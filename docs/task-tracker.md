@@ -75,7 +75,8 @@ schema persistence + API, browser depth, business glossary, UI placement).
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | P5-0 | Open Phase 5 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-E |
-| P5-D | Owner approval + decision resolution (D-A…D-E) | ⏳ Awaiting owner | scope envelope: introspection? persistence+API? browser depth? glossary? |
+| P5-D | Owner approval + decision resolution (D-A…D-E) | ✅ Completed | resolved 2026-06-10: scoped introspection + upload; persist schema + /schema API; full browser (incl. where-used) + export; read-only (defer glossary); rename → Data Dictionary |
+| P5-DES | Design + build sequence (proposed) | ⏳ Awaiting owner go-ahead | governed design doc + contracts (SchemaStore, introspection, /schema); build begins on approval |
 | P5-1 | Data-dictionary browser UI (search/filter, column detail, relationship nav, export) | 📋 Planned | depends on D-C/D-E |
 | P5-2 | Core schema-tool helpers (find/where-used) + tests | 📋 Planned | `schema.py`/`core/dictionary.py` |
 | P5-3 | Live SELECT-only introspection (`core/introspection.py`) | 📋 Planned | conditional on D-A; **through the chokepoint** |

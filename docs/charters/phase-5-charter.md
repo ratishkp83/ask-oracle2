@@ -1,11 +1,11 @@
 # Phase 5 Charter — Data Dictionary Browser & Schema Tools
 
-> **Document:** Phase Charter · **Version:** 1.0 · **Status:** Discovery (open — decisions pending owner approval) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.1 · **Status:** Discovery complete → Design (proposed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**Discovery.** This charter frames objectives, scope, deliverables, risks, success
-criteria, and the **open decisions** (§ Decisions) the owner must resolve. **No code is
-written until the owner approves the charter and resolves the decisions.**
+**Discovery complete** — owner approved the charter and resolved decisions D-A…D-E on
+2026-06-10 (see § Decisions). **Design proposed next; Development begins on owner approval
+of the design + build sequence.**
 
 ## Context — where we are today (grounding facts)
 - **A schema model already exists** (`src/schema.py`): `Schema` → `TableDefinition` →
@@ -96,37 +96,25 @@ written until the owner approves the charter and resolves the decisions.**
 5. Tests green in CI; governed docs current.
 6. **Independent adversarial review + QA returns PASS** ([gate](../process/external-review-gate.md)); **reviewer agent supplied by the owner**.
 
-## Decisions (OPEN — to resolve at approval)
-Recommended option is **bolded**; the rest are documented for an informed choice.
+## Decisions (resolved 2026-06-10)
+Owner resolved all five at charter approval — the four pivotal scope decisions confirmed
+**as recommended**; the D-E default accepted.
 
-- **D-A — Live introspection.** **Add a scoped SELECT-only introspection mode** (auto-load
-  the dictionary from `ALL_*` views through the chokepoint) **alongside** CSV/Excel upload —
-  the marquee "schema tool," read-only-compatible, removes the upload burden. *(Alt:
-  uploaded-metadata only this phase; defer introspection. This is the main effort/scope
-  lever.)*
-- **D-B — Schema persistence + API.** **Persist the schema in a `SchemaStore` (mirrors
-  profiles/reports) + a read `/schema` API** so it survives sessions and matches the
-  core+API pattern. *(Alt: keep schema session/upload-only — smaller, but re-upload every
-  session and no API.)*
-- **D-C — Browser depth.** **Full browser: search/filter + column-detail grid + FK
-  navigation + "where-used" + export.** *(Alts: core only — search/filter + detail + export,
-  defer where-used; or full **plus** a visual ER graph — adds a viz dependency the project
-  has so far avoided.)*
-- **D-D — Business glossary.** **Read-only browser only; defer editable business
-  descriptions/synonyms** to a later phase. *(Alt: add a persisted glossary now — larger
-  scope, new edit/persist surface.)*
-- **D-E — UI placement.** Default: **rename/expand "Explore Schema" → "Data Dictionary"**
-  in the left-nav (single section), keeping shared session state. *(Alt: keep "Explore
-  Schema" and add a separate "Schema Tools" section.)*
-
-## Open questions for the owner
-1. Include live SELECT-only introspection now, or uploaded-metadata only (D-A)?
-2. Persist the schema + add a `/schema` API, or keep it session-only (D-B)?
-3. Browser depth — full (with where-used), core, or full + ER graph (D-C)?
-4. Read-only browser, or add an editable business glossary (D-D)?
+- **D-A — Live introspection:** ✅ **Add scoped SELECT-only introspection** (auto-load from
+  `ALL_*` views through the chokepoint, scoped by owner/schema + name filter, capped by
+  `SafetyLimits`, graceful on missing views) **alongside** CSV/Excel upload.
+- **D-B — Schema persistence + API:** ✅ **Persist the schema in a `SchemaStore`** (mirrors
+  profiles/reports; local JSON under `STORAGE_DIR`, metadata only) **+ a read `/schema`
+  API** for parity.
+- **D-C — Browser depth:** ✅ **Full browser** — search/filter + column-detail grid + FK
+  navigation + **where-used** (reverse FK) + export (CSV/Excel/Markdown). No ER-graph viz.
+- **D-D — Business glossary:** ✅ **Read-only browser only**; editable glossary deferred.
+- **D-E — UI placement:** ✅ **Rename/expand "Explore Schema" → "Data Dictionary"** in the
+  left-nav (single section, shared session state).
 
 ## Revision history
 
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product/Eng | Discovery charter opened; decisions pending owner approval. |
+| 1.1 | 2026-06-10 | Product/Eng | Owner approved; decisions D-A…D-E resolved (4 pivotal as recommended; D-E default accepted). Discovery complete → Design. |
