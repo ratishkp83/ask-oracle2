@@ -44,6 +44,24 @@ Status: Planned · In Progress · Blocked · Completed.
 | R3.3 | Re-review (r2) on the fixes + regression | ✅ Done | verdict **PASS-WITH-FIXES — no open blocking** ([phase-3-review-r2.md](reviews/phase-3-review-r2.md)); range `b77b571..HEAD` (`29d956b`); all r1 probes independently re-run; new S4 F7→ITM-010; deferrals ITM-008/009 confirmed acceptable |
 | P3-7 | Phase-3 closure sign-off | ✅ Completed | **gate PASSED 2026-06-10**: r2 = PASS-WITH-FIXES (no open blocking), 75 tests green, governed docs current, F1–F6 remediated + re-validated, S3/S4 fixed-or-deferred |
 
+## Phase 4 — Reports, Templates & UX (🔄 Discovery — decisions pending)
+
+Charter: [phase-4-charter.md](charters/phase-4-charter.md). Opened 2026-06-10. **No code
+until the owner approves the charter and resolves decisions D-A…D-I.**
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| P4-0 | Open Phase 4 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-I |
+| P4-D | Owner approval + decision resolution (D-A…D-I) | ⏳ Awaiting owner | scope envelope: store format, param scope, template approach/size, UX depth, API parity |
+| P4-1 | `src/core/reports.py` — Report v2 model + store + legacy migration | 📋 Planned | depends on D-A/D-H |
+| P4-2 | Bind-parameter plumbing through `run_select`/`/execute` | 📋 Planned | depends on D-B/D-G; **touches chokepoint** |
+| P4-3 | EBS template catalog (GL/AP/AR/PO/OM, starter set) | 📋 Planned | depends on D-C/D-D |
+| P4-4 | Left-nav UX rework | 📋 Planned | depends on D-E |
+| P4-5 | `/reports` CRUD + `/reports/{id}/run` API | 📋 Planned | depends on D-F (conditional) |
+| P4-6 | Tests (CRUD, **bind-safety**, migration, template shape, execute-with-binds, UI smoke) | 📋 Planned | — |
+| P4-7 | Governed-doc updates (D3/D4/D5/D6, ADR(s), CHANGELOG, traceability, registers) | 📋 Planned | code + docs same change set |
+| R4.x | Phase-4 independent adversarial review + QA gate | 📋 Planned | reviewer ≠ author; owner supplies reviewer |
+
 ## Standing per-phase review gate (applies to EVERY phase)
 
 Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](process/external-review-gate.md)):
@@ -67,6 +85,7 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 
 - **Phase-2 closure gate: PASSED (2026-06-10).** Phase 3 Discovery may open.
 - **Phase-3 closure gate: PASSED (2026-06-10)** — r2 PASS-WITH-FIXES, no open blocking. Phase 4 may open.
+- **Phase 4 Discovery: OPEN (2026-06-10)** — charter awaiting owner approval + decisions (P4-D). Build (P4-1…P4-7) is gated on those decisions.
 - Pre-GA (not gating Phase 3): manual UI/live-DB pass (RISK-04), `/v1` API prefix (T-18), legacy `connection.json` migration (T-19).
 - **Hard precondition for any networked/multi-tenant deployment (Phase 7):** CORS/auth hardening (ITM-009/RISK-12) + `base_url` host-normalization (F7/ITM-010).
 
@@ -76,3 +95,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Delivery | Initial tracker; Phase-2 delivered, P2.5 in progress. |
 | 1.1 | 2026-06-10 | Delivery | Phase-3 exit gate PASSED (r2 PASS-WITH-FIXES); R3.3/P3-7 closed; Phase 4 may open. |
+| 1.2 | 2026-06-10 | Delivery | Phase 4 Discovery opened (P4-0); P4-1…P4-7 + R4.x seeded as Planned; build gated on owner decisions (P4-D). |
