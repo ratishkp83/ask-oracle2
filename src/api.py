@@ -3,13 +3,22 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.core import audit
 from src.core.config import load_safety_limits
-from src.core.logging_config import configure_logging
+from src.core.errors import (
+    GENERIC_SERVER_DETAIL,
+    log_error,
+    new_error_id,
+)
+from src.core.logging_config import configure_logging, get_request_id, set_request_id
 from src.core.crypto import SecretConfigError
 from src.core.profiles import (
     JsonFileProfileStore,
@@ -59,6 +68,70 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# --------------------------------------------------------------------------- #
+# Observability: per-request correlation id (= client error_id) + error envelope
+# --------------------------------------------------------------------------- #
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    """Assign/honour a correlation id, bind it for logging, echo it back.
+
+    The same id is stamped on every log record (via the ``request_id``
+    contextvar) and injected as ``error_id`` into every error body by the
+    exception handlers below — so a client-visible failure maps to one exact
+    server log line.
+    """
+    rid = request.headers.get("X-Request-ID") or new_error_id()
+    set_request_id(rid)
+    try:
+        response = await call_next(request)
+    finally:
+        # Keep the id available to exception handlers running in this context.
+        set_request_id(rid)
+    response.headers["X-Request-ID"] = rid
+    return response
+
+
+def _db_error(exc: Exception, context: str) -> HTTPException:
+    """Sanitize a raw driver/connection error: log it server-side (full detail,
+    keyed by the request's error_id) and return a generic 400. The error body's
+    ``error_id`` is attached by the HTTPException handler."""
+    error_id = get_request_id() or new_error_id()
+    log_error(exc, context=context, error_id=error_id, event="db_error")
+    return HTTPException(status_code=400, detail="Database error — see server logs.")
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    """Preserve the existing ``detail`` (safe messages stay verbatim) and add
+    ``error_id`` — additive, no contract break."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "error_id": get_request_id()},
+        headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """422 body keeps FastAPI's ``detail`` list and gains ``error_id``."""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": jsonable_encoder(exc.errors()), "error_id": get_request_id()},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all: never leak an internal error; log it server-side, return a
+    generic 500 + ``error_id``."""
+    error_id = get_request_id() or new_error_id()
+    log_error(exc, context="unhandled", error_id=error_id, event="unhandled_error")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": GENERIC_SERVER_DETAIL, "error_id": error_id},
+    )
 
 # Pluggable storage backends. Swap for Sqlite*Store later without touching the
 # routes below.
@@ -232,8 +305,8 @@ def test_profile(profile_id: str) -> Dict[str, Any]:
     )
     try:
         result = client.run_select("SELECT 1 FROM DUAL")
-    except Exception as exc:  # noqa: BLE001 - surface a clean message to the UI
-        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001 - DB/connection errors (sanitized, ITM-015)
+        raise _db_error(exc, "profile-test")
     audit.audit_profile_usage(profile_id, resolved.username, "test")
     return {"ok": True, "elapsed_seconds": result.elapsed_seconds}
 
@@ -253,8 +326,8 @@ def test_connection(conn: ConnectionConfig) -> Dict[str, Any]:
     )
     try:
         result = client.run_select("SELECT 1 FROM DUAL")
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001 - DB/connection errors (sanitized, ITM-015)
+        raise _db_error(exc, "test-connection")
     return {"ok": True, "elapsed_seconds": result.elapsed_seconds, "columns": result.columns, "rows": result.rows}
 
 
@@ -359,11 +432,11 @@ def _run_sql(
             source="api", sql=sql, allowed=False, profile_id=profile_id, username=username, reason=str(exc)
         )
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001 - DB/connection errors
+    except Exception as exc:  # noqa: BLE001 - DB/connection errors (sanitized, ITM-015)
         audit.audit_execution(
             source="api", sql=sql, allowed=True, profile_id=profile_id, username=username, reason="execution_error"
         )
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise _db_error(exc, "execute")
 
     audit.audit_execution(
         source="api",
@@ -542,9 +615,10 @@ def introspect(req: IntrospectRequest) -> Dict[str, Any]:
     try:
         result = introspect_schema(client, owner=req.owner, table_like=req.table_like)
     except ValueError as exc:
+        # Safe, intentional validation message (e.g. blank owner) — stays verbatim.
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:  # noqa: BLE001 - DB/connection errors
-        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001 - DB/connection errors (sanitized, ITM-015)
+        raise _db_error(exc, "introspect")
 
     definition = schema_to_dict(result.schema)
     saved: Optional[Dict[str, Any]] = None

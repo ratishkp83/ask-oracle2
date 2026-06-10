@@ -1,11 +1,22 @@
 # D5 — API Contracts
 
-> **Document:** API Contracts · **Version:** 1.1 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
+> **Document:** API Contracts · **Version:** 1.4 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
 > Service: `Ask Oracle Reports API` v2.1.0 · Swagger: `/docs` · OpenAPI: `/openapi.json`
 
 ## Conventions
 
-- Errors use FastAPI's `{ "detail": <string | list> }`. Business errors are `string`; request-validation errors are a `list` (HTTP 422).
+- **Error envelope** *(Phase 6)*: every error body is `{ "detail": <string | list>, "error_id": <hex> }`.
+  `detail` is unchanged from before — business errors are a `string`, request-validation
+  errors are a `list` (HTTP 422). `error_id` is **additive** and equals the request's
+  correlation id. ([ADR-012](adr/ADR-012-observability-and-error-handling.md))
+- **Correlation** *(Phase 6)*: every response carries an `X-Request-ID` header. A client may
+  supply `X-Request-ID` on the request to set the id; otherwise the server generates one. The
+  same value is the `error_id` in error bodies and the key for the matching server log line.
+- **DB/driver errors are sanitized** *(Phase 6, ITM-015)*: `/execute`, `/reports/{id}/run`,
+  `/schemas/introspect`, `/test-connection`, and `/profiles/{id}/test` return a **generic**
+  `detail = "Database error — see server logs."` (+ `error_id`) for raw driver/connection
+  failures; the full detail is logged server-side only. Safety-rejection reasons and
+  validation messages are **not** sanitized — they stay verbatim.
 - Passwords/keys are **never** returned in any response.
 - **Versioning (planned):** introduce a `/v1` path prefix before external GA (tracked in [task-tracker](task-tracker.md)).
 
@@ -54,10 +65,17 @@ Body: `{ sql, profile_id?, connection?, max_rows?, binds? }` — provide **exact
   (string/number/bool/null/date); non-scalars are rejected `400`. The SQL-text safety
   check is unchanged and still runs first.
 
-**Example — reject:**
+**Example — reject (safety reason verbatim + error_id):**
 ```
 POST /execute { "sql": "DELETE FROM emp", "connection": {...} }
-→ 400 { "detail": "Only SELECT/CTE queries are allowed; received a DELETE statement." }
+→ 400 { "detail": "Only SELECT/CTE queries are allowed; received a DELETE statement.",
+        "error_id": "9f2c…" }
+```
+**Example — DB/driver error (sanitized, ITM-015):**
+```
+POST /execute { "sql": "SELECT 1 FROM DUAL", "connection": {...bad host...} }
+→ 400 { "detail": "Database error — see server logs.", "error_id": "1a7b…" }
+   (full ORA-/DSN detail is logged server-side under error_id 1a7b…, never returned)
 ```
 **Example — success:**
 ```
@@ -122,3 +140,4 @@ if constraint views aren't visible.
 | 1.1 | 2026-06-10 | Engineering | Phase 4: `/execute` gains optional `binds` (bound, never interpolated; ADR-007). |
 | 1.2 | 2026-06-10 | Engineering | Phase 4: `/reports` CRUD + `/reports/{id}/run` (runs via chokepoint) and read-only `/templates` documented. |
 | 1.3 | 2026-06-10 | Engineering | Phase 5: `/schemas` CRUD + `/schemas/introspect` (SELECT-only dictionary introspection via the chokepoint). |
+| 1.4 | 2026-06-10 | Engineering | Phase 6 (B2): additive `error_id` on every error body; `X-Request-ID` correlation header; DB/driver errors sanitized to a generic message (ITM-015); ADR-012. |
