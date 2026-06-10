@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 import oracledb
 
@@ -14,9 +16,41 @@ __all__ = [
     "OracleConnectionConfig",
     "build_dsn",
     "is_safe_select",
+    "validate_binds",
     "QueryResult",
     "OracleClient",
 ]
+
+# Bind variables (Phase 4) are passed to the driver as *values*, never spliced
+# into the SQL text — so they cannot alter the parsed statement or escape the
+# SELECT/CTE-only guarantee. validate_binds is a fail-closed backstop at the
+# chokepoint: bind names must be plain identifiers and values must be scalars.
+_BIND_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_BIND_NAME_MAX = 30
+_ALLOWED_BIND_TYPES = (str, int, float, bool, date, datetime)
+
+
+def validate_binds(binds: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Validate a bind map (or None) and return a safe dict for ``cur.execute``.
+
+    Raises :class:`SqlSafetyError` for a non-mapping, an invalid bind name, or a
+    non-scalar value (dict/list/object) — anything that could carry structure
+    rather than a plain value.
+    """
+    if binds is None:
+        return {}
+    if not isinstance(binds, dict):
+        raise SqlSafetyError("Binds must be a mapping of name to scalar value.")
+    for name, value in binds.items():
+        if not isinstance(name, str) or len(name) > _BIND_NAME_MAX or not _BIND_NAME_RE.match(name):
+            raise SqlSafetyError(f"Invalid bind name: {name!r}.")
+        if value is None:
+            continue
+        if not isinstance(value, _ALLOWED_BIND_TYPES):
+            raise SqlSafetyError(
+                f"Bind '{name}' must be a scalar (str/number/date), got {type(value).__name__}."
+            )
+    return binds
 
 
 @dataclass
@@ -74,14 +108,22 @@ class OracleClient:
         )
         return oracledb.connect(user=self.config.username, password=self.config.password, dsn=dsn)
 
-    def run_select(self, sql: str, limits: Optional[SafetyLimits] = None) -> QueryResult:
+    def run_select(
+        self,
+        sql: str,
+        limits: Optional[SafetyLimits] = None,
+        binds: Optional[Dict[str, Any]] = None,
+    ) -> QueryResult:
         """Validate ``sql`` through the safety layer and execute it under limits.
 
-        Raises :class:`SqlSafetyError` if the query is not a safe SELECT/CTE.
+        ``binds`` (Phase 4) are passed to the driver as bind variables, never
+        interpolated into ``sql``. Raises :class:`SqlSafetyError` if the query is
+        not a safe SELECT/CTE or if the binds are not name→scalar.
         """
         result = assert_safe_select(sql)
         if not result.allowed:
             raise SqlSafetyError(result.reason or "Only SELECT/CTE queries are allowed.")
+        safe_binds = validate_binds(binds)
 
         limits = limits or load_safety_limits()
         start = time.perf_counter()
@@ -92,7 +134,7 @@ class OracleClient:
             except Exception:  # noqa: BLE001 - not fatal if unsupported
                 pass
             with conn.cursor() as cur:
-                cur.execute(sql)
+                cur.execute(sql, safe_binds)
                 columns = [d[0] for d in cur.description] if cur.description else []
                 rows: List[Tuple[Any, ...]] = []
                 total_bytes = 0

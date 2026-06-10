@@ -89,6 +89,7 @@ class SQLExecuteRequest(BaseModel):
     profile_id: Optional[str] = None
     connection: Optional[ConnectionConfig] = None
     max_rows: Optional[int] = None
+    binds: Optional[Dict[str, Any]] = None  # Phase 4: bound as values, never interpolated
 
     @model_validator(mode="after")
     def _require_target(self) -> "SQLExecuteRequest":
@@ -268,7 +269,7 @@ def execute(req: SQLExecuteRequest) -> Dict[str, Any]:
 
     client = OracleClient(conn_cfg)
     try:
-        result = client.run_select(req.sql, limits=limits)
+        result = client.run_select(req.sql, limits=limits, binds=req.binds)
     except SqlSafetyError as exc:
         audit.audit_execution(
             source="api", sql=req.sql, allowed=False, profile_id=profile_id, username=username, reason=str(exc)

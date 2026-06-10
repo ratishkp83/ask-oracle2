@@ -29,7 +29,7 @@ def fresh_store(monkeypatch):
 def no_db(monkeypatch):
     """Stub query execution so we never open a real Oracle connection."""
 
-    def fake_run_select(self, sql, limits=None):
+    def fake_run_select(self, sql, limits=None, binds=None):
         return QueryResult(columns=["N"], rows=[(1,)], elapsed_seconds=0.01, truncated=False, row_count=1)
 
     monkeypatch.setattr(OracleClient, "run_select", fake_run_select)

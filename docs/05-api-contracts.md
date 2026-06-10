@@ -1,6 +1,6 @@
 # D5 — API Contracts
 
-> **Document:** API Contracts · **Version:** 1.0 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
+> **Document:** API Contracts · **Version:** 1.1 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
 > Service: `Ask Oracle Reports API` v2.0.0 · Swagger: `/docs` · OpenAPI: `/openapi.json`
 
 ## Conventions
@@ -44,9 +44,15 @@ Body: `{ natural_language, schema_csv?, relationships_csv?, model?, llm? }`
 - Provider/redaction governed by `LLM_POLICY` (`local_only` | `local_external` | `external_disabled`); external prompts carry **schema names only**.
 
 ### POST /execute  *(single safety chokepoint)*
-Body: `{ sql, profile_id?, connection?, max_rows? }` — provide **exactly one** of `profile_id` / `connection`
+Body: `{ sql, profile_id?, connection?, max_rows?, binds? }` — provide **exactly one** of `profile_id` / `connection`
 → `200 { columns, rows, elapsed_seconds, row_count, truncated }`
-→ `400` unsafe SQL (with reason) or DB error · `404` unknown profile · `422` neither/both target supplied
+→ `400` unsafe SQL (with reason), invalid bind, or DB error · `404` unknown profile · `422` neither/both target supplied
+
+- `binds` *(Phase 4)*: optional `{ name: scalar }` map bound as Oracle **bind variables**
+  (`:name`), passed to the driver as values — **never interpolated** into `sql` (ADR-007).
+  Names must match `^[A-Za-z_][A-Za-z0-9_]*$` (≤30 chars); values must be scalar
+  (string/number/bool/null/date); non-scalars are rejected `400`. The SQL-text safety
+  check is unchanged and still runs first.
 
 **Example — reject:**
 ```
@@ -64,3 +70,4 @@ POST /execute { "sql": "SELECT 1 FROM DUAL", "profile_id": "ab12…" }
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Engineering | Baseline; profiles + safe /execute + per-user llm documented. |
+| 1.1 | 2026-06-10 | Engineering | Phase 4: `/execute` gains optional `binds` (bound, never interpolated; ADR-007). |
