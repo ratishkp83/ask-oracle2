@@ -20,14 +20,14 @@ Status: Planned · In Progress · Blocked · Completed.
 
 | ID | Task | Status | Depends / Notes |
 |----|------|--------|-----------------|
-| T-10 | `git init` + baseline commit (`.env` ignored) | 🔄 In Progress | local identity set; **user pushes to GitHub** |
-| T-09 | Promote governed `/docs` set into repo | ✅ Completed | this batch |
-| T-14 | Record ADR-001…005 | 🔄 In Progress | see `docs/adr/` |
-| T-15 | Seed CHANGELOG + registers + trackers | ✅ Completed | this batch |
-| T-16 | Add CI workflow (pytest) | 🔄 In Progress | `.github/workflows/ci.yml` |
+| T-10 | `git init` + baseline commit (`.env` ignored) | ✅ Completed | commit `5c21f13`; local identity placeholder; **user pushes to GitHub** |
+| T-09 | Promote governed `/docs` set into repo | ✅ Completed | 22 docs tracked |
+| T-14 | Record ADR-001…005 | ✅ Completed | `docs/adr/` |
+| T-15 | Seed CHANGELOG + registers + trackers | ✅ Completed | — |
+| T-16 | Add CI workflow (pytest) | ✅ Completed | `.github/workflows/ci.yml`; first run executes on push |
 | T-13 | Phase-2 manual UI smoke test | 📋 Planned | checklist in test-strategy |
 | T-07 | **Rotate leaked Groq/OpenAI keys** | ⛔ Blocked (user) | external; RISK-01 |
-| T-17 | Phase-2 closure sign-off record | 📋 Planned | gate to start Phase 3 |
+| T-17 | Phase-2 closure sign-off record | 📋 Planned | gate to start Phase 3 (pending T-07, T-13) |
 
 ## Backlog (next phases)
 
