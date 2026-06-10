@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
@@ -180,4 +180,114 @@ def attach_relationships(schema: Schema, relationships: List[RelationshipDefinit
             col.is_foreign_key = True
             col.references_table = r.to_table
             col.references_column = r.to_column
+    return schema
+
+
+# --------------------------------------------------------------------------- #
+# Data-dictionary helpers (Phase 5) — pure functions over a Schema, no DB.
+# --------------------------------------------------------------------------- #
+def table_detail(schema: Schema, table_name: str) -> List[ColumnDefinition]:
+    """Full column detail for one table (empty list if unknown)."""
+    table = schema.tables.get(table_name)
+    return list(table.columns) if table else []
+
+
+def find_columns(
+    schema: Schema,
+    query: str = "",
+    *,
+    data_type: Optional[str] = None,
+    pk: Optional[bool] = None,
+    fk: Optional[bool] = None,
+) -> List[ColumnDefinition]:
+    """Search columns by name substring (table or column) + optional filters.
+
+    ``data_type`` matches as a case-insensitive substring (e.g. "char" → VARCHAR2).
+    ``pk`` / ``fk`` filter on the primary/foreign-key flags when not ``None``.
+    """
+    q = (query or "").strip().lower()
+    dt = (data_type or "").strip().lower()
+    out: List[ColumnDefinition] = []
+    for table in schema.tables.values():
+        for col in table.columns:
+            if q and q not in col.column_name.lower() and q not in col.table_name.lower():
+                continue
+            if dt and dt not in (col.data_type or "").lower():
+                continue
+            if pk is not None and col.is_primary_key != pk:
+                continue
+            if fk is not None and col.is_foreign_key != fk:
+                continue
+            out.append(col)
+    out.sort(key=lambda c: (c.table_name, c.column_name))
+    return out
+
+
+def references_out(schema: Schema, table_name: str) -> List[Tuple[str, str, str]]:
+    """FKs this table declares: ``[(from_column, to_table, to_column)]``."""
+    out: List[Tuple[str, str, str]] = []
+    seen: set = set()
+    table = schema.tables.get(table_name)
+    if table:
+        for col in table.columns:
+            if col.is_foreign_key and col.references_table and col.references_column:
+                key = (col.column_name, col.references_table, col.references_column)
+                if key not in seen:
+                    seen.add(key)
+                    out.append(key)
+    for r in schema.relationships:
+        if r.from_table == table_name:
+            key = (r.from_column, r.to_table, r.to_column)
+            if key not in seen:
+                seen.add(key)
+                out.append(key)
+    out.sort()
+    return out
+
+
+def referenced_by(schema: Schema, table_name: str) -> List[Tuple[str, str, str]]:
+    """Where-used: other tables' FKs that point AT this table.
+
+    Returns ``[(from_table, from_column, to_column)]`` where ``to_column`` is on
+    ``table_name``.
+    """
+    out: List[Tuple[str, str, str]] = []
+    seen: set = set()
+    for table in schema.tables.values():
+        for col in table.columns:
+            if col.is_foreign_key and col.references_table == table_name and col.references_column:
+                key = (col.table_name, col.column_name, col.references_column)
+                if key not in seen:
+                    seen.add(key)
+                    out.append(key)
+    for r in schema.relationships:
+        if r.to_table == table_name:
+            key = (r.from_table, r.from_column, r.to_column)
+            if key not in seen:
+                seen.add(key)
+                out.append(key)
+    out.sort()
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# Serialization (Phase 5) — metadata only; no data values.
+# --------------------------------------------------------------------------- #
+def schema_to_dict(schema: Schema) -> Dict[str, object]:
+    return {
+        "tables": {name: [asdict(c) for c in t.columns] for name, t in schema.tables.items()},
+        "relationships": [asdict(r) for r in schema.relationships],
+    }
+
+
+def schema_from_dict(data: Dict[str, object]) -> Schema:
+    schema = Schema()
+    tables = data.get("tables") or {}
+    for name, cols in tables.items():  # type: ignore[assignment]
+        schema.tables[name] = TableDefinition(
+            name=name, columns=[ColumnDefinition(**c) for c in cols]
+        )
+    schema.relationships = [
+        RelationshipDefinition(**r) for r in (data.get("relationships") or [])  # type: ignore[arg-type]
+    ]
     return schema
