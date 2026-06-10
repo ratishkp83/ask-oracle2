@@ -48,7 +48,7 @@ Sources: [reviews/phase-3-review-r1.md](reviews/phase-3-review-r1.md) (verdict: 
 
 ## Phase 4 — independent review findings & remediation (r1)
 
-Source: [reviews/phase-4-review-r1.md](reviews/phase-4-review-r1.md) — verdict **PASS-WITH-FIXES** (no S1/S2; 118 tests at review time). Remediation suite: **129 tests green**.
+Source: [reviews/phase-4-review-r1.md](reviews/phase-4-review-r1.md) — verdict **PASS-WITH-FIXES** (no S1/S2; 118 tests at review time). Post-remediation suite: **130 tests green** (F2/F3/F4 fixes + F5 fix).
 
 | ID | Sev | Finding | Disposition | Status |
 |----|-----|---------|-------------|--------|

@@ -38,7 +38,7 @@ from src.schema import (
 # directly, so this is a harmless no-op there. No secrets live in source.
 load_dotenv()
 
-app = FastAPI(title="Ask Oracle Reports API", version="2.0.0")
+app = FastAPI(title="Ask Oracle Reports API", version="2.1.0")
 
 app.add_middleware(
     CORSMiddleware,
