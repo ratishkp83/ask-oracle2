@@ -8,6 +8,14 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 - **Governance baseline (P2.5):** full `/docs` governed set (Vision, BRD/PRD, Architecture, Data Models, API Contracts, Test Strategy, Deployment Plan), ADR log, Risk Register, Task Tracker, Issue Log, Traceability Matrix, Roadmap, and this changelog.
 - Git version control initialized for the repository.
 - GitHub Actions CI running the test suite (`.github/workflows/ci.yml`).
+- Headless Streamlit UI smoke tests (`tests/test_app_smoke.py`, AppTest) — total suite now 51 tests.
+
+### Fixed
+- **BUG-005:** app crashed with `StreamlitDuplicateElementId` once a connection profile existed (duplicate `Delete selected` button across the Connections and Saved Reports tabs). Added unique widget keys to the affected buttons/selectboxes.
+- `streamlit run src/app.py` now works from any working directory (added a `sys.path` shim in `src/app.py`).
+
+### Notes
+- **Phase 2 closed** (closure gate passed 2026-06-10): secrets rotated, 51 tests green, governance docs current.
 
 ## [Phase 2 — Hardened Connectivity & Safety] - 2026-06-10
 

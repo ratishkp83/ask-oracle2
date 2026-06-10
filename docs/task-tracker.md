@@ -25,9 +25,9 @@ Status: Planned · In Progress · Blocked · Completed.
 | T-14 | Record ADR-001…005 | ✅ Completed | `docs/adr/` |
 | T-15 | Seed CHANGELOG + registers + trackers | ✅ Completed | — |
 | T-16 | Add CI workflow (pytest) | ✅ Completed | `.github/workflows/ci.yml`; first run executes on push |
-| T-13 | Phase-2 manual UI smoke test | 📋 Planned | checklist in test-strategy |
-| T-07 | **Rotate leaked Groq/OpenAI keys** | ⛔ Blocked (user) | external; RISK-01 |
-| T-17 | Phase-2 closure sign-off record | 📋 Planned | gate to start Phase 3 (pending T-07, T-13) |
+| T-13 | Phase-2 UI smoke test | ✅ Completed | automated via `test_app_smoke.py` (3 tests); **found + fixed BUG-005** |
+| T-07 | Rotate leaked Groq/OpenAI keys | ✅ Completed | user-confirmed 2026-06-10 (RISK-01 Closed) |
+| T-17 | Phase-2 closure sign-off | ✅ Completed | **gate PASSED 2026-06-10**: secrets rotated, 51 tests green, docs current, ADRs ratified, tree clean |
 
 ## Backlog (next phases)
 
@@ -40,8 +40,8 @@ Status: Planned · In Progress · Blocked · Completed.
 
 ## Dependencies & critical path
 
-- **T-07 (key rotation)** gates any external deployment.
-- **T-13 + T-17** gate the Phase-2 → Phase-3 transition.
+- **Phase-2 closure gate: PASSED (2026-06-10).** Phase 3 Discovery may open.
+- Pre-GA (not gating Phase 3): manual UI/live-DB pass (RISK-04), `/v1` API prefix (T-18), legacy `connection.json` migration (T-19).
 
 ## Revision history
 

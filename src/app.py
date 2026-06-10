@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import os
+import sys
 from typing import List, Optional, Tuple
+
+# Make the repo root importable so `streamlit run src/app.py` works from any CWD.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas as pd
 import streamlit as st
@@ -166,15 +171,15 @@ def draw_connections(store: JsonFileProfileStore):
         st.subheader("Add a connection profile")
         c1, c2 = st.columns(2)
         with c1:
-            name = st.text_input("Profile name")
-            host = st.text_input("Host")
-            port = st.number_input("Port", min_value=1, max_value=65535, value=1521)
-            environment = st.selectbox("Environment", ["DEV", "TEST", "PROD"])
+            name = st.text_input("Profile name", key="profile_name")
+            host = st.text_input("Host", key="profile_host")
+            port = st.number_input("Port", min_value=1, max_value=65535, value=1521, key="profile_port")
+            environment = st.selectbox("Environment", ["DEV", "TEST", "PROD"], key="profile_env")
         with c2:
-            service_name = st.text_input("Service name (preferred)")
-            sid = st.text_input("SID (optional)")
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
+            service_name = st.text_input("Service name (preferred)", key="profile_service")
+            sid = st.text_input("SID (optional)", key="profile_sid")
+            username = st.text_input("Username", key="profile_username")
+            password = st.text_input("Password", type="password", key="profile_password")
         submitted = st.form_submit_button("Add profile")
 
     if submitted:
@@ -222,10 +227,10 @@ def draw_connections(store: JsonFileProfileStore):
     )
 
     labels = {f"{p.name}  ·  {p.environment}": p for p in profiles}
-    selected = labels[st.selectbox("Select a profile", list(labels.keys()))]
+    selected = labels[st.selectbox("Select a profile", list(labels.keys()), key="conn_select_profile")]
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Test selected", use_container_width=True):
+        if st.button("Test selected", use_container_width=True, key="conn_test_selected"):
             try:
                 resolved = store.resolve(selected.id)
                 ok, msg = _try_connect(_resolved_to_cfg(resolved))
@@ -233,7 +238,7 @@ def draw_connections(store: JsonFileProfileStore):
             except SecretConfigError as e:
                 st.error(str(e))
     with col2:
-        if st.button("Delete selected", use_container_width=True):
+        if st.button("Delete selected", use_container_width=True, key="conn_delete_selected"):
             store.delete(selected.id)
             st.success(f"Deleted '{selected.name}'.")
             st.rerun()
@@ -431,14 +436,14 @@ def draw_saved_reports():
     st.header("Saved Reports")
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        report_name = st.text_input("Report name")
+        report_name = st.text_input("Report name", key="rep_name")
     with col2:
-        save_clicked = st.button("Save current", use_container_width=True)
+        save_clicked = st.button("Save current", use_container_width=True, key="rep_save")
     with col3:
-        delete_clicked = st.button("Delete selected", use_container_width=True)
+        delete_clicked = st.button("Delete selected", use_container_width=True, key="rep_delete")
 
     existing = list_reports()
-    selected = st.selectbox("Select a saved report", options=[""] + existing)
+    selected = st.selectbox("Select a saved report", options=[""] + existing, key="rep_select")
     report = get_report(selected) if selected else None
 
     if save_clicked:

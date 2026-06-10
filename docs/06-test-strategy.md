@@ -12,16 +12,17 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 |-------|-------|---------|-------|
 | Unit | Safety engine, crypto, profile store, LLM config resolution | pytest | ✅ Implemented |
 | API/integration | `/execute`, `/profiles` via TestClient (DB monkeypatched) | pytest + FastAPI TestClient | ✅ Implemented |
-| Manual UI smoke | Streamlit Connections/Settings/Query flows | Checklist (below) | ⏳ Planned (Phase-2 closure) |
-| Live DB (optional) | Real Oracle/EBS sandbox | manual / gated CI | ⏳ Future |
+| UI smoke (headless) | Streamlit screens render; Connections/Settings flows | streamlit `AppTest` | ✅ Implemented (`test_app_smoke.py`) |
+| Manual UI / live DB | Browser visuals, real connection success, live NL→SQL | Checklist (below) + Oracle sandbox | ⏳ Recommended pass |
 
 ## 3. Current coverage (baseline)
 
-**48 automated tests pass locally:**
+**51 automated tests pass locally:**
 - `test_sql_safety.py` (24): accept/reject matrix incl. literal/identifier false-positive guards, stacked statements, `FOR UPDATE`, PL/SQL, MERGE/GRANT/DDL/DML.
 - `test_profiles.py` (6): encryption-at-rest, decrypt round-trip, no password leakage, duplicate-name & service/sid validation.
 - `test_execute_endpoint.py` (12): unsafe-SQL rejection, target validation (422), unknown profile (404), success inline + via profile, `/profiles` CRUD without password.
 - `test_nl2sql_config.py` (6): per-user LLM resolution + env fallback (no network).
+- `test_app_smoke.py` (3): headless AppTest — all six screens render without exception; Settings LLM override; Connections create → on-disk encryption. (Caught + validated the fix for BUG-005, a duplicate-widget-ID crash.)
 
 ## 4. Coverage targets
 

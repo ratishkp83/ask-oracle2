@@ -134,11 +134,11 @@ pytest -q
 - `tests/test_execute_endpoint.py` — `/execute` rejects unsafe SQL, requires a target, 404 on unknown profile, success path (Oracle driver monkeypatched); `/profiles` CRUD with password never returned.
 - `tests/test_nl2sql_config.py` — per-user LLM resolution: explicit model wins, provider defaults, Groq base-url wiring, env fallback (no network calls).
 
-> Status at hand-off: the full suite (**48 tests**) was executed locally and
-> passes, including the endpoint and LLM-config tests. The Streamlit app
-> (`src/app.py`) was syntax-verified (`py_compile`); its UI was not driven in a
-> browser, so a manual UI smoke test (Connections add/test/delete, Settings LLM
-> override) is recommended in QA.
+> Status at hand-off: the full suite (**51 tests**) passes locally, including
+> headless `AppTest` UI smoke (`test_app_smoke.py`) that executes every screen.
+> The UI smoke caught and verified the fix for BUG-005 (duplicate widget ID). A
+> manual pass against a real Oracle sandbox (connection success, live NL→SQL,
+> browser visuals) is still recommended before external GA.
 
 ---
 
