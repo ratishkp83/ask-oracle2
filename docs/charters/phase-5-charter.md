@@ -3,11 +3,11 @@
 > **Document:** Phase Charter · **Version:** 1.2 · **Status:** Development complete → exit-gate review · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**Development + Testing complete** (2026-06-10). Decisions D-A…D-E resolved and the
-[design](../data-dictionary-design.md) approved; built across commits `4d08844 → HEAD`
-with **155 tests green** and governed docs updated in lockstep. **Next: the mandatory
-independent adversarial review + QA exit gate (R5.x) — the owner supplies a fresh reviewer
-agent over `6a299f8..HEAD`; remediate to PASS, then close.**
+**In exit gate** (2026-06-10). Built across `4d08844 → 865719a`; design approved.
+Independent review **r1 = FAIL** (1 blocking — F-1 S2, metadata-only persistence not
+enforced; [phase-5-review-r1.md](../reviews/phase-5-review-r1.md)). **Remediated**: F-1
+fixed (not waived) + F-2…F-5; **159 tests green** (`ee14e70`). **Next: r2 re-review** on
+the fixes + regression (owner-supplied reviewer) → on PASS, close Phase 5.
 
 ## Context — where we are today (grounding facts)
 - **A schema model already exists** (`src/schema.py`): `Schema` → `TableDefinition` →

@@ -25,6 +25,23 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   D5, D6, traceability updated in lockstep.
 - Tests: **+25** → **155 total** green.
 
+### Fixed (Phase 5 review r1 remediation)
+- **F-1 (S2, blocking):** `POST /schemas` no longer persists arbitrary blobs — the
+  `definition` is normalized through `schema_from_dict`→`schema_to_dict`, so injected
+  secrets/row-data/connection-strings cannot reach `schemas.json` (**metadata-only enforced**).
+  `schema_from_dict` is now whitelist-only and never raises.
+- **F-3 (S3):** malformed stored definitions no longer crash the UI Load path (tolerant
+  `schema_from_dict` + `try/except` guard).
+- **F-2 (S3):** introspection degradation `warnings[]` (a 200 payload) are now generic; the
+  raw driver exception is logged server-side only. (The introspect `400` verbatim error is
+  deferred to ITM-015 / Phase 7, uniform with `/execute`.)
+- **F-4 (S3):** `sqlglot==30.10.0` pinned exactly (the safety layer is parser-version-
+  sensitive); `pydantic`/`oracledb`/`cryptography` pinned to the validated set so
+  `pip install -r requirements.txt` reproduces the green suite.
+- **F-5 (S4):** a blank `owner` (empty or whitespace) on `/schemas/introspect` now returns a
+  uniform `400`.
+- Suite **155 → 159** green. r1 verdict was **FAIL** (1 blocking); **r2 re-review pending**.
+
 ### Notes (Phase 4 closure)
 - **Phase 4 CLOSED** (exit gate passed 2026-06-10): independent adversarial review
   **r1 = `PASS-WITH-FIXES`** (no S1/S2) — [phase-4-review-r1.md](reviews/phase-4-review-r1.md).

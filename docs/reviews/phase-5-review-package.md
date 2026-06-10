@@ -42,3 +42,17 @@
 
 ## Expected reviewer output
 Verdict (`PASS` / `PASS-WITH-FIXES` / `FAIL`), findings table (severity + exact `file:line` + repro), blocking list (default: open S1/S2), QA results, could-not-verify — saved to `docs/reviews/phase-5-review-r1.md`.
+
+---
+
+## r2 scope (after r1 remediation)
+
+- **r1 verdict:** **FAIL** — 1 blocking (F-1, S2). Full findings: [phase-5-review-r1.md](phase-5-review-r1.md). Triage + dispositions in [issue-log.md](../issue-log.md) (Phase-5 section).
+- **Remediation change set for r2:** `865719a..HEAD` (remediation commit `ee14e70`). Re-run these probes + regression:
+  - **F-1 (blocking)** — `create_schema` now normalizes via `schema_to_dict(schema_from_dict(body.definition))`; `schema.py:schema_from_dict` is whitelist-only. **Re-run the poison-blob probe** (`POST /schemas` with `db_password`/`rows`/`connection_string` in `definition`) → expect the stored + echoed definition to contain **only** `{tables, relationships}`; secrets gone. (Regression: `test_schemas_api.py::test_create_schema_strips_non_metadata`, `test_schema_tools.py::test_schema_from_dict_drops_unknown_keys`.)
+  - **F-3** — `schema_from_dict` no longer raises; UI Load guarded. Re-run the malformed-definition probe → no `TypeError` (returns an empty/partial schema). (`test_schema_tools.py::test_schema_from_dict_tolerates_malformed`.)
+  - **F-2 (200-path)** — degradation `warnings[]` are generic; re-run the `LeakyClient` ORA-error probe → **no `ORA`/host tokens in `warnings`** (raw exc now logged server-side only). The introspect **400** verbatim path is **deferred** → [ITM-015](../issue-log.md) (Phase-7, uniform with `/execute`) — confirm the deferral rationale is acceptable rather than re-raising as blocking.
+  - **F-4** — `requirements.txt` pins `sqlglot==30.10.0` + `pydantic==2.13.4`/`oracledb==4.0.1`/`cryptography==48.0.1`; confirm a clean `pip install -r requirements.txt` reproduces the **159-green** set (green == shipped).
+  - **F-5** — empty/whitespace `owner` → uniform **400**. (`test_schemas_api.py::test_introspect_empty_owner_is_400`.)
+  - **Regression:** full suite (now **159**) green; confirm no new gaps and the chokepoint/bind invariants still hold.
+- Output → `docs/reviews/phase-5-review-r2.md`.
