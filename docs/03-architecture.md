@@ -58,7 +58,11 @@ Both the UI and the API converge on `src/core/`. The React/Vite scaffold exists 
 
 ## 4. Cross-cutting concerns
 
-- **Safety:** one enforcer, used by API, UI, and NL→SQL post-check.
+- **Safety:** one enforcer, used by API, UI, and NL→SQL post-check. The parse gate proves
+  a statement *is* a read-only SELECT/CTE; it cannot prove a SELECT has no side effects
+  (a SELECT may call a side-effecting/autonomous-txn function). The "no data modification"
+  guarantee therefore requires **defense in depth**: the parse gate **plus** a required
+  least-privilege read-only DB account ([ADR-009](adr/ADR-009-readonly-db-account-precondition.md), [Deployment §0](07-deployment-plan.md)).
 - **Secrets:** env-only; no inline keys; `.env` git-ignored; profile passwords encrypted at rest.
 - **Audit:** every attempt (allowed/rejected) logged with SQL fingerprint, never raw SQL/creds.
 - **Limits:** centrally configured; per-request `max_rows` may only narrow.
@@ -69,7 +73,7 @@ Python 3.11/3.13 · FastAPI · Streamlit · python-oracledb (thin) · sqlglot ·
 
 ## 6. Architecture decisions
 
-See [ADR index](adr/). Ratified: ADR-001…008.
+See [ADR index](adr/). Ratified: ADR-001…009.
 
 ## Revision history
 

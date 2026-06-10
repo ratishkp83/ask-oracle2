@@ -28,7 +28,7 @@ safety constraints of production Oracle databases.
 ## 4. Product principles (non-negotiables)
 
 1. **Minimal, obvious UX** — task-based menus, not BI jargon.
-2. **Explainable, safe intelligence** — AI *proposes* SQL; users review/edit before running. **SELECT/CTE only; DML/DDL/PL-SQL rejected** by a single central safety layer.
+2. **Explainable, safe intelligence** — AI *proposes* SQL; users review/edit before running. **SELECT/CTE only; DML/DDL/PL-SQL rejected** by a single central safety layer, **backed by a required least-privilege read-only database account** (defense in depth — see [ADR-009](adr/ADR-009-readonly-db-account-precondition.md)).
 3. **Oracle-centric** — tuned to Oracle SQL/PLSQL idioms and EBS schema patterns.
 4. **Local/hosted LLM first, external optional** — provider abstraction; redaction for external LLMs.
 5. **Secrets are secrets** — no credentials in source/logs; encrypted at rest.
@@ -42,7 +42,7 @@ safety constraints of production Oracle databases.
 
 ## 6. Out of scope (current)
 
-- Write-back / data modification of any kind (permanent product guarantee).
+- Write-back / data modification of any kind (permanent product guarantee, delivered by the SELECT/CTE-only safety layer **and** a required least-privilege read-only DB account — [ADR-009](adr/ADR-009-readonly-db-account-precondition.md)).
 - Full pixel-perfect/embedded report design.
 - Multi-tenant user accounts / RBAC (future; see [ADR-004](adr/ADR-004-per-user-llm-config.md)).
 
@@ -51,3 +51,4 @@ safety constraints of production Oracle databases.
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product | Baseline from techspec decomposition. |
+| 1.1 | 2026-06-10 | Product | Phase 4 r1/F1: no-modification guarantee framed as defense in depth (safety layer + required read-only DB account, ADR-009). |

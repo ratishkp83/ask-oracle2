@@ -104,6 +104,8 @@ class SQLExecuteRequest(BaseModel):
     def _require_target(self) -> "SQLExecuteRequest":
         if not self.profile_id and self.connection is None:
             raise ValueError("Provide either profile_id or an inline connection.")
+        if self.profile_id and self.connection is not None:
+            raise ValueError("Provide exactly one of profile_id or connection, not both.")
         return self
 
 

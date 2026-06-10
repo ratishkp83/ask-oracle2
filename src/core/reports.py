@@ -19,6 +19,7 @@ file is rewritten once (idempotent thereafter).
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import threading
@@ -117,14 +118,19 @@ def _coerce_value(ptype: ParamType, name: str, value: Any) -> Any:
         if isinstance(value, bool):
             raise ValueError(f"Parameter '{name}' must be a number.")
         if isinstance(value, (int, float)):
-            return value
-        s = str(value).strip()
-        if re.fullmatch(r"[+-]?\d+", s):
-            return int(s)
-        try:
-            return float(s)
-        except ValueError:
-            raise ValueError(f"Parameter '{name}' must be a number.")
+            num: Any = value
+        else:
+            s = str(value).strip()
+            if re.fullmatch(r"[+-]?\d+", s):
+                num = int(s)
+            else:
+                try:
+                    num = float(s)
+                except ValueError:
+                    raise ValueError(f"Parameter '{name}' must be a number.")
+        if isinstance(num, float) and not math.isfinite(num):
+            raise ValueError(f"Parameter '{name}' must be a finite number.")
+        return num
     if ptype == "date":
         if isinstance(value, (date, datetime)):
             return value

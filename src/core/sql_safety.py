@@ -17,6 +17,13 @@ Every SQL string that reaches an Oracle connection MUST pass through
 The layer is intentionally **fail-closed**: anything we cannot confidently prove
 to be a read-only SELECT is rejected. This can occasionally reject exotic-but-
 valid Oracle SQL; for a safety-first product that trade-off is deliberate.
+
+**Scope of this guarantee (important):** parsing proves a statement *is* a single
+read-only SELECT/CTE. It does **not** prove the SELECT has no side effects — a SELECT
+can invoke a PL/SQL function that performs I/O or an autonomous-transaction DML. The
+"no data modification" product guarantee therefore depends on **defense in depth**: this
+parse gate **plus** a required least-privilege read-only database account (see ADR-009
+and docs/07-deployment-plan.md §0). Do not rely on this module alone for that guarantee.
 """
 
 from __future__ import annotations
@@ -133,6 +140,14 @@ def assert_safe_select(sql: str) -> SafetyResult:
         return SafetyResult(
             allowed=False,
             reason="Row-locking clauses (e.g. FOR UPDATE) are not allowed.",
+        )
+
+    # Layer 3c: reject `SELECT ... INTO ...` — not a pure read-only projection
+    # (PL/SQL `SELECT INTO` in Oracle; creates a table in T-SQL/Postgres dialects).
+    if statement.find(exp.Into) is not None:
+        return SafetyResult(
+            allowed=False,
+            reason="SELECT ... INTO is not allowed; only read-only projections are permitted.",
         )
 
     # Layer 4: keyword denylist backstop over normalised, literal-stripped SQL.

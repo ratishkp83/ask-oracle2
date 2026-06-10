@@ -60,6 +60,15 @@ def test_execute_requires_a_target():
     assert resp.status_code == 422  # neither profile_id nor connection
 
 
+def test_execute_rejects_both_targets():
+    # F4: contract says exactly one of profile_id / connection.
+    resp = client.post(
+        "/execute",
+        json={"sql": "SELECT 1 FROM DUAL", "profile_id": "x", "connection": INLINE},
+    )
+    assert resp.status_code == 422
+
+
 def test_execute_unknown_profile_returns_404():
     resp = client.post("/execute", json={"sql": "SELECT 1 FROM DUAL", "profile_id": "missing"})
     assert resp.status_code == 404

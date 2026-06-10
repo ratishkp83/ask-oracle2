@@ -32,6 +32,8 @@ REJECTED = [
     "BEGIN NULL; END;",                       # PL/SQL block
     "SELECT * FROM emp; DROP TABLE emp",       # stacked statements
     "SELECT * FROM emp FOR UPDATE",            # row locking
+    "SELECT x INTO y FROM emp",                # SELECT ... INTO is not a read-only projection (F2)
+    "SELECT a, b INTO t2 FROM t1",             # SELECT INTO new table (T-SQL/PG dialect) (F2)
 ]
 
 

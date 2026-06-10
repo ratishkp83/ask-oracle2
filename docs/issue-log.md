@@ -21,13 +21,16 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 ## Open items (non-defect, tracked)
 
 - ITM-005: Streamlit UI not browser-verified — see [RISK-04](risk-register.md).
-- ITM-006: Migrate legacy `connection.json` (plaintext) to encrypted profiles — see [RISK-09](risk-register.md).
+- ITM-006: Migrate legacy `connection.json` (plaintext) to encrypted profiles — see [RISK-09](risk-register.md). **(Phase 4 r1, F5 — S3, pre-existing):** the Streamlit sidebar manual-entry **Save** writes the password in **cleartext** to `storage/connection.json` (profiles are Fernet-encrypted; this legacy single-connection path is not). Mitigated: `storage/` is git-ignored and local-only. **Disposition: deferred to this migration item** — fix options: encrypt via `crypto.encrypt_secret`, stop persisting the password (session-only), or drop the manual-save path in favour of profiles. Pending owner go-ahead on the quick fix vs. full migration.
 - ITM-007: `use_container_width` is deprecated in Streamlit (removal scheduled post-2025-12-31); migrate `st.button`/`st.dataframe`/`st.download_button` calls to `width='stretch'`. Severity S4 (warning only; app functions).
 - ITM-008: (deferred from F3) optional NL-question PII scrubbing before external send. Current mitigation: question text is sent by design; tenants set `LLM_POLICY=external_disabled`. Rationale: the question is the user's own intent; scrubbing risks degrading legitimate queries. Revisit with the redaction/policy work.
 - ITM-009: pre-existing CORS `allow_origins=["*"]` + `allow_credentials=True` + `0.0.0.0` bind (`src/api.py`) — harden (specific origins, auth) before any multi-tenant deployment. Flagged by Phase-3 reviewer §5; out of Phase-3 scope. **r2: deferral confirmed acceptable** (pre-existing, inert for single-session posture) — hard precondition for any networked/multi-tenant deployment ([RISK-12](risk-register.md)).
 - ITM-010: (F7, from r2) `validate_base_url` (`src/core/llm/providers.py`) only checks canonical IP literals via `ipaddress.ip_address`, so integer/hex/octal encodings of loopback (`2130706433`, `0x7f000001`, `017700000001` = 127.0.0.1) are treated as hostnames and allowed. Severity **S4** — **not exploitable on the tested stack** (`getaddrinfo` does not resolve those forms → fails closed at the network layer); platform/resolver-dependent. Fix: reject bare-integer/`0x…` hosts or normalize via `getaddrinfo` + re-apply the private/loopback check. Tracked under [RISK-11](risk-register.md) residual. Linux/Docker-target behavior not yet verified.
 - ITM-011: (Phase 4, charter D-B) **list / multi-value bind parameters deferred.** v1 supports scalar binds only (string/number/date); `IN (:list)` expansion needs a safe design (e.g. generating `:p0,:p1,…` binds, not interpolation). Severity S4 (feature gap). Revisit when a report needs multi-value filters.
 - ITM-012: (Phase 4) **EBS template SQL not validated against a live instance.** The catalog is proven safe (every template passes `assert_safe_select`) and param-consistent, but standard EBS table/column names vary by version/customization; templates are review-before-run starting points. Live-EBS validation is part of the pre-GA manual/live-DB pass ([RISK-04](risk-register.md) / [RISK-14](risk-register.md)).
+- ITM-013: (Phase 4 r1, R1 — S4) **File-store durability/concurrency.** `JsonFileReportStore._save_locked` (and the mirror in `profiles.py`) do a non-atomic truncate+write with a per-process lock — crash-during-write can corrupt the JSON; >1 worker can lose updates. Fix before multi-worker/Phase 7: write temp + `os.replace`, add a file lock, or move to SQLite. Tracked under [RISK-16](risk-register.md).
+- ITM-014: (Phase 4 r1, R2 — S4) **Legacy-migration robustness.** `_deserialize` treats any record missing `id`/`name` as legacy and raises uncaught on a malformed v2 record (→ 500 on `list/get`). Harden: distinguish "legacy shape" from "corrupt v2"; skip+log bad records. Add a malformed-store test.
+- ITM-015: (Phase 4 r1, F6 — S3, **deferred to Phase 7**) **Verbatim driver errors** returned as `detail=str(exc)` from `_run_sql`/`/test-connection`/`/profiles/{id}/test` can leak DSN/host/port/username (never the password). Inert on a local single-user tool; **harden before the networked/multi-tenant Phase 7** alongside CORS/auth ([ITM-009](#)/[RISK-12](risk-register.md)): return a generic "Database error — see server logs" to the client, log detail server-side (audit already records `reason="execution_error"`). Rationale for deferral: not exploitable in the current local posture; same Phase-7 hardening batch.
 
 ## Phase 3 — independent review findings & remediation (r1 → r2)
 
@@ -43,6 +46,23 @@ Sources: [reviews/phase-3-review-r1.md](reviews/phase-3-review-r1.md) (verdict: 
 | F6 | S4 | `api_key` printed by `LLMConfig`/`LLMSettings` repr | **Fixed** — `repr=False` on both | ✅ Fixed |
 | F7 | S4 | (r2) `validate_base_url` allows integer/hex/octal IP encodings of loopback | **Backlogged** → ITM-010 (not exploitable on tested stack; non-blocking) | Open (S4) |
 
+## Phase 4 — independent review findings & remediation (r1)
+
+Source: [reviews/phase-4-review-r1.md](reviews/phase-4-review-r1.md) — verdict **PASS-WITH-FIXES** (no S1/S2; 118 tests at review time). Remediation suite: **129 tests green**.
+
+| ID | Sev | Finding | Disposition | Status |
+|----|-----|---------|-------------|--------|
+| F1 | S3* | A SELECT can call a side-effecting / autonomous-txn PL/SQL function (`DBMS_LOCK.SLEEP` etc.) — parse gate can't prove side-effect-freedom | **Fixed (documented control):** least-privilege read-only DB account made a required deployment precondition ([ADR-009](adr/ADR-009-readonly-db-account-precondition.md), [Deployment §0](07-deployment-plan.md)); guarantee reframed as defense-in-depth (D1/D3 + `sql_safety` docstring); [RISK-15](risk-register.md). *Owner severity call (S3 vs S2) + optional parse denylist pending.* | ✅ Documented |
+| F2 | S3 | `SELECT … INTO …` passed the gate (not a read-only projection) | **Fixed** — reject `exp.Into` in `assert_safe_select` | ✅ Fixed (`test_sql_safety.py`) |
+| F3 | S3 | `number` params accepted non-finite `nan`/`inf`/`1e400` | **Fixed** — `validate_binds` + `_coerce_value` reject non-finite floats (`math.isfinite`) | ✅ Fixed (`test_bind_safety.py`, `test_reports.py`, `test_reports_api.py`) |
+| F4 | S4 | Contract says `/execute` rejects both `profile_id`+`connection` (422); code accepted both | **Fixed** — validator enforces exactly-one | ✅ Fixed (`test_execute_endpoint.py`) |
+| F5 | S3 | Manual-entry **Save** writes plaintext password to `connection.json` (pre-existing legacy path) | **Deferred** → [ITM-006](#)/[RISK-09](risk-register.md) (git-ignored, local-only); owner go-ahead pending on quick encrypt-or-drop fix | ⏳ Deferred |
+| F6 | S3 | Verbatim driver errors leak DSN/host (never password) | **Deferred to Phase 7** → [ITM-015](#) (inert in local posture; bundle with CORS/auth hardening) | ⏳ Deferred |
+| R1 | S4 | Non-atomic file writes + per-process lock | **Backlogged** → [ITM-013](#)/[RISK-16](risk-register.md) (Phase-7 multi-worker gate) | 📋 Backlog |
+| R2 | S4 | Fragile legacy migration on corrupt v2 record | **Backlogged** → [ITM-014](#) | 📋 Backlog |
+
+\* F1 severity is an owner decision (S3 with the precondition documented this phase, vs S2 gating) — the marketed "no data modification" guarantee (D1 §6) is now framed as defense-in-depth and backed by the documented read-only-account precondition either way.
+
 ## Revision history
 
 | Version | Date | Author | Change |
@@ -50,4 +70,5 @@ Sources: [reviews/phase-3-review-r1.md](reviews/phase-3-review-r1.md) (verdict: 
 | 1.0 | 2026-06-10 | Engineering | Initial log; Phase-2 defects recorded as Fixed. |
 | 1.1 | 2026-06-10 | Engineering | Phase-3 r1 findings F1–F6 logged + remediated; ITM-008/009 added. |
 | 1.2 | 2026-06-10 | Engineering | Phase-3 r2 verdict PASS-WITH-FIXES recorded; F7/ITM-010 logged; deferrals (ITM-008/009) confirmed acceptable. |
+| 1.3 | 2026-06-10 | Engineering | Phase 4 r1 findings F1–F6/R1–R2 logged; F2/F3/F4 fixed, F1 documented (ADR-009), F5/F6 deferred, R1/R2 backlogged; ITM-013/014/015 added. |
 | 1.3 | 2026-06-10 | Engineering | Phase 4: ITM-011 (list/multi-value binds deferred) + ITM-012 (templates not live-EBS validated) logged. |

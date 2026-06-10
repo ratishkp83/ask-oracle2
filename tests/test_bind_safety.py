@@ -58,6 +58,13 @@ def test_validate_binds_rejects_non_mapping():
         validate_binds([("a", 1)])  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_validate_binds_rejects_non_finite_numbers(bad):
+    # F3: NaN/Infinity are never valid Oracle NUMBER binds.
+    with pytest.raises(SqlSafetyError):
+        validate_binds({"n": bad})
+
+
 # --- the value never enters the SQL text ---------------------------------- #
 def test_injection_as_bind_value_does_not_alter_parsed_sql():
     sql = "SELECT * FROM emp WHERE name = :n"

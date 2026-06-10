@@ -114,6 +114,14 @@ def test_run_unknown_report_is_404():
     assert resp.status_code == 404
 
 
+def test_run_report_non_finite_number_is_400(no_db):
+    # F3 at the HTTP layer: a NaN/inf number param is a clean 400, not a driver error.
+    rid = client.post("/reports", json=_make_report()).json()["id"]
+    resp = client.post(f"/reports/{rid}/run", json={"connection": INLINE, "binds": {"org_id": "nan"}})
+    assert resp.status_code == 400
+    assert "finite number" in resp.json()["detail"]
+
+
 def test_run_report_unknown_bind_is_400(no_db):
     rid = client.post("/reports", json=_make_report()).json()["id"]
     resp = client.post(

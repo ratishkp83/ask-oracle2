@@ -20,6 +20,8 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | RISK-12 | Permissive CORS `*` + credentials + `0.0.0.0` bind (pre-existing) | Medium | Cross-origin/SSRF amplification once exposed/multi-tenant | Medium | Restrict origins + add auth before multi-tenant ([ITM-009](issue-log.md)) | Eng | Open |
 | RISK-13 | Parameterized reports could re-introduce SQL injection / SELECT-only bypass | High | Read-only guarantee defeated via parameter values | Low | **Bind variables only**, never interpolated ([ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)); `validate_binds` (scalar-only); SQL-text safety check unchanged + runs first; 11 bind-safety tests (injection-as-value inert; DML-with-binds rejected) | Eng | **Mitigating** |
 | RISK-14 | EBS templates assume a standard schema; may fail/mislead on customized instances | Low | Template run errors or wrong results on customized EBS | Medium | Labelled "standard EBS reference — review before running"; editable; never auto-run; live-EBS validation deferred to pre-GA pass ([RISK-04](#)) / [ITM-012](issue-log.md) | Product/Eng | **Accepted** |
+| RISK-15 | A SELECT can invoke a side-effecting / autonomous-txn PL/SQL function (parse gate can't prove side-effect-freedom) — F1 | High | "No data modification" guarantee defeated *iff* a writing function + EXECUTE grant exist on the connected account | Low | **Defense in depth:** SELECT/CTE-only parse gate (ADR-001) + bind params (ADR-007) **and a required least-privilege read-only DB account** ([ADR-009](adr/ADR-009-readonly-db-account-precondition.md), [Deployment §0](07-deployment-plan.md)) — the account, not parsing, is the control. Optional parse-time package denylist available as extra defense-in-depth (owner decision; not enforced) | Eng/Ops | **Mitigating** |
+| RISK-16 | File-store durability/concurrency: non-atomic writes + per-process lock (R1) | Low | Torn `reports.json`/`profiles.json` on crash; lost updates with >1 worker | Low | Single-process today; atomic temp+`os.replace` / file lock / SQLite before multi-worker (Phase 7) — [ITM-013](issue-log.md) | Eng | **Accepted** (Phase-7 gate) |
 
 ## Revision history
 
@@ -27,3 +29,4 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Delivery | Initial register from P2.5 issue triage. |
 | 1.1 | 2026-06-10 | Delivery | Phase 4: RISK-13 (bind-injection, mitigated by ADR-007) + RISK-14 (EBS template schema variance, accepted) added. |
+| 1.2 | 2026-06-10 | Delivery | Phase 4 review r1: RISK-15 (side-effecting functions → read-only-account precondition, ADR-009) + RISK-16 (file-store durability, Phase-7) added. |

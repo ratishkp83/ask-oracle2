@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 import time
 from dataclasses import dataclass
@@ -50,6 +51,9 @@ def validate_binds(binds: Optional[Dict[str, Any]]) -> Dict[str, Any]:
             raise SqlSafetyError(
                 f"Bind '{name}' must be a scalar (str/number/date), got {type(value).__name__}."
             )
+        # Reject non-finite numbers (NaN/Infinity) — never valid for an Oracle NUMBER.
+        if isinstance(value, float) and not math.isfinite(value):
+            raise SqlSafetyError(f"Bind '{name}' must be a finite number.")
     return binds
 
 

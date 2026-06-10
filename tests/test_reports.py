@@ -131,6 +131,14 @@ def test_coerce_number_type_validation():
         coerce_report_binds(params, {"amount": "not-a-number"})
 
 
+@pytest.mark.parametrize("bad", ["nan", "inf", "-inf", "1e400"])
+def test_coerce_rejects_non_finite_numbers(bad):
+    # F3: "nan"/"inf"/overflow must be rejected, not coerced to float NaN/Inf.
+    params = [ReportParam(name="amount", type="number")]
+    with pytest.raises(ValueError, match="finite number"):
+        coerce_report_binds(params, {"amount": bad})
+
+
 def test_coerce_optional_without_value_is_skipped():
     params = [ReportParam(name="org_id", type="number", required=False)]
     assert coerce_report_binds(params, {}) == {}

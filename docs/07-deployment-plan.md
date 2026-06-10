@@ -2,6 +2,33 @@
 
 > **Document:** Deployment Plan · **Version:** 1.0 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-10
 
+## 0. Required database account (read-only) — **non-negotiable precondition**
+
+Ask Oracle Reports must connect with a **least-privilege, read-only Oracle account**.
+The application's SELECT/CTE-only safety layer proves the tool *issues* only read-only
+statements; the read-only account is what guarantees those statements **cannot modify
+data** even if a SELECT invokes a side-effecting/autonomous-transaction function (see
+[ADR-009](adr/ADR-009-readonly-db-account-precondition.md), review finding F1). Both
+layers are required; neither alone delivers the "no data modification" guarantee.
+
+Provision an account with **only**:
+- `CREATE SESSION`;
+- `SELECT` on the specific target objects (or a read-only role / `SELECT ANY TABLE` only
+  if the deployment explicitly accepts that breadth);
+- **no** `INSERT` / `UPDATE` / `DELETE` / `MERGE`;
+- **no** `EXECUTE` on side-effecting packages (`DBMS_LOCK`, `DBMS_SCHEDULER`/`DBMS_JOB`,
+  `UTL_FILE`/`UTL_HTTP`/`UTL_SMTP`/`UTL_TCP`, `DBMS_AQ`, …).
+
+```sql
+-- Illustrative; scope SELECT grants to the objects the analysts need.
+CREATE USER ask_oracle_ro IDENTIFIED BY <strong-secret>;
+GRANT CREATE SESSION TO ask_oracle_ro;
+GRANT SELECT ON apps.ap_invoices_all TO ask_oracle_ro;   -- repeat per object/view
+-- Do NOT grant any DML, EXECUTE on writing packages, or DBA roles.
+```
+
+Onboarding/release checklist must confirm the connecting profile uses such an account.
+
 ## 1. Environments
 
 | Env | UI | API | Config source |
@@ -33,8 +60,9 @@
 
 1. Green CI on the branch.
 2. Docs current (CHANGELOG entry added).
-3. Tag/commit; deploy (Render auto-deploy on push, or `docker compose up --build -d`).
-4. Post-deploy: hit `/health`; run profile test against a sandbox.
+3. **Confirm the connecting Oracle account is least-privilege read-only** (§0 / [ADR-009](adr/ADR-009-readonly-db-account-precondition.md)).
+4. Tag/commit; deploy (Render auto-deploy on push, or `docker compose up --build -d`).
+5. Post-deploy: hit `/health`; run profile test against a sandbox.
 
 ## 5. Rollback
 
@@ -53,3 +81,4 @@
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Eng/Ops | Baseline; env config, rotation runbook, rollback. |
+| 1.1 | 2026-06-10 | Eng/Ops | Phase 4 r1/F1: §0 required least-privilege read-only DB account (ADR-009) + release-checklist gate. |
