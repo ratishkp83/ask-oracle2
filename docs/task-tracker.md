@@ -112,8 +112,8 @@ tests green.** Next: independent adversarial exit-gate review (R6.x), owner-supp
 | P6-6 | Tests (sanitization/no-leak, error-id + header, log JSON shape, metrics, regression) | ✅ Completed | delivered across B1–B4: `test_logging_config.py` (7), `test_error_handling.py` (10), `test_metrics.py` (5) = **+22 → 182**; no chokepoint/safety regression |
 | P6-7 | Governed-doc updates (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers) + **close ITM-015** | ✅ Completed | **B6**; D3/D5/D6/D7 + ADR-012 + CHANGELOG + traceability (NFR-7) + risk-register (RISK-19 Closed) + issue-log (ITM-015/016 Closed) + governance index, in lockstep |
 | P6-G | (D-G) CI Python matrix 3.11 + 3.13 — **closes ITM-016** | ✅ Completed | **B5**; `ci.yml` `strategy.matrix.python-version: ["3.11","3.13"]` (`fail-fast: false`); **ITM-016 CLOSED** |
-| R6.1 | Prepare exit-gate review package | 🔄 In Progress | self-contained brief w/ Phase-6 change range + invariants for the owner-supplied reviewer |
-| R6.2–.7 | Phase-6 independent adversarial review + QA gate | 📋 Planned | owner-supplied reviewer; iterate to PASS |
+| R6.1 | Prepare exit-gate review package | ✅ Completed | [reviews/phase-6-review-package.md](reviews/phase-6-review-package.md); range `d059295..HEAD`, 9 Phase-6 invariants to attack, leak-proof pointer |
+| R6.2–.7 | Phase-6 independent adversarial review + QA gate | 📋 Planned (next) | **owner supplies the reviewer agent**; iterate to PASS → close Phase 6 |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -165,3 +165,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.14 | 2026-06-10 | Delivery | Phase 6 B4 done: P6-5 Completed; UI driver-error surfaces sanitized (shared helper) + ref id; safety/validation messages verbatim; 182 tests. |
 | 1.15 | 2026-06-10 | Delivery | Phase 6 B5 done: P6-G Completed; CI 3.11+3.13 matrix; **ITM-016 CLOSED**. |
 | 1.16 | 2026-06-10 | Delivery | Phase 6 B6 done: P6-6/P6-7 Completed; governed docs (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers, index) in lockstep; build B1…B6 complete (182 tests); R6.1 review-package prep is next. |
+| 1.17 | 2026-06-10 | Delivery | Phase 6 R6.1 Completed — review package prepared (`d059295..HEAD`). Next: owner runs the independent adversarial exit-gate reviewer (R6.2). |
