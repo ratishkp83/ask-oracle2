@@ -51,15 +51,16 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   DB-error helper binds its `error_id` so the logged and returned ids cannot diverge. **F-5
   (S4):** leak tests now cover `/schemas/introspect` and assert response **headers** are clean.
   **F-7 (Info):** non-DB `str(exc)` surfaces deferred → ITM-017 (Phase-7). Suite **+3 → 185**.
-- **ITM-016 (S4):** corrected from the premature B5 "closed" to **Mitigating** — the fix is in
-  and clean-install-proven on 3.13; it **closes when the owner pushes** and CI demonstrates
-  green on both interpreter legs (3.11 wheels confirmed; code interpreter-agnostic).
+- **ITM-016 (S4) CLOSED:** corrected from the premature B5 "closed" — the fix was re-pinned +
+  clean-install-proven on 3.13, then **pushed (`d059295..2a88a04`) and demonstrated by CI run
+  #7 green on both `test (3.11)` and `test (3.13)`** (so "green == shipped" is proven on every
+  interpreter the matrix targets, not asserted).
 
 ### Notes (Phase 6)
 - All changes are **additive** and **do not touch** the SELECT-only chokepoint (`src/db.py`,
   `src/core/sql_safety.py`); error responses keep `detail` and add `error_id`; status codes
-  unchanged. **Phase 6 CLOSED via the gate (r1 → r2 PASS); 185 tests; push pending for the CI
-  demonstration (ITM-016).**
+  unchanged. **Phase 6 CLOSED via the gate (r1 → r2 PASS); 185 tests; pushed and CI-green on
+  3.11 + 3.13. No open residual.**
 
 ### Notes (Phase 5 closure)
 - **Phase 5 CLOSED** (exit gate passed 2026-06-10): independent review **r1 = FAIL**

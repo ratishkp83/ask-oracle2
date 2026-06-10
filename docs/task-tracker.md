@@ -100,8 +100,8 @@ structured JSON logging, request/error-reference IDs, uniform DB-error sanitizat
 **r1 = PASS-WITH-FIXES** (2 blocking S2 — F-1/F-2 dependency/CI hygiene; pins not
 3.13-installable + httpx floor broke LLM + CI never ran) → remediated (re-pinned to a
 **clean-install-proven 3.13-capable** set; F-3/F-4/F-5 fixed) → **r2 = PASS**. **185 tests
-green**; chokepoint unchanged. **Residual:** ITM-016 Mitigating (owner pushes so CI
-demonstrates both legs).
+green**; chokepoint unchanged. **Pushed (`d059295..2a88a04`); CI run #7 green on both
+3.11 + 3.13 → ITM-016 CLOSED.** No open residual.
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
@@ -120,7 +120,7 @@ demonstrates both legs).
 | R6.2 | Independent adversarial review + QA (r1) | ✅ Done | verdict **PASS-WITH-FIXES** ([phase-6-review-r1.md](reviews/phase-6-review-r1.md)); all 9 invariants + suite verified green; 2 blocking **S2 (F-1/F-2)** = dependency/CI hygiene (pins not 3.13-installable + httpx floor breaks LLM + CI never ran) external to the Phase-6 code; F-3/F-4/F-5/F-7 minor |
 | R6.3 | Remediate r1 findings + regression | ✅ Done | re-pinned to a clean-install-proven 3.13-capable set (F-1/F-2; 185 green on a fresh 3.13 venv); F-3 ingress id-sanitization, F-4 single id source, F-5 introspect+header leak tests; F-6 package note; F-7→ITM-017 |
 | R6.4 | Re-review (r2) on the fixes | ✅ Done | verdict **PASS** ([phase-6-review-r2.md](reviews/phase-6-review-r2.md)); F-1/F-2 clean-install re-verified, F-3/F-4/F-5 confirmed; ITM-016 Mitigating (CI demo pending push) |
-| R6.5 | Phase-6 closure sign-off | ✅ Completed | **gate PASSED**: r1 PASS-WITH-FIXES → r2 PASS; 185 tests; governed docs current; **only residual = owner push so CI demonstrates both legs (ITM-016)** |
+| R6.5 | Phase-6 closure sign-off | ✅ Completed | **gate PASSED**: r1 PASS-WITH-FIXES → r2 PASS; 185 tests; governed docs current. **Pushed `d059295..2a88a04`; CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed; no open residual. |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -147,7 +147,7 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 - **Phase-3 closure gate: PASSED (2026-06-10)** — r2 PASS-WITH-FIXES, no open blocking. Phase 4 may open.
 - **Phase 4: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES, no open blocking; 130 tests).
 - **Phase 5: CLOSED (2026-06-10)** — exit gate PASSED (r1 FAIL → r2 PASS-WITH-FIXES, no open blocking; 160 tests). Phase 6 may open next.
-- **Phase 6: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES → r2 PASS; 185 tests). ITM-015 closed; validated set re-pinned 3.13-capable (F-1/F-2). Residual: ITM-016 (CI demo pending owner push). Phase 7 (optional) may open next.
+- **Phase 6: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES → r2 PASS; 185 tests). ITM-015 + ITM-016 closed (pushed; CI run #7 green on both 3.11 + 3.13). Phase 7 (optional) may open next.
 - Pre-GA (not gating Phase 3): manual UI/live-DB pass (RISK-04), `/v1` API prefix (T-18), legacy `connection.json` migration (T-19).
 - **Hard precondition for any networked/multi-tenant deployment (Phase 7):** CORS/auth hardening (ITM-009/RISK-12) + `base_url` host-normalization (F7/ITM-010).
 
@@ -174,3 +174,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.16 | 2026-06-10 | Delivery | Phase 6 B6 done: P6-6/P6-7 Completed; governed docs (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers, index) in lockstep; build B1…B6 complete (182 tests); R6.1 review-package prep is next. |
 | 1.17 | 2026-06-10 | Delivery | Phase 6 R6.1 Completed — review package prepared (`d059295..HEAD`). Next: owner runs the independent adversarial exit-gate reviewer (R6.2). |
 | 1.18 | 2026-06-10 | Delivery | Phase 6 exit gate: r1 = PASS-WITH-FIXES (F-1/F-2 S2 = dependency/CI hygiene) → remediated (3.13-capable repin, clean-install-proven, 185 green; F-3/F-4/F-5 fixed) → r2 = PASS. **Phase 6 CLOSED.** Residual ITM-016 (CI demo pending push). |
+| 1.19 | 2026-06-10 | Delivery | Pushed `d059295..2a88a04`; **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed, no open residual. |

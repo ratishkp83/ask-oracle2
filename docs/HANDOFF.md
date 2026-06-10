@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 1.7 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Session Handoff · **Version:** 1.8 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -55,8 +55,9 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
   chokepoint (`db.py`/`sql_safety.py`) unchanged. **r1 F-1/F-2** corrected a premature
   ITM-016 closure: the validated set was **re-pinned to a clean-install-proven 3.13-capable
   configuration** (numpy 2.2.6 / pandas 2.2.3 / streamlit 1.58.0 / fastapi 0.136.3 / Pillow
-  11.0.0; `httpx<0.28` keeps openai 1.43.0); F-3/F-4/F-5 fixed. **185 tests.** **Residual:
-  ITM-016 Mitigating** — push so CI demonstrates green on both interpreter legs. See §8.
+  11.0.0; `httpx<0.28` keeps openai 1.43.0); F-3/F-4/F-5 fixed. **185 tests.** Pushed
+  (`d059295..2a88a04`); **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED**; no open
+  residual. See §8.
 
 ## 5. Non-negotiables (must never regress)
 - **SELECT/CTE only.** All DML/DDL/PL-SQL/stacked/`FOR UPDATE` rejected, fail-closed, via the single `/execute` chokepoint (`src/core/sql_safety.py`); both UI and API route through it. Verify with `tests/test_sql_safety.py` + `test_execute_endpoint.py`.
@@ -79,16 +80,17 @@ and `httpx` floated past `openai==1.43.0`'s compat. **Remediated:** the validate
 re-pinned to a **clean-install-proven 3.13-capable** configuration (verified by a fresh-venv
 `pip install` + `pytest` → **185 passed** on 3.13); F-3/F-4/F-5 fixed.
 
-**The one open follow-up is a process step, not code:** **push so CI demonstrates green on
-both 3.11 + 3.13** (closes [ITM-016](issue-log.md); the 3.11 leg is wheel-confirmed +
-interpreter-agnostic but not yet CI-run). After that, **Phase 7 (optional)** is next feature
-work — but its hard preconditions gate any networked/multi-tenant deploy: CORS/auth (ITM-009),
-`base_url` normalization (ITM-010), file-store durability (ITM-013/14), non-DB error
-sanitization (ITM-017), plus the pre-GA manual/live-Oracle pass (RISK-04).
+**Pushed + CI-green; no open residual.** The branch was pushed (`d059295..2a88a04`) and **CI
+run #7 is green on both `test (3.11)` and `test (3.13)`** → **ITM-016 CLOSED**. Phase 6 is
+fully closed with nothing pending.
 
-**Unpushed:** `origin/main` is at `d059295` (Phase 5 close), so **Phase 4 + 5 are already on
-origin**; only the **12 Phase-6 commits** (`6b0671c..HEAD`) are local — **push when the owner
-asks** (that push also runs CI / demonstrates the 3.11+3.13 matrix / closes ITM-016).
+**Next feature work = Phase 7 (optional)** — but its hard preconditions gate any
+networked/multi-tenant deploy: CORS/auth (ITM-009), `base_url` normalization (ITM-010),
+file-store durability (ITM-013/14), non-DB error sanitization (ITM-017), plus the pre-GA
+manual/live-Oracle pass (RISK-04).
+
+**Sync state:** all Phase 6 work is **pushed**; `main` == `origin/main` after the
+ITM-016-closure doc commit is pushed (one local doc commit may remain — push as usual).
 
 **Unpushed:** all Phase-4 + Phase-5 commits are local; **push when the owner asks**. Carried
 items: pre-GA manual/live-Oracle pass (RISK-04); Phase-7 preconditions (CORS/auth ITM-009,
@@ -109,3 +111,4 @@ First steps on resume: confirm the working tree is clean and **160 tests pass**
 | 1.5 | 2026-06-10 | Delivery | Phase 6 Discovery OPENED — charter drafted (`charters/phase-6-charter.md`); decisions D-A…D-G pending owner approval; **no code until approved**. Folds in ITM-015 (+ optional ITM-016 per D-G). |
 | 1.6 | 2026-06-10 | Delivery | Phase 6 decisions resolved + design approved + **build B1…B6 complete** (182 tests; ITM-015 + ITM-016 CLOSED); review package ready. Next = owner runs the exit-gate reviewer (R6.2). |
 | 1.7 | 2026-06-10 | Delivery | Phase 6 **CLOSED** — exit gate r1 PASS-WITH-FIXES (F-1/F-2 S2 dependency/CI hygiene) → re-pinned to a clean-install-proven 3.13-capable set + F-3/F-4/F-5 fixed → r2 PASS; **185 tests**. Residual: push to demonstrate CI matrix (ITM-016). |
+| 1.8 | 2026-06-10 | Delivery | Pushed `d059295..2a88a04`; **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed, no open residual. |

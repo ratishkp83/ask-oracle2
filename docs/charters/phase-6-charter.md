@@ -10,9 +10,8 @@ Phase-6 code) → remediated → **r2 = PASS** ([r1](../reviews/phase-6-review-r
 [r2](../reviews/phase-6-review-r2.md)). ITM-015 closed (uniform DB-error sanitization);
 the validated set re-pinned to a **clean-install-proven 3.13-capable** configuration
 (F-1/F-2); F-3/F-4/F-5 fixed; F-7→ITM-017 (Phase-7). **185 tests green**; the SELECT-only
-chokepoint (`db.py`/`sql_safety.py`) unchanged. **Sole residual:** ITM-016 is Mitigating —
-the owner pushes so CI demonstrates green on both interpreter legs (process step, not a code
-defect).
+chokepoint (`db.py`/`sql_safety.py`) unchanged. Pushed (`d059295..2a88a04`); **CI run #7
+green on both 3.11 + 3.13 → ITM-016 CLOSED.** No open residual.
 
 ## Context — where we are today (grounding facts)
 - **There is no logging configuration anywhere.** No `logging.basicConfig`, no handlers, no
