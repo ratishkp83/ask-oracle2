@@ -21,8 +21,8 @@ APP_PATH = os.path.join(
 )
 SECTIONS = [
     "Connections",
-    "Schema Upload",
-    "Explore Schema",
+    "Schema Sources",
+    "Data Dictionary",
     "Query Builder",
     "Reports",
     "Templates",
@@ -77,6 +77,32 @@ def test_templates_section_lists_catalog():
     assert not at.exception
     module = next(s for s in at.selectbox if s.label == "Module")
     assert set(module.options) == {"GL", "AP", "AR", "PO", "OM"}
+
+
+def test_data_dictionary_renders_with_schema():
+    from src.schema import ColumnDefinition, Schema, TableDefinition
+
+    at = AppTest.from_file(APP_PATH, default_timeout=60)
+    at.session_state["schema"] = Schema(
+        tables={
+            "EMP": TableDefinition(
+                "EMP",
+                [
+                    ColumnDefinition("EMP", "EMP_ID", "NUMBER", is_primary_key=True),
+                    ColumnDefinition(
+                        "EMP", "DEPT_ID", "NUMBER", is_foreign_key=True,
+                        references_table="DEPT", references_column="DEPT_ID",
+                    ),
+                ],
+            ),
+            "DEPT": TableDefinition("DEPT", [ColumnDefinition("DEPT", "DEPT_ID", "NUMBER", is_primary_key=True)]),
+        }
+    )
+    at.run()
+    _nav(at).set_value("Data Dictionary")
+    at.run()
+    assert not at.exception
+    assert any(ti.label == "Table or column contains" for ti in at.text_input)
 
 
 def test_connections_create_profile_via_ui_encrypts_at_rest():

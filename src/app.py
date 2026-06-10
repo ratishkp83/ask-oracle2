@@ -16,11 +16,20 @@ from src.db import OracleClient, OracleConnectionConfig
 from src.core.profiles import JsonFileProfileStore, ProfileCreate, ProfilePublic
 from src.core.crypto import SecretConfigError
 from src.schema import (
+    ColumnDefinition,
     Schema,
     attach_relationships,
+    find_columns,
     parse_relationships_dataframe,
     parse_schema_dataframe,
+    referenced_by,
+    references_out,
+    schema_from_dict,
+    schema_to_dict,
+    table_detail,
 )
+from src.core.schema_store import JsonFileSchemaStore
+from src.core.introspection import introspect_schema
 from src.nl2sql import (
     DEFAULT_GROQ_MODEL,
     DEFAULT_OPENAI_MODEL,
@@ -44,6 +53,8 @@ st.set_page_config(page_title="Ask Oracle Reports", layout="wide")
 # --- session state -------------------------------------------------------- #
 if "schema" not in st.session_state:
     st.session_state.schema = None  # type: Optional[Schema]
+if "schema_source" not in st.session_state:
+    st.session_state.schema_source = "upload"
 if "conn_config" not in st.session_state:
     st.session_state.conn_config = load_connection_config() or {}
 if "last_results" not in st.session_state:
@@ -64,6 +75,10 @@ def get_store() -> JsonFileProfileStore:
 
 def get_report_store() -> JsonFileReportStore:
     return JsonFileReportStore()
+
+
+def get_schema_store() -> JsonFileSchemaStore:
+    return JsonFileSchemaStore()
 
 
 _BIND_RE = re.compile(r":([A-Za-z_][A-Za-z0-9_]*)")
@@ -329,63 +344,208 @@ def draw_settings():
 # --------------------------------------------------------------------------- #
 # Schema upload & explorer (unchanged behaviour)
 # --------------------------------------------------------------------------- #
-def draw_schema_upload():
-    st.header("Upload Schema Metadata")
-    st.write(
-        "Upload a CSV/Excel file with columns: table_name, column_name, data_type, "
-        "is_primary_key, is_foreign_key, references_table, references_column."
+def _columns_df(cols: List[ColumnDefinition]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "table": c.table_name,
+                "column": c.column_name,
+                "type": c.data_type or "",
+                "PK": "Y" if c.is_primary_key else "",
+                "FK": "Y" if c.is_foreign_key else "",
+                "references": (
+                    f"{c.references_table}.{c.references_column}"
+                    if c.references_table and c.references_column
+                    else ""
+                ),
+            }
+            for c in cols
+        ]
     )
 
-    schema_file = st.file_uploader("Schema file (CSV/Excel)", type=["csv", "xlsx", "xls"])
-    rel_file = st.file_uploader("Relationships (optional, CSV/Excel)", type=["csv", "xlsx", "xls"], key="rel")
 
-    if st.button("Parse Schema"):
-        if not schema_file:
-            st.error("Please upload a schema file first.")
-            return
-        try:
-            schema = parse_schema_dataframe(read_tabular_file(schema_file.read(), schema_file.name))
-            if rel_file is not None:
-                rels = parse_relationships_dataframe(read_tabular_file(rel_file.read(), rel_file.name))
-                schema = attach_relationships(schema, rels)
-            st.session_state.schema = schema
-            st.success("Schema parsed and loaded.")
-            with st.expander("Schema Overview", expanded=True):
-                st.code(schema.to_compact_markdown())
-        except Exception as e:  # noqa: BLE001
-            st.error(f"Failed to parse schema: {e}")
+def draw_schema_sources(conn_cfg: Optional[OracleConnectionConfig]):
+    st.header("Schema Sources")
+    st.caption(
+        "Load a data dictionary by uploading metadata, introspecting a live connection, "
+        "or loading a saved schema. The active schema powers NL→SQL and the Data Dictionary."
+    )
 
+    # --- Upload --------------------------------------------------------- #
+    with st.expander("Upload metadata (CSV/Excel)", expanded=st.session_state.schema is None):
+        st.write(
+            "Columns: table_name, column_name, data_type, is_primary_key, is_foreign_key, "
+            "references_table, references_column."
+        )
+        schema_file = st.file_uploader("Schema file (CSV/Excel)", type=["csv", "xlsx", "xls"])
+        rel_file = st.file_uploader(
+            "Relationships (optional, CSV/Excel)", type=["csv", "xlsx", "xls"], key="rel"
+        )
+        if st.button("Parse schema", key="schema_parse"):
+            if not schema_file:
+                st.error("Please upload a schema file first.")
+            else:
+                try:
+                    schema = parse_schema_dataframe(read_tabular_file(schema_file.read(), schema_file.name))
+                    if rel_file is not None:
+                        rels = parse_relationships_dataframe(read_tabular_file(rel_file.read(), rel_file.name))
+                        schema = attach_relationships(schema, rels)
+                    st.session_state.schema = schema
+                    st.session_state.schema_source = "upload"
+                    st.success(f"Schema parsed: {len(schema.tables)} tables loaded.")
+                except Exception as e:  # noqa: BLE001
+                    st.error(f"Failed to parse schema: {e}")
 
-def draw_schema_explorer(schema: Schema):
-    st.header("Explore Schema")
-    c1, c2 = st.columns([1, 2])
-    with c1:
-        st.subheader("Tables")
-        table_selected = st.selectbox("Select table", options=schema.list_tables())
-        if table_selected:
-            st.write(f"Columns in `{table_selected}`:")
-            st.write(pd.DataFrame({"column": schema.list_columns(table_selected)}))
-    with c2:
-        st.subheader("Relationships")
-        if schema.relationships:
-            st.dataframe(
-                pd.DataFrame(
-                    [
-                        {
-                            "from_table": r.from_table,
-                            "from_column": r.from_column,
-                            "to_table": r.to_table,
-                            "to_column": r.to_column,
-                            "type": r.relationship_type or "",
-                        }
-                        for r in schema.relationships
-                    ]
-                ),
-                use_container_width=True,
-                hide_index=True,
-            )
+    # --- Introspect ----------------------------------------------------- #
+    with st.expander("Introspect from connection (read-only)"):
+        st.caption(
+            "Builds the dictionary from Oracle's ALL_* views via SELECT-only queries, "
+            "under your read-only account. Scope it with an owner and a name filter."
+        )
+        default_owner = (conn_cfg.username.upper() if conn_cfg and conn_cfg.username else "")
+        ic1, ic2 = st.columns(2)
+        with ic1:
+            owner = st.text_input("Owner / schema", value=default_owner, key="introspect_owner")
+        with ic2:
+            table_like = st.text_input("Table name filter (LIKE)", value="%", key="introspect_like")
+        if st.button("Introspect", key="introspect_btn"):
+            if not conn_cfg:
+                st.warning("Choose a connection in the sidebar first.")
+            elif not owner.strip():
+                st.error("Provide an owner/schema.")
+            else:
+                try:
+                    result = introspect_schema(OracleClient(conn_cfg), owner=owner, table_like=table_like)
+                    st.session_state.schema = result.schema
+                    st.session_state.schema_source = "introspection"
+                    msg = f"Introspected {len(result.schema.tables)} tables for {owner.upper()}."
+                    (st.warning if result.truncated else st.success)(
+                        msg + (" Results truncated by limits — narrow the filter." if result.truncated else "")
+                    )
+                    for w in result.warnings:
+                        st.info(w)
+                except Exception as e:  # noqa: BLE001
+                    st.error(f"Introspection failed: {e}")
+
+    # --- Library -------------------------------------------------------- #
+    with st.expander("Library (saved schemas)"):
+        store = get_schema_store()
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            save_name = st.text_input("Save current schema as", key="schema_save_name")
+        with c2:
+            if st.button("Save to library", key="schema_save_btn", use_container_width=True):
+                if not st.session_state.schema:
+                    st.warning("No active schema to save.")
+                elif not save_name.strip():
+                    st.error("Provide a name.")
+                else:
+                    try:
+                        store.create(
+                            save_name,
+                            schema_to_dict(st.session_state.schema),
+                            source=st.session_state.schema_source,
+                        )
+                        st.success(f"Saved '{save_name}'.")
+                    except Exception as e:  # noqa: BLE001
+                        st.error(str(e))
+
+        summaries = store.list()
+        if summaries:
+            labels = {f"{s.name}  ·  {s.table_count} tables  ·  {s.source}": s for s in summaries}
+            chosen = st.selectbox("Saved schemas", list(labels.keys()), key="schema_load_select")
+            lc1, lc2 = st.columns(2)
+            with lc1:
+                if st.button("Load", key="schema_load_btn", use_container_width=True):
+                    record = store.get(labels[chosen].id)
+                    if record:
+                        st.session_state.schema = schema_from_dict(record.definition)
+                        st.session_state.schema_source = record.source
+                        st.success(f"Loaded '{record.name}'.")
+                        st.rerun()
+            with lc2:
+                if st.button("Delete", key="schema_delete_btn", use_container_width=True):
+                    store.delete(labels[chosen].id)
+                    st.success("Deleted.")
+                    st.rerun()
         else:
-            st.info("No relationships uploaded. You can still write explicit JOINs in SQL.")
+            st.info("No saved schemas yet.")
+
+    if st.session_state.schema:
+        st.success(f"Active schema: {len(st.session_state.schema.tables)} tables ({st.session_state.schema_source}).")
+
+
+def draw_data_dictionary(schema: Schema):
+    st.header("Data Dictionary")
+
+    # --- Search / filter ----------------------------------------------- #
+    st.subheader("Search")
+    s1, s2, s3, s4 = st.columns([3, 2, 1, 1])
+    with s1:
+        query = st.text_input("Table or column contains", key="dict_search")
+    with s2:
+        dtype = st.text_input("Data type contains", key="dict_dtype")
+    with s3:
+        pk_only = st.checkbox("PK only", key="dict_pk")
+    with s4:
+        fk_only = st.checkbox("FK only", key="dict_fk")
+
+    matches = find_columns(
+        schema,
+        query,
+        data_type=dtype or None,
+        pk=True if pk_only else None,
+        fk=True if fk_only else None,
+    )
+    st.caption(f"{len(matches)} column(s) match.")
+    if matches:
+        st.dataframe(_columns_df(matches), use_container_width=True, hide_index=True)
+
+    # --- Table detail + relationship navigation ------------------------ #
+    st.subheader("Table detail")
+    table = st.selectbox("Select a table", options=schema.list_tables(), key="dict_table")
+    if table:
+        st.dataframe(_columns_df(table_detail(schema, table)), use_container_width=True, hide_index=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**References out** (this table's foreign keys)")
+            out = references_out(schema, table)
+            if out:
+                st.dataframe(
+                    pd.DataFrame(out, columns=["column", "to_table", "to_column"]),
+                    use_container_width=True, hide_index=True,
+                )
+            else:
+                st.caption("None.")
+        with c2:
+            st.markdown("**Where used** (tables referencing this one)")
+            inbound = referenced_by(schema, table)
+            if inbound:
+                st.dataframe(
+                    pd.DataFrame(inbound, columns=["from_table", "from_column", "to_column"]),
+                    use_container_width=True, hide_index=True,
+                )
+            else:
+                st.caption("None.")
+
+    # --- Export --------------------------------------------------------- #
+    st.subheader("Export dictionary")
+    all_cols = [c for t in schema.tables.values() for c in t.columns]
+    df = _columns_df(all_cols)
+    e1, e2, e3 = st.columns(3)
+    with e1:
+        st.download_button("CSV", data=dataframe_to_csv_bytes(df), file_name="data_dictionary.csv", mime="text/csv")
+    with e2:
+        st.download_button(
+            "Excel", data=dataframe_to_excel_bytes(df, sheet_name="Dictionary"),
+            file_name="data_dictionary.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    with e3:
+        st.download_button(
+            "Markdown", data=schema.to_compact_markdown().encode("utf-8"),
+            file_name="data_dictionary.md", mime="text/markdown",
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -642,8 +802,8 @@ def draw_templates():
 # --------------------------------------------------------------------------- #
 SECTIONS = [
     "Connections",
-    "Schema Upload",
-    "Explore Schema",
+    "Schema Sources",
+    "Data Dictionary",
     "Query Builder",
     "Reports",
     "Templates",
@@ -657,13 +817,13 @@ conn_cfg = draw_sidebar_connection()
 
 if section == "Connections":
     draw_connections(get_store())
-elif section == "Schema Upload":
-    draw_schema_upload()
-elif section == "Explore Schema":
+elif section == "Schema Sources":
+    draw_schema_sources(conn_cfg)
+elif section == "Data Dictionary":
     if st.session_state.schema:
-        draw_schema_explorer(st.session_state.schema)
+        draw_data_dictionary(st.session_state.schema)
     else:
-        st.info("Upload schema metadata first.")
+        st.info("Load a schema in **Schema Sources** first (upload, introspect, or load a saved one).")
 elif section == "Query Builder":
     draw_query_builder(conn_cfg, st.session_state.schema)
 elif section == "Reports":
