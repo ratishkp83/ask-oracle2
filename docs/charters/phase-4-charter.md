@@ -1,13 +1,11 @@
 # Phase 4 Charter — Reports, Templates & UX
 
-> **Document:** Phase Charter · **Version:** 1.0 · **Status:** Discovery (open — decisions pending owner approval) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.1 · **Status:** Discovery complete → Design (proposed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**Discovery.** This charter frames objectives, scope, deliverables, risks, success
-criteria, and the **open decisions** (§ Decisions) the owner must resolve. **No code
-is written until the owner approves the charter and resolves the decisions.** Once
-resolved, this section is rewritten as "Decisions (resolved YYYY-MM-DD)" and Design
-proceeds, then Development.
+**Discovery complete** — owner approved the charter and resolved decisions D-A…D-I on
+2026-06-10 (see § Decisions). **Design proposed next; Development begins on owner
+approval of the design + build sequence.**
 
 ## Context — where we are today (grounding facts)
 - **Saved reports exist but are minimal.** `src/storage.py` persists a flat
@@ -107,48 +105,36 @@ proceeds, then Development.
    blocking)** per the [gate](../process/external-review-gate.md); **reviewer agent
    supplied by the owner**.
 
-## Decisions (OPEN — to resolve at approval)
-Recommended option is **bolded**; the rest are documented for an informed choice.
+## Decisions (resolved 2026-06-10)
+Owner resolved all nine at charter approval. The four pivotal scope decisions were
+confirmed **as recommended**; the remaining defaults were accepted without change.
 
-- **D-A — Report store format.** **Keep the flat JSON file store** (`reports.json`,
-  upgraded to Report v2 shape) for consistency with current architecture / no-auth
-  reality. *(Alt: move to SQLite — deferred until multi-tenant/Phase 7.)*
-- **D-B — Parameter scope.** **Scalar binds only** (string/number/date) in v1.
-  *(Alt: also support `IN (:list)` multi-value expansion now — more power, more
-  bind-safety surface; recommend deferring.)*
-- **D-C — Template approach.** **Curated parameterized SQL templates** (deterministic,
-  high analyst value, labelled review-before-run). *(Alts: NL-prompt presets that feed
-  NL→SQL — safer re: schema variance, less deterministic; or a hybrid.)*
-- **D-D — Template catalog size (v1).** **~2–3 per module across GL/AP/AR/PO/OM
-  (~10–15 total)** as a starter pack. Owner to confirm which modules are highest
-  priority and the per-module count.
-- **D-E — UX depth.** **Sidebar left-nav (radio) + single app + shared session state**;
-  keep current flows. *(Alt: full Streamlit multipage `pages/` refactor — cleaner URLs,
-  but restructures app and session/connection sharing; recommend deferring.)*
-- **D-F — API parity for reports.** **Add `/reports` CRUD + `/reports/{id}/run` and put
-  report storage in `src/core/reports.py`** (UI + API share one core, run via the
-  chokepoint) — coherent and testable. *(Alt: keep reports UI-only this phase; smaller
-  scope, but leaves the asymmetry and an untested run path.)*
-- **D-G — Bind transport through `/execute`.** Extend the execute contract with an
+- **D-A — Report store format:** ✅ **Keep the flat JSON file store**, upgraded to the
+  Report v2 shape. SQLite deferred to multi-tenant/Phase 7.
+- **D-B — Parameter scope:** ✅ **Scalar binds only** (string / number / date) in v1.
+  `IN (:list)` multi-value expansion deferred to a follow-up.
+- **D-C — Template approach:** ✅ **Curated parameterized SQL templates**, labelled
+  "standard EBS reference — review before running," editable, never auto-run.
+- **D-D — Template catalog size (v1):** ✅ **All 5 modules (GL/AP/AR/PO/OM), ~2–3 each
+  (~10–15 total)** — broad coverage, shallow depth, expandable later.
+- **D-E — UX depth:** ✅ **Sidebar left-nav (radio) + single app + shared session
+  state.** Full multipage `pages/` refactor deferred.
+- **D-F — API parity for reports:** ✅ **Add `/reports` CRUD + `/reports/{id}/run`;
+  report storage lives in `src/core/reports.py`.** UI + API share one core; run goes
+  through the `/execute` safety chokepoint with binds.
+- **D-G — Bind transport through `/execute`:** ✅ Extend the execute contract with an
   optional `binds: {name: value}` map; `run_select` passes it to `cur.execute(sql, binds)`;
-  safety check on SQL text is unchanged. (Mechanism follows from D-B/D-F; flagged because
-  it touches the non-negotiable chokepoint and will be a focus at the exit gate.)
-- **D-H — Profile-binding semantics.** Store nullable `default_profile_id`; user can
-  override at run; if the bound profile is missing, **warn and require selection** (no
-  hard-fail). Optional confirmation when the target environment is PROD.
-- **D-I — Confirm out-of-scope list.** Owner to confirm the § "Scope — out" exclusions
-  (scheduling, charts, RBAC/sharing, list-binds, React revival, schema auto-detection,
-  live-DB template validation).
-
-## Open questions for the owner
-1. Which EBS modules matter most, and how many templates per module for v1 (D-D)?
-2. API parity now or UI-only this phase (D-F)?
-3. Template style: curated SQL, NL presets, or hybrid (D-C)?
-4. UX depth: sidebar nav now, or full multipage refactor (D-E)?
-5. Any must-have report parameter type beyond string/number/date (D-B)?
+  the SQL-text safety check is unchanged. Touches the non-negotiable chokepoint — a focus
+  at the exit gate.
+- **D-H — Profile-binding semantics:** ✅ Nullable `default_profile_id`; user can
+  override at run; missing profile → **warn and require selection** (no hard-fail);
+  optional confirmation when the target environment is PROD.
+- **D-I — Out-of-scope list:** ✅ Confirmed (scheduling, charts, RBAC/sharing,
+  list-binds, React revival, schema auto-detection, live-DB template validation).
 
 ## Revision history
 
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product/Eng | Discovery charter opened; decisions pending owner approval. |
+| 1.1 | 2026-06-10 | Product/Eng | Owner approved; decisions D-A…D-I resolved (4 pivotal as recommended; defaults accepted). Discovery complete → Design. |

@@ -52,7 +52,8 @@ until the owner approves the charter and resolves decisions D-A…D-I.**
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | P4-0 | Open Phase 4 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-I |
-| P4-D | Owner approval + decision resolution (D-A…D-I) | ⏳ Awaiting owner | scope envelope: store format, param scope, template approach/size, UX depth, API parity |
+| P4-D | Owner approval + decision resolution (D-A…D-I) | ✅ Completed | resolved 2026-06-10: keep JSON store; scalar binds; curated EBS SQL; ~10–15 templates across 5 modules; sidebar nav; **core + /reports API**; bind-through-execute; nullable profile binding |
+| P4-DES | Design + build sequence (proposed) | ⏳ Awaiting owner go-ahead | governed design doc + contracts (Report v2, /execute binds, /reports); build begins on approval |
 | P4-1 | `src/core/reports.py` — Report v2 model + store + legacy migration | 📋 Planned | depends on D-A/D-H |
 | P4-2 | Bind-parameter plumbing through `run_select`/`/execute` | 📋 Planned | depends on D-B/D-G; **touches chokepoint** |
 | P4-3 | EBS template catalog (GL/AP/AR/PO/OM, starter set) | 📋 Planned | depends on D-C/D-D |
