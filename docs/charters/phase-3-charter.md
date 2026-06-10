@@ -1,9 +1,9 @@
 # Phase 3 Charter — NL→SQL 2.0 & LLM Abstraction
 
-> **Document:** Phase Charter · **Version:** 1.0 · **Status:** Discovery (open) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.1 · **Status:** Discovery complete → Design (proposed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-Opening **Discovery**. Design/Development do not begin until the open decisions below are resolved and this charter is approved.
+**Discovery complete** (decisions resolved below). Design proposed in [oracle-llm-design.md](../oracle-llm-design.md); **Development begins on owner approval of the design.**
 
 ## Objectives
 Turn the existing NL→SQL into a **provider-agnostic, explainable** module, and enforce prompt redaction so external LLMs never receive live data or PII/PHI. Builds on the Phase-2 `LLMConfig` seed.
@@ -40,12 +40,12 @@ Turn the existing NL→SQL into a **provider-agnostic, explainable** module, and
 5. Tests green in CI; governed docs current.
 6. **Independent adversarial review + QA returns PASS** ([gate](../process/external-review-gate.md)); **reviewer agent supplied by the product owner**.
 
-## Open decisions to resolve in Discovery
-- **D-A — Confidence:** real (model self-rated) vs deterministic heuristic vs omit for v1.
-- **D-B — Explanation guardrails:** how to keep the rationale from leaking schema beyond what's shown.
-- **D-C — Provider set for v1:** Groq + OpenAI concrete now; `LocalLLMProvider` interface stub only.
-- **D-D — Redaction default policy:** exactly what may appear in external prompts (schema/table/column names + types; no sample values; optional column-name anonymization).
-- **D-E — Policy-toggle config location:** env now; per-user later.
+## Decisions (resolved 2026-06-10)
+- **D-A — Confidence:** **deterministic heuristic** → coarse High/Medium/Low from schema coverage, parse success, and identifier resolution. No LLM self-rating.
+- **D-B — Explanation guardrails:** short rationale referencing only schema elements already shown; no data; (low risk since prompts carry no values).
+- **D-C — Provider set v1:** **Groq + OpenAI concrete** via the OpenAI-compatible client; **`LocalLLMProvider` as a stub seam** for OCI/23ai.
+- **D-D — Redaction default:** **strict** — external prompts carry table/column/type names + relationships only; **never** sample/live values or raw identifiers. Local/in-DB providers may receive more (future).
+- **D-E — Policy toggle:** `LLM_POLICY` env (`local_only` / `local_external` / `external_disabled`), default `local_external`; per-user later.
 
 ## Revision history
 

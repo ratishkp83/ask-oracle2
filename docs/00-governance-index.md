@@ -25,6 +25,7 @@ as the code, before the work is considered complete.
 | D13 | Traceability Matrix | [traceability-matrix.md](traceability-matrix.md) | Living |
 | — | Delivery Roadmap (7 phases) | [roadmap.md](roadmap.md) | Living |
 | — | Phase-2 Review & QA | [ask-oracle-review-phase-2.md](ask-oracle-review-phase-2.md) | Closed |
+| — | LLM Design (Phase 3) | [oracle-llm-design.md](oracle-llm-design.md) | Proposed |
 
 ## Process & gates
 
