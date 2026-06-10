@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # Make the repo root importable so `streamlit run src/app.py` works from any CWD.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,14 +28,14 @@ from src.nl2sql import (
     generate_sql_from_nl,
 )
 from src.utils import read_tabular_file, dataframe_to_csv_bytes, dataframe_to_excel_bytes
-from src.storage import (
-    load_connection_config,
-    save_connection_config,
-    list_reports,
-    save_report,
-    get_report,
-    delete_report,
+from src.storage import load_connection_config, save_connection_config
+from src.core.reports import (
+    JsonFileReportStore,
+    ReportCreate,
+    ReportParam,
+    coerce_report_binds,
 )
+from src.core.templates import get_template, list_templates
 
 load_dotenv()
 
@@ -59,6 +60,22 @@ if "llm_config" not in st.session_state:
 
 def get_store() -> JsonFileProfileStore:
     return JsonFileProfileStore()
+
+
+def get_report_store() -> JsonFileReportStore:
+    return JsonFileReportStore()
+
+
+_BIND_RE = re.compile(r":([A-Za-z_][A-Za-z0-9_]*)")
+
+
+def _detect_params(sql: str) -> List[str]:
+    """Unique `:bind` names in declaration order, for the save-as-report form."""
+    seen: List[str] = []
+    for name in _BIND_RE.findall(sql or ""):
+        if name not in seen:
+            seen.append(name)
+    return seen
 
 
 def _resolved_to_cfg(resolved) -> OracleConnectionConfig:
@@ -371,9 +388,9 @@ def draw_schema_explorer(schema: Schema):
 # --------------------------------------------------------------------------- #
 # Query builder
 # --------------------------------------------------------------------------- #
-def _run_and_display(client: OracleClient, sql: str):
+def _run_and_display(client: OracleClient, sql: str, binds: Optional[Dict[str, object]] = None):
     try:
-        result = client.run_select(sql)
+        result = client.run_select(sql, binds=binds)
         df = pd.DataFrame(result.rows, columns=result.columns)
         st.session_state.last_results = df
         msg = f"Query OK in {result.elapsed_seconds:.2f}s, {result.row_count} rows"
@@ -450,58 +467,205 @@ def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optio
                 _run_and_display(client, sql)
 
 
-def draw_saved_reports():
-    st.header("Saved Reports")
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
-        report_name = st.text_input("Report name", key="rep_name")
-    with col2:
-        save_clicked = st.button("Save current", use_container_width=True, key="rep_save")
-    with col3:
-        delete_clicked = st.button("Delete selected", use_container_width=True, key="rep_delete")
+def _profile_options(store: JsonFileProfileStore) -> Dict[str, Optional[str]]:
+    """Map a display label → profile id, with a leading '— none —' → None."""
+    labels: Dict[str, Optional[str]] = {"— none —": None}
+    for p in store.list():
+        labels[f"{p.name}  ·  {p.environment}"] = p.id
+    return labels
 
-    existing = list_reports()
-    selected = st.selectbox("Select a saved report", options=[""] + existing, key="rep_select")
-    report = get_report(selected) if selected else None
 
-    if save_clicked:
-        if not report_name:
-            st.error("Provide a name.")
-        elif st.session_state.generated_sql:
-            save_report(report_name, {"sql": st.session_state.generated_sql})
-            st.success("Saved.")
+def draw_reports(conn_cfg: Optional[OracleConnectionConfig]):
+    st.header("Reports")
+    rstore = get_report_store()
+    pstore = get_store()
+    reports = rstore.list()
+
+    # --- Run a saved report ------------------------------------------------ #
+    st.subheader("Run a saved report")
+    if not reports:
+        st.info("No saved reports yet. Save one below, or from the Templates section.")
+    else:
+        names = {r.name: r for r in reports}
+        report = names[st.selectbox("Select a report", list(names.keys()), key="rep_run_select")]
+        if report.description:
+            st.caption(report.description)
+        st.code(report.sql, language="sql")
+
+        raw_values: Dict[str, object] = {}
+        if report.parameters:
+            st.markdown("**Parameters** (* required)")
+            cols = st.columns(min(3, len(report.parameters)))
+            for i, p in enumerate(report.parameters):
+                with cols[i % len(cols)]:
+                    label = (p.label or p.name) + (" *" if p.required else "")
+                    raw_values[p.name] = st.text_input(
+                        label,
+                        value="" if p.default is None else str(p.default),
+                        key=f"repparam_{report.id}_{p.name}",
+                        help=f"type: {p.type}",
+                    )
+
+        prof_labels = _profile_options(pstore)
+        bound_label = next(
+            (lbl for lbl, pid in prof_labels.items() if pid == report.default_profile_id),
+            "— none —",
+        )
+        target_choice = st.selectbox(
+            "Run against profile (or use the sidebar connection)",
+            list(prof_labels.keys()),
+            index=list(prof_labels.keys()).index(bound_label),
+            key=f"rep_target_{report.id}",
+        )
+        target_profile_id = prof_labels[target_choice]
+
+        if st.button("Run report", key=f"rep_run_{report.id}"):
+            provided = {k: v for k, v in raw_values.items() if v != ""}
+            try:
+                binds = coerce_report_binds(report.parameters, provided)
+            except ValueError as e:
+                st.error(str(e))
+            else:
+                client: Optional[OracleClient] = None
+                if target_profile_id:
+                    try:
+                        resolved = pstore.resolve(target_profile_id)
+                        client = OracleClient(_resolved_to_cfg(resolved)) if resolved else None
+                    except SecretConfigError as e:
+                        st.error(str(e))
+                elif conn_cfg:
+                    client = OracleClient(conn_cfg)
+                if client is None:
+                    st.warning(
+                        "No connection target. Bind a profile, pick one above, or set the "
+                        "sidebar connection."
+                    )
+                else:
+                    _run_and_display(client, report.sql, binds=binds)
+
+    # --- Save / manage ----------------------------------------------------- #
+    st.markdown("---")
+    st.subheader("Save / manage reports")
+    current_sql = st.session_state.generated_sql or ""
+    with st.expander("Save current SQL as a report", expanded=not reports):
+        if not current_sql.strip():
+            st.info("Generate or type SQL in the Query Builder first, or load a template.")
         else:
-            st.warning("Nothing to save. Generate or type SQL in the Query Builder first.")
+            st.code(current_sql, language="sql")
+            name = st.text_input("Report name", key="rep_save_name")
+            description = st.text_input("Description (optional)", key="rep_save_desc")
+            params: List[ReportParam] = []
+            for pname in _detect_params(current_sql):
+                c1, c2, c3 = st.columns([1, 1, 2])
+                with c1:
+                    ptype = st.selectbox(f":{pname} type", ["string", "number", "date"], key=f"savep_type_{pname}")
+                with c2:
+                    preq = st.checkbox("required", value=True, key=f"savep_req_{pname}")
+                with c3:
+                    pdef = st.text_input("default", key=f"savep_def_{pname}")
+                params.append(ReportParam(name=pname, type=ptype, required=preq, default=(pdef or None)))
+            bind_label = st.selectbox("Bind to profile (optional)", list(_profile_options(pstore).keys()), key="rep_save_bind")
+            if st.button("Save report", key="rep_save_btn"):
+                if not name.strip():
+                    st.error("Provide a report name.")
+                else:
+                    try:
+                        rstore.create(
+                            ReportCreate(
+                                name=name,
+                                description=description,
+                                sql=current_sql,
+                                parameters=params,
+                                default_profile_id=_profile_options(pstore)[bind_label],
+                            )
+                        )
+                        st.success(f"Saved report '{name}'.")
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(str(e))
 
-    if delete_clicked and selected:
-        delete_report(selected)
-        st.success("Deleted.")
+    if reports:
+        del_choice = st.selectbox("Delete a report", ["—"] + [r.name for r in reports], key="rep_del_select")
+        if st.button("Delete report", key="rep_del_btn") and del_choice != "—":
+            rid = next(r.id for r in reports if r.name == del_choice)
+            rstore.delete(rid)
+            st.success(f"Deleted '{del_choice}'.")
+            st.rerun()
 
-    if report:
-        st.subheader(f"Report: {selected}")
-        st.code(report.get("sql", ""))
+
+def draw_templates():
+    st.header("Templates")
+    st.caption(
+        "Curated standard-EBS starter queries. They assume a standard EBS schema — "
+        "review and adjust before running. Nothing runs automatically."
+    )
+    templates = list_templates()
+    module = st.selectbox("Module", sorted({t.module for t in templates}), key="tpl_module")
+    in_mod = [t for t in templates if t.module == module]
+    tpl = next(t for t in in_mod if t.name == st.selectbox("Template", [t.name for t in in_mod], key="tpl_select"))
+
+    st.caption(tpl.description)
+    st.code(tpl.sql, language="sql")
+    if tpl.parameters:
+        st.markdown("**Parameters:** " + ", ".join(f"`:{p.name}` ({p.type})" for p in tpl.parameters))
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Load into Query Builder", key="tpl_load"):
+            st.session_state.generated_sql = tpl.sql
+            st.session_state.nl_explanation = None
+            st.session_state.nl_confidence = None
+            st.success("Loaded into Query Builder — switch to it from the left nav to run.")
+    with c2:
+        save_name = st.text_input("Save as report — name", value=tpl.name, key="tpl_save_name")
+        if st.button("Save as report", key="tpl_save"):
+            try:
+                get_report_store().create(
+                    ReportCreate(
+                        name=save_name,
+                        description=tpl.description,
+                        sql=tpl.sql,
+                        parameters=tpl.parameters,
+                        template_id=tpl.id,
+                    )
+                )
+                st.success(f"Saved report '{save_name}'.")
+            except ValueError as e:
+                st.error(str(e))
 
 
 # --------------------------------------------------------------------------- #
-# Layout
+# Layout — left-nav (sidebar) over a single app with shared session state
 # --------------------------------------------------------------------------- #
+SECTIONS = [
+    "Connections",
+    "Schema Upload",
+    "Explore Schema",
+    "Query Builder",
+    "Reports",
+    "Templates",
+    "Settings",
+]
+
+st.sidebar.title("Ask Oracle Reports")
+section = st.sidebar.radio("Navigate", SECTIONS, key="nav")
+st.sidebar.markdown("---")
 conn_cfg = draw_sidebar_connection()
 
-_tabs = st.tabs(
-    ["Connections", "Schema Upload", "Explore Schema", "Query Builder", "Saved Reports", "Settings"]
-)
-with _tabs[0]:
+if section == "Connections":
     draw_connections(get_store())
-with _tabs[1]:
+elif section == "Schema Upload":
     draw_schema_upload()
-with _tabs[2]:
+elif section == "Explore Schema":
     if st.session_state.schema:
         draw_schema_explorer(st.session_state.schema)
     else:
         st.info("Upload schema metadata first.")
-with _tabs[3]:
+elif section == "Query Builder":
     draw_query_builder(conn_cfg, st.session_state.schema)
-with _tabs[4]:
-    draw_saved_reports()
-with _tabs[5]:
+elif section == "Reports":
+    draw_reports(conn_cfg)
+elif section == "Templates":
+    draw_templates()
+elif section == "Settings":
     draw_settings()
