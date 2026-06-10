@@ -1,0 +1,8 @@
+# Normalize line endings: store text as LF, so Windows + Linux CI stay consistent.
+* text=auto eol=lf
+
+# Binary assets — never normalize.
+*.png binary
+*.ico binary
+*.svg binary
+*.lockb binary

@@ -1,0 +1,15 @@
+[theme]
+base = "dark"
+primaryColor = "#4F46E5"
+backgroundColor = "#0B1221"
+secondaryBackgroundColor = "#111827"
+textColor = "#ECEFF4"
+font = "sans serif"
+
+[server]
+# headless=true suppresses the "Go to URL" prompt on startup — required for cloud.
+headless = true
+# enableCORS=false and enableXsrfProtection=false are needed when running
+# behind Render's reverse proxy / load balancer.
+enableCORS = false
+enableXsrfProtection = false
