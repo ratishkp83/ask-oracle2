@@ -1,6 +1,6 @@
 # Ask Oracle Reports — Documentation Governance Index
 
-> **Document:** Governance Index · **Version:** 1.0 · **Status:** Baseline · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Governance Index · **Version:** 1.1 · **Status:** Baseline · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
 
 This `/docs` tree is the **single source of truth** for the product. Every change
 to behaviour, contracts, or scope must be reflected here in the same change set
@@ -31,6 +31,7 @@ as the code, before the work is considered complete.
 | — | LLM Design (Phase 3) | [oracle-llm-design.md](oracle-llm-design.md) | Proposed |
 | — | Reports/Templates/UX Design (Phase 4) | [reports-templates-ux-design.md](reports-templates-ux-design.md) | Baseline |
 | — | Data Dictionary Design (Phase 5) | [data-dictionary-design.md](data-dictionary-design.md) | Baseline |
+| — | Observability & Error Handling Design (Phase 6) | [observability-error-handling-design.md](observability-error-handling-design.md) | Baseline |
 
 ## Process & gates
 
@@ -59,3 +60,4 @@ as the code, before the work is considered complete.
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Delivery | Initial governance baseline (P2.5). |
+| 1.1 | 2026-06-10 | Delivery | Phase 6: registered the Observability & Error Handling design doc (ADR-012 under `adr/`). |

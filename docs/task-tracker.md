@@ -90,13 +90,14 @@ fixed; **160 tests green**.
 | R5.4 | Re-review (r2) on fixes + regression | ✅ Done | verdict **PASS-WITH-FIXES — gate cleared** ([phase-5-review-r2.md](reviews/phase-5-review-r2.md)); F-1 re-verified closed; F-2(400)/ITM-015 + N-1 carried; N-1 fixed at closure (160 tests) |
 | P5-CLOSE | Phase-5 closure sign-off | ✅ Completed | **gate PASSED 2026-06-10**: r2 = PASS-WITH-FIXES (no open blocking), 160 tests green, governed docs current, all findings fixed-or-formally-deferred |
 
-## Phase 6 — Observability & Error Handling (🔄 Discovery — charter awaiting owner decisions)
+## Phase 6 — Observability & Error Handling (🔨 Build complete — exit-gate review pending)
 
-Charter: [phase-6-charter.md](charters/phase-6-charter.md). **Discovery opened 2026-06-10**;
-objectives/scope/deliverables/risks/success criteria + open decisions **D-A…D-G** drafted.
-**Build is gated on owner approval + decision resolution (P6-D).** Theme: structured JSON
-logging, request/error-reference IDs, uniform DB-error sanitization (**closes ITM-015**), and
-lightweight in-process metrics.
+Charter: [phase-6-charter.md](charters/phase-6-charter.md) · Design:
+[observability-error-handling-design.md](observability-error-handling-design.md). Decisions
+**D-A…D-G** resolved (all as recommended); design approved; **build B1…B6 complete** —
+structured JSON logging, request/error-reference IDs, uniform DB-error sanitization
+(**ITM-015 CLOSED**), in-process metrics, CI 3.11+3.13 matrix (**ITM-016 CLOSED**). **182
+tests green.** Next: independent adversarial exit-gate review (R6.x), owner-supplied reviewer.
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
@@ -108,10 +109,11 @@ lightweight in-process metrics.
 | P6-3 | Shared DB-error sanitizer across all DB-touching endpoints — **resolves ITM-015** | ✅ Completed | **B2**; `core/errors.py` (`log_error`/`sanitize_db_error_for_ui`) + `_db_error`; 4 arms refactored; **ITM-015 CLOSED**; 9 tests (176 total); D5/ADR-012 updated |
 | P6-4 | In-process metrics (`src/core/metrics.py`) + read-only `/metrics` endpoint | ✅ Completed | **B3**; thread-safe counters + latency; wired into `_run_sql`; `GET /metrics`; 5 tests (181 total); D3/D5 updated |
 | P6-5 | UI surfaces generic message + `error_id` | ✅ Completed | **B4**; 3 UI driver-error surfaces (`_try_connect`, introspection, `_run_and_display`) use shared `sanitize_db_error_for_ui` → generic msg + ref; `SqlSafetyError`/`ValueError` stay verbatim; +1 test (182 total) |
-| P6-6 | Tests (sanitization/no-leak, error-id + header, log JSON shape, metrics, regression) | 📋 Planned | no chokepoint/safety regression |
-| P6-7 | Governed-doc updates (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers) + **close ITM-015** | 📋 Planned | code + docs in lockstep |
+| P6-6 | Tests (sanitization/no-leak, error-id + header, log JSON shape, metrics, regression) | ✅ Completed | delivered across B1–B4: `test_logging_config.py` (7), `test_error_handling.py` (10), `test_metrics.py` (5) = **+22 → 182**; no chokepoint/safety regression |
+| P6-7 | Governed-doc updates (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers) + **close ITM-015** | ✅ Completed | **B6**; D3/D5/D6/D7 + ADR-012 + CHANGELOG + traceability (NFR-7) + risk-register (RISK-19 Closed) + issue-log (ITM-015/016 Closed) + governance index, in lockstep |
 | P6-G | (D-G) CI Python matrix 3.11 + 3.13 — **closes ITM-016** | ✅ Completed | **B5**; `ci.yml` `strategy.matrix.python-version: ["3.11","3.13"]` (`fail-fast: false`); **ITM-016 CLOSED** |
-| R6.1–.7 | Phase-6 independent adversarial review + QA gate | 📋 Planned | owner-supplied reviewer; iterate to PASS |
+| R6.1 | Prepare exit-gate review package | 🔄 In Progress | self-contained brief w/ Phase-6 change range + invariants for the owner-supplied reviewer |
+| R6.2–.7 | Phase-6 independent adversarial review + QA gate | 📋 Planned | owner-supplied reviewer; iterate to PASS |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -162,3 +164,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.13 | 2026-06-10 | Delivery | Phase 6 B3 done: P6-4 Completed; `core/metrics` + `GET /metrics`, counters wired into chokepoint; 181 tests; D3/D5 updated. |
 | 1.14 | 2026-06-10 | Delivery | Phase 6 B4 done: P6-5 Completed; UI driver-error surfaces sanitized (shared helper) + ref id; safety/validation messages verbatim; 182 tests. |
 | 1.15 | 2026-06-10 | Delivery | Phase 6 B5 done: P6-G Completed; CI 3.11+3.13 matrix; **ITM-016 CLOSED**. |
+| 1.16 | 2026-06-10 | Delivery | Phase 6 B6 done: P6-6/P6-7 Completed; governed docs (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers, index) in lockstep; build B1…B6 complete (182 tests); R6.1 review-package prep is next. |

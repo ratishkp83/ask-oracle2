@@ -1,6 +1,6 @@
 # D7 — Deployment Plan
 
-> **Document:** Deployment Plan · **Version:** 1.0 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-10
+> **Document:** Deployment Plan · **Version:** 1.2 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-10
 
 ## 0. Required database account (read-only) — **non-negotiable precondition**
 
@@ -46,6 +46,8 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 | `OPENAI_API_KEY` / `OPENAI_MODEL` | Default LLM (OpenAI) | Alternative to Groq |
 | `MAX_ROWS` / `MAX_EXECUTION_SECONDS` / `MAX_RESULT_BYTES` | Safety limits | No (defaults applied) |
 | `STORAGE_DIR` | Location of profiles/reports JSON | No (sensible default) |
+| `LOG_LEVEL` | Logging level (`DEBUG`/`INFO`/`WARNING`/…) | No (default `INFO`) |
+| `LOG_FORMAT` | `json` (stdout, 12-factor) or `text` (human-readable, local dev) | No (default `json`) |
 
 > **No secrets in source or `docker-compose.yml`.** All come from env. `.env` is git-ignored.
 
@@ -73,8 +75,20 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 ## 6. Monitoring & health
 
 - `/health` for liveness.
-- Audit logs (`ask_oracle.audit`) for query attempts (hash + metadata, no secrets).
-- **Gap (Phase 6):** Prometheus metrics, structured log shipping, error reference IDs — tracked in [roadmap](roadmap.md).
+- **Structured JSON logs to stdout** (Phase 6, [ADR-012](adr/ADR-012-observability-and-error-handling.md)):
+  configured by `configure_logging()` at startup; `LOG_LEVEL`/`LOG_FORMAT` env-controlled.
+  The platform (Docker/Render) captures stdout — **log shipping/aggregation/retention is the
+  deployment platform's responsibility**, not built into the app.
+- **Audit logs** (`ask_oracle.audit`) for query attempts (SHA-256 hash + metadata, no secrets),
+  now emitted as valid JSON.
+- **Error reference IDs:** every error response carries an `error_id` (= the `X-Request-ID`
+  correlation id) that keys the matching server-side log line — quote it in support tickets.
+  DB-driver detail is logged server-side only, never returned to clients (ITM-015 closed).
+- **`GET /metrics`** (Phase 6): in-process query counts (executed/rejected/errored) + latency
+  (in-memory; resets on restart; counts only). **Unauthenticated** like `/health` — gate
+  behind auth before any multi-tenant/networked exposure (Phase 7, [ITM-009](issue-log.md)).
+- **Deferred to Phase 7:** Prometheus/scrape exposition + an APM/error-tracking vendor —
+  tracked in [roadmap](roadmap.md).
 
 ## Revision history
 
@@ -82,3 +96,4 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Eng/Ops | Baseline; env config, rotation runbook, rollback. |
 | 1.1 | 2026-06-10 | Eng/Ops | Phase 4 r1/F1: §0 required least-privilege read-only DB account (ADR-009) + release-checklist gate. |
+| 1.2 | 2026-06-10 | Eng/Ops | Phase 6: `LOG_LEVEL`/`LOG_FORMAT` env vars; §6 rewritten for structured JSON logs, error reference IDs, and `/metrics` (ADR-012); Prometheus/APM deferred to Phase 7. |

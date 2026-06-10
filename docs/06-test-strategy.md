@@ -1,6 +1,6 @@
 # D6 — Test Strategy
 
-> **Document:** Test Strategy · **Version:** 1.1 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-10
+> **Document:** Test Strategy · **Version:** 1.4 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-10
 
 ## 1. Objectives
 
@@ -17,7 +17,18 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 
 ## 3. Current coverage (baseline)
 
-**155 automated tests pass locally** (130 through Phase 4 + 25 in Phase 5):
+**182 automated tests pass locally** (160 through Phase 5 + 22 in Phase 6):
+
+- **Observability & error handling (Phase 6)** — `test_logging_config.py` (7): JSON formatter
+  emits valid JSON + base keys, `request_id` stamping, text mode, **idempotent** handlers,
+  `LOG_LEVEL`, audit record round-trips as **secret-free** JSON. `test_error_handling.py`
+  (10): **ITM-015 leak proof** (no host/DSN/username in any client body; full driver detail
+  present server-side keyed by the same `error_id`) across the DB-touching endpoints,
+  inbound `X-Request-ID` honoured + echoed + reused as `error_id`, safe messages
+  (404/409/safety-400) stay verbatim and merely **gain** `error_id`, validation `422` gains
+  `error_id`, catch-all generic `500`, and the **shared UI sanitizer** returns a ref + logs
+  full detail. `test_metrics.py` (5): counter increments (executed/rejected/errored) + latency
+  via the chokepoint, `GET /metrics` JSON is secret-free.
 
 - **Data dictionary & schema tools (Phase 5)** — `test_schema_tools.py` (6): helpers
   (`find_columns` filters, `references_out`, **`referenced_by`/where-used**, serialization
@@ -49,7 +60,7 @@ Through Phase 4 (130):
 
 ## 6. CI
 
-GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and runs `pytest -q` on push/PR. Gate: merges require green CI.
+GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and runs `pytest -q` on push/PR across a **Python 3.11 + 3.13 matrix** (`fail-fast: false`) — the validated set is confirmed on every interpreter actually used (ITM-016 closed). Gate: merges require green CI.
 
 ## 7. Manual UI smoke checklist (Phase-2 closure)
 
@@ -62,6 +73,7 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 - [ ] Reports: save SQL with `:params`, bind a profile, run with parameter values, export CSV/XLSX; missing required param shows a clear error.
 - [ ] Templates: load a GL/AP/AR/PO/OM template, run vs. a **real EBS** instance (schema-variance caveat), save-as-report.
 - [ ] Data Dictionary: **introspect** a schema from a live read-only connection (owner + filter); verify scoping/caps; browse/search; export CSV/Excel/Markdown; save + reload from the library.
+- [ ] Observability: confirm stdout shows **JSON** log lines (set `LOG_FORMAT=text` for dev); force a DB error and confirm the UI/API shows the **generic message + ref id** while the full ORA-/DSN detail appears only in the server log under that id; `GET /metrics` returns query counts + latency.
 
 ## Revision history
 
@@ -71,3 +83,4 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 | 1.1 | 2026-06-10 | QA/Eng | Phase 4: +43 tests (reports store/migration, bind safety, /reports API, templates, 7-section smoke) → 118 total; manual checklist extended. |
 | 1.2 | 2026-06-10 | QA/Eng | Phase-4 review r1 remediation: +12 tests (SELECT INTO, non-finite binds, exactly-one target, no-plaintext connection.json) → 130 total. |
 | 1.3 | 2026-06-10 | QA/Eng | Phase 5: +25 tests (dictionary helpers, schema store, introspection SELECT-safety + mapping, /schemas API, dictionary smoke) → 155 total. |
+| 1.4 | 2026-06-10 | QA/Eng | Phase 6: +22 tests (logging config/JSON, error sanitization + correlation incl. ITM-015 leak proof, metrics) → 182 total; CI 3.11+3.13 matrix; observability manual-check added. |

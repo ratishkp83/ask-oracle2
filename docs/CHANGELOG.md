@@ -4,6 +4,41 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 6 — Observability & Error Handling)
+- **Structured logging** ([ADR-012](adr/ADR-012-observability-and-error-handling.md)):
+  `src/core/logging_config.py` — idempotent `configure_logging()`, **JSON to stdout**
+  (`LOG_FORMAT=text` for local dev), level via `LOG_LEVEL`; a `request_id` `ContextVar`
+  stamped on every record. The secret-free audit trail now emits **valid JSON** (content
+  unchanged — SHA-256 fingerprint only).
+- **Request correlation = error reference id**: `request_id_middleware` assigns/honours an
+  `X-Request-ID` per request, echoes it as a response header, and injects it as `error_id`
+  into **every** error body. The same id keys the matching server log line.
+- **Uniform DB-error sanitization** (`src/core/errors.py`, **shared by API and UI**): raw
+  driver/connection errors return a generic `"Database error — see server logs."` + `error_id`
+  to the client; the full detail is logged server-side only. Safety-rejection reasons and
+  validation messages stay verbatim. Central exception handlers (HTTPException / validation /
+  catch-all 500) make the envelope uniform; the four DB-touching endpoints and three UI
+  driver-error surfaces route through the one rule.
+- **In-process metrics** (`src/core/metrics.py`): thread-safe counters
+  (executed/rejected/errored) + latency, read-only via `GET /metrics` (counts only, no
+  data/secrets; in-memory, resets on restart).
+- **Governed docs:** `docs/observability-error-handling-design.md`, ADR-012; D3, D5, D6 (and
+  D7/traceability/registers) updated in lockstep.
+- Tests: **+22** → **182 total** green; CI now runs a **Python 3.11 + 3.13 matrix**.
+
+### Fixed (Phase 6)
+- **ITM-015 (S3) CLOSED:** verbatim driver errors no longer leak DSN/host/port/username from
+  `/execute`, `/reports/{id}/run`, `/schemas/introspect`, `/test-connection`,
+  `/profiles/{id}/test`, or the UI — all sanitized uniformly (generic message + `error_id`;
+  full detail server-side). Proven by `tests/test_error_handling.py`.
+- **ITM-016 (S4) CLOSED:** CI matrix (3.11 + 3.13) confirms the pinned set green on every
+  interpreter actually used.
+
+### Notes (Phase 6)
+- All changes are **additive** and **do not touch** the SELECT-only chokepoint (`src/db.py`,
+  `src/core/sql_safety.py`); error responses keep `detail` and add `error_id`; status codes
+  unchanged. **Build complete (B1…B6); independent exit-gate review (R6.x) pending.**
+
 ### Notes (Phase 5 closure)
 - **Phase 5 CLOSED** (exit gate passed 2026-06-10): independent review **r1 = FAIL**
   (1 blocking — F-1/S2, metadata-only persistence not enforced) → remediated → **r2 =
