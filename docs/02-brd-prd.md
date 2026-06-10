@@ -50,7 +50,7 @@
 
 ## 6. Constraints & assumptions
 
-- Local working copy is now git-initialized; GitHub remote: `ratishkp83/ask-oracle-reports`.
+- Local working copy is git-initialized; GitHub remote: `ratishkp83/ask-oracle2`.
 - No authentication/identity layer yet → "per-user" = per-session (see [ADR-004](adr/ADR-004-per-user-llm-config.md)).
 - Schema knowledge comes from uploaded CSV/Excel metadata.
 
@@ -59,3 +59,4 @@
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product/Eng | Baseline; FR/NFR captured, Phase-2 marked delivered. |
+| 1.1 | 2026-06-10 | Eng | GitHub remote reference updated to `ratishkp83/ask-oracle2`. |

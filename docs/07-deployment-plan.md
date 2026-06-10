@@ -8,7 +8,7 @@
 |-----|----|----|---------------|
 | Local (bare) | `streamlit run src/app.py` | `uvicorn src.api:app` | git-ignored `.env` (via python-dotenv) |
 | Local (Docker) | frontend service (node) | api service (`Dockerfile.api.local`) | `env_file: .env` |
-| Hosted (Render) | `ask-oracle-reports-ui` | `ask-oracle-reports-api` | Dashboard env vars (`sync: false`) |
+| Hosted (Render) | `ask-oracle2-ui` | `ask-oracle2-api` | Dashboard env vars (`sync: false`) |
 
 ## 2. Configuration (environment variables)
 
