@@ -1,6 +1,6 @@
 # Data Dictionary Browser & Schema Tools — Design (Phase 5)
 
-> **Document:** Design · **Version:** 1.0 · **Status:** Baseline (built; pending exit-gate review) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Design · **Version:** 1.0 · **Status:** Baseline (built; Phase 5 closed — exit gate passed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 > Implements [phase-5-charter.md](charters/phase-5-charter.md) (decisions D-A…D-E resolved 2026-06-10).
 
 ## 1. Overview

@@ -309,7 +309,9 @@ def schema_from_dict(data: object) -> Schema:
                         continue
                     columns.append(
                         ColumnDefinition(
-                            table_name=str(c.get("table_name") or tname),
+                            # Always the containing table key — a column cannot belong to
+                            # a different table than the one it is listed under (review N-1).
+                            table_name=tname,
                             column_name=str(c.get("column_name") or ""),
                             data_type=_opt_str(c.get("data_type")),
                             is_primary_key=bool(c.get("is_primary_key", False)),

@@ -66,11 +66,12 @@ F6 + R1/R2 deferred/backlogged with rationale; **130 tests green**.
 | R4.1–.7 | Phase-4 independent adversarial review + QA gate | ✅ Completed | r1 = **PASS-WITH-FIXES** ([phase-4-review-r1.md](reviews/phase-4-review-r1.md)); no S1/S2; F2/F3/F4/F5 fixed + F1 documented (ADR-009); F6/R1/R2 deferred-or-backlogged; owner closed F1 (account is the control) + F5 (don't persist password) 2026-06-10 |
 | P4-CLOSE | Phase-4 closure sign-off | ✅ Completed | **gate PASSED 2026-06-10**: r1 PASS-WITH-FIXES (no open blocking), 130 tests green, governed docs current, all findings fixed-or-formally-disposed |
 
-## Phase 5 — Data Dictionary Browser & Schema Tools (🔄 Discovery — decisions pending)
+## Phase 5 — Data Dictionary Browser & Schema Tools (✅ CLOSED — exit gate passed 2026-06-10)
 
-Charter: [phase-5-charter.md](charters/phase-5-charter.md). Opened 2026-06-10. **No code
-until the owner approves the charter and resolves decisions D-A…D-E** (live introspection,
-schema persistence + API, browser depth, business glossary, UI placement).
+Charter: [phase-5-charter.md](charters/phase-5-charter.md). **Gate PASSED**: independent
+review **r1 = FAIL** (F-1 S2) → remediated → **r2 = PASS-WITH-FIXES** (no open blocking).
+F-1 fixed + re-verified; F-2 200-path fixed / 400-path deferred (ITM-015); F-3/F-4/F-5/N-1
+fixed; **160 tests green**.
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
@@ -86,7 +87,8 @@ schema persistence + API, browser depth, business glossary, UI placement).
 | R5.1 | Prepare review package | ✅ Completed | self-contained brief w/ filled Context + Phase-5 invariants: [reviews/phase-5-review-package.md](reviews/phase-5-review-package.md) |
 | R5.2 | Independent adversarial review + QA (r1) | ✅ Done | verdict **FAIL** — 1 blocking (F-1 S2: metadata-only persistence not enforced) + F-2…F-5; [phase-5-review-r1.md](reviews/phase-5-review-r1.md) |
 | R5.3 | Remediate r1 findings + regression tests | ✅ Done | F-1 fixed (not waived), F-2 200-path fixed / 400 → ITM-015, F-3/F-4/F-5 fixed; **159 tests**; commit `ee14e70` |
-| **R5.4–.7** | **Re-review (r2) on fixes + regression → sign-off** | ⏳ **Next — awaiting owner** | reviewer re-runs the F-1 poison-blob + F-2/F-3/F-5 probes + regression over `865719a..HEAD` (r2 scope in the [package](reviews/phase-5-review-package.md)); iterate to PASS |
+| R5.4 | Re-review (r2) on fixes + regression | ✅ Done | verdict **PASS-WITH-FIXES — gate cleared** ([phase-5-review-r2.md](reviews/phase-5-review-r2.md)); F-1 re-verified closed; F-2(400)/ITM-015 + N-1 carried; N-1 fixed at closure (160 tests) |
+| P5-CLOSE | Phase-5 closure sign-off | ✅ Completed | **gate PASSED 2026-06-10**: r2 = PASS-WITH-FIXES (no open blocking), 160 tests green, governed docs current, all findings fixed-or-formally-deferred |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -112,7 +114,7 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 - **Phase-2 closure gate: PASSED (2026-06-10).** Phase 3 Discovery may open.
 - **Phase-3 closure gate: PASSED (2026-06-10)** — r2 PASS-WITH-FIXES, no open blocking. Phase 4 may open.
 - **Phase 4: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES, no open blocking; 130 tests).
-- **Phase 5: in exit gate (2026-06-10)** — r1 = **FAIL** (1 blocking, F-1 S2) → **remediated** (159 tests green, F-1 fixed + F-2…F-5). **r2 re-review pending** (owner-supplied reviewer) over `865719a..HEAD`; iterate to PASS, then close Phase 5.
+- **Phase 5: CLOSED (2026-06-10)** — exit gate PASSED (r1 FAIL → r2 PASS-WITH-FIXES, no open blocking; 160 tests). Phase 6 (Observability & error handling) may open next.
 - Pre-GA (not gating Phase 3): manual UI/live-DB pass (RISK-04), `/v1` API prefix (T-18), legacy `connection.json` migration (T-19).
 - **Hard precondition for any networked/multi-tenant deployment (Phase 7):** CORS/auth hardening (ITM-009/RISK-12) + `base_url` host-normalization (F7/ITM-010).
 
@@ -128,3 +130,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.5 | 2026-06-10 | Delivery | Phase 5 Discovery opened (P5-0); P5-1…P5-6 + R5.x seeded as Planned; build gated on owner decisions (P5-D). |
 | 1.6 | 2026-06-10 | Delivery | Phase 5 decisions resolved + built: P5-DES…P5-6 Completed (155 tests); R5.x exit-gate review is the next action (owner-supplied reviewer). |
 | 1.7 | 2026-06-10 | Delivery | Phase 5 r1 = FAIL (F-1 S2) → remediated (159 tests; F-1 fixed, F-2…F-5); r2 re-review pending. |
+| 1.8 | 2026-06-10 | Delivery | Phase 5 r2 = PASS-WITH-FIXES; N-1 fixed at closure (160 tests); gate PASSED; Phase 5 CLOSED. |

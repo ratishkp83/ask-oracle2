@@ -4,7 +4,18 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
-### Added (Phase 5 — Data Dictionary Browser & Schema Tools · dev complete, pending exit-gate review)
+### Notes (Phase 5 closure)
+- **Phase 5 CLOSED** (exit gate passed 2026-06-10): independent review **r1 = FAIL**
+  (1 blocking — F-1/S2, metadata-only persistence not enforced) → remediated → **r2 =
+  `PASS-WITH-FIXES`** (no open blocking) — [r1](reviews/phase-5-review-r1.md) ·
+  [r2](reviews/phase-5-review-r2.md). F-1 fixed + independently re-verified (poison
+  `POST /schemas` now persists only `{tables, relationships}`); F-2 200-path `warnings[]`
+  leak fixed (400-path deferred → ITM-015, Phase-7, **deferral confirmed acceptable**);
+  F-3/F-4/F-5 fixed; **N-1** (cosmetic `table_name` normalization, found in r2) fixed at
+  closure. **F-4 caveat closed:** CI runs a from-scratch `pip install` on a clean runner
+  (green == shipped); CI/dev Python-version matrix noted as ITM-016. Suite **160 tests** green.
+
+### Added (Phase 5 — Data Dictionary Browser & Schema Tools)
 - **Data-dictionary helpers** (`src/schema.py`): `find_columns` (name + data-type/PK/FK
   filters), `table_detail`, `references_out`, `referenced_by` (**where-used**), plus
   `schema_to_dict`/`schema_from_dict` serialization.

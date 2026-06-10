@@ -1,13 +1,13 @@
 # Phase 5 Charter — Data Dictionary Browser & Schema Tools
 
-> **Document:** Phase Charter · **Version:** 1.2 · **Status:** Development complete → exit-gate review · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.3 · **Status:** ✅ CLOSED (exit gate passed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**In exit gate** (2026-06-10). Built across `4d08844 → 865719a`; design approved.
-Independent review **r1 = FAIL** (1 blocking — F-1 S2, metadata-only persistence not
-enforced; [phase-5-review-r1.md](../reviews/phase-5-review-r1.md)). **Remediated**: F-1
-fixed (not waived) + F-2…F-5; **159 tests green** (`ee14e70`). **Next: r2 re-review** on
-the fixes + regression (owner-supplied reviewer) → on PASS, close Phase 5.
+**CLOSED (2026-06-10).** Built across `4d08844 → HEAD`; design approved. **Exit gate
+PASSED:** independent review **r1 = FAIL** (F-1 S2) → remediated → **r2 = PASS-WITH-FIXES**
+(no open blocking) — [r1](../reviews/phase-5-review-r1.md) · [r2](../reviews/phase-5-review-r2.md).
+F-1 fixed + re-verified; F-2 200-path fixed / 400-path deferred (ITM-015); F-3/F-4/F-5/N-1
+fixed; **160 tests green**; governed docs current.
 
 ## Context — where we are today (grounding facts)
 - **A schema model already exists** (`src/schema.py`): `Schema` → `TableDefinition` →
@@ -121,3 +121,4 @@ Owner resolved all five at charter approval — the four pivotal scope decisions
 | 1.0 | 2026-06-10 | Product/Eng | Discovery charter opened; decisions pending owner approval. |
 | 1.1 | 2026-06-10 | Product/Eng | Owner approved; decisions D-A…D-E resolved (4 pivotal as recommended; D-E default accepted). Discovery complete → Design. |
 | 1.2 | 2026-06-10 | Product/Eng | Design approved + built (helpers, schema store, introspection, /schemas, Data Dictionary UI); 155 tests; docs updated. Dev+Test complete → exit-gate review (R5.x). |
+| 1.3 | 2026-06-10 | Product/Eng | Exit gate PASSED — r1 FAIL (F-1) → r2 PASS-WITH-FIXES; F-1…F-5/N-1 fixed, F-2(400)→ITM-015; 160 tests. Phase 5 CLOSED. |

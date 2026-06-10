@@ -101,6 +101,12 @@ def test_schema_from_dict_tolerates_malformed():
     assert s.tables["X"].columns[0].column_name == ""
 
 
+def test_schema_from_dict_normalizes_column_table_name():
+    # N-1: a column always carries its containing table key, even if the dict disagrees.
+    s = schema_from_dict({"tables": {"X": [{"column_name": "C", "table_name": "Y"}]}})
+    assert s.tables["X"].columns[0].table_name == "X"
+
+
 def test_serialization_round_trip():
     s = _schema()
     restored = schema_from_dict(schema_to_dict(s))
