@@ -6,10 +6,13 @@ This `/docs` tree is the **single source of truth** for the product. Every chang
 to behaviour, contracts, or scope must be reflected here in the same change set
 as the code, before the work is considered complete.
 
+> **New or resumed session? Read [HANDOFF.md](HANDOFF.md) first** — it is the onboarding entry point and current-state snapshot.
+
 ## Document set
 
 | ID | Document | Path | Status |
 |----|----------|------|--------|
+| — | **Session Handoff (read first)** | [HANDOFF.md](HANDOFF.md) | Living |
 | D1 | Product Vision | [01-product-vision.md](01-product-vision.md) | Baseline |
 | D2 | Requirements (BRD/PRD) | [02-brd-prd.md](02-brd-prd.md) | Baseline |
 | D3 | Architecture | [03-architecture.md](03-architecture.md) | Baseline |
