@@ -1,8 +1,8 @@
 streamlit==1.36.0
 pandas==2.2.2
 openpyxl==3.1.5
-oracledb==2.5.1
-pydantic==2.8.2
+oracledb==4.0.1
+pydantic==2.13.4
 python-dotenv==1.0.1
 tenacity==8.5.0
 openai==1.43.0
@@ -15,5 +15,8 @@ pyvis==0.3.2
 fastapi==0.112.0
 uvicorn[standard]==0.30.5
 # Phase 2 — hardened connectivity & safety
-sqlglot>=25.0.0
-cryptography>=42.0.0
+# sqlglot is pinned EXACTLY: the SELECT-only safety layer depends on its parse
+# behaviour, so an unpinned upgrade could silently change fail-closed semantics
+# (review F-4). Bump deliberately + re-run the safety suite.
+sqlglot==30.10.0
+cryptography==48.0.1

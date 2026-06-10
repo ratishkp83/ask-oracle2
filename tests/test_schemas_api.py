@@ -1,5 +1,7 @@
 """API tests for /schemas CRUD and /schemas/introspect (mocked DB)."""
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -82,6 +84,27 @@ def test_create_schema_requires_a_source():
     assert client.post("/schemas", json={"name": "NoSource"}).status_code == 422
 
 
+def test_create_schema_strips_non_metadata():
+    # F-1: secrets/row-data in a posted definition must NOT be persisted.
+    poisoned = {
+        "name": "poison",
+        "definition": {
+            "tables": {"EMP": [{"column_name": "EMP_ID", "data_type": "NUMBER"}]},
+            "db_password": "hunter2-SECRET",
+            "rows": [["alice", "123-45-6789"]],
+            "connection_string": "u/p@host:1521/XE",
+        },
+    }
+    created = client.post("/schemas", json=poisoned)
+    assert created.status_code == 201
+    sid = created.json()["id"]
+    blob = json.dumps(client.get(f"/schemas/{sid}").json())
+    assert "hunter2-SECRET" not in blob
+    assert "123-45-6789" not in blob
+    assert "connection_string" not in blob
+    assert "EMP" in client.get(f"/schemas/{sid}").json()["definition"]["tables"]
+
+
 # --- introspect ----------------------------------------------------------- #
 def test_introspect_inline_connection(fake_dictionary):
     resp = client.post(
@@ -114,3 +137,9 @@ def test_introspect_blank_owner_is_400(fake_dictionary):
     resp = client.post("/schemas/introspect", json={"connection": INLINE, "owner": "   "})
     assert resp.status_code == 400
     assert "owner" in resp.json()["detail"].lower()
+
+
+def test_introspect_empty_owner_is_400():
+    # F-5: empty owner is a uniform 400 (was 422 vs 400 for whitespace).
+    resp = client.post("/schemas/introspect", json={"connection": INLINE, "owner": ""})
+    assert resp.status_code == 400

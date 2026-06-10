@@ -1,5 +1,7 @@
 """Tests for Phase-5 data-dictionary helpers and schema serialization."""
 
+import json
+
 from src.schema import (
     ColumnDefinition,
     RelationshipDefinition,
@@ -70,6 +72,33 @@ def test_referenced_by_where_used():
     # DEPT is referenced by EMP.DEPT_ID
     assert referenced_by(_schema(), "DEPT") == [("EMP", "DEPT_ID", "DEPT_ID")]
     assert referenced_by(_schema(), "EMP") == []
+
+
+def test_schema_from_dict_drops_unknown_keys():
+    # F-1: injected secrets / row data must not survive reconstruction.
+    poisoned = {
+        "tables": {"EMP": [{"column_name": "EMP_ID", "data_type": "NUMBER", "db_password": "secret"}]},
+        "db_password": "hunter2-SECRET",
+        "rows": [["alice", "123-45-6789"]],
+        "connection_string": "u/p@host:1521/XE",
+    }
+    blob = json.dumps(schema_to_dict(schema_from_dict(poisoned)))
+    assert "hunter2-SECRET" not in blob
+    assert "123-45-6789" not in blob
+    assert "connection_string" not in blob
+    assert "db_password" not in blob
+    # legitimate metadata survives
+    assert "EMP_ID" in blob
+
+
+def test_schema_from_dict_tolerates_malformed():
+    # F-3: never crash on malformed/unexpected input.
+    assert schema_from_dict(None).list_tables() == []
+    assert schema_from_dict([1, 2]).list_tables() == []
+    assert schema_from_dict({"tables": "not-a-dict"}).list_tables() == []
+    assert schema_from_dict({"tables": {"X": "nope"}}).tables["X"].columns == []
+    s = schema_from_dict({"tables": {"X": [{"foo": 1}]}})  # unknown col key, no column_name
+    assert s.tables["X"].columns[0].column_name == ""
 
 
 def test_serialization_round_trip():

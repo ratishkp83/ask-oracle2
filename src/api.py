@@ -32,7 +32,7 @@ from src.core.schema_store import (
 from src.core.introspection import introspect_schema
 from src.core.sql_safety import SqlSafetyError, assert_safe_select
 from src.core.templates import Template, get_template, list_templates
-from src.schema import schema_to_dict
+from src.schema import schema_from_dict, schema_to_dict
 from src.db import OracleClient, OracleConnectionConfig
 from src.nl2sql import LLMConfig, generate_sql_from_nl
 from src.schema import (
@@ -150,7 +150,9 @@ class IntrospectRequest(BaseModel):
 
     profile_id: Optional[str] = None
     connection: Optional[ConnectionConfig] = None
-    owner: str = Field(..., min_length=1)
+    # No min_length: a blank/whitespace owner is normalized to a uniform 400 by
+    # the orchestrator (review F-5), rather than 422 for "" vs 400 for "   ".
+    owner: str
     table_like: str = "%"
     save: bool = False
     name: Optional[str] = None
@@ -490,7 +492,10 @@ def get_template_by_id(template_id: str) -> Template:
 @app.post("/schemas", response_model=SchemaRecord, status_code=201)
 def create_schema(body: SchemaCreate) -> SchemaRecord:
     if body.definition is not None:
-        definition = body.definition
+        # Normalize to enforce metadata-only persistence (review F-1): reading the
+        # definition back through schema_from_dict drops any non-schema keys
+        # (injected secrets, row data, connection strings) before it is stored.
+        definition = schema_to_dict(schema_from_dict(body.definition))
     else:
         import pandas as pd
         from io import StringIO

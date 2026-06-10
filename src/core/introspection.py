@@ -14,11 +14,14 @@ degrades gracefully when constraint views are not visible to the account.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.core.config import SafetyLimits
 from src.schema import ColumnDefinition, RelationshipDefinition, Schema, TableDefinition
+
+logger = logging.getLogger("ask_oracle.introspection")
 
 Binds = Dict[str, Any]
 
@@ -158,13 +161,17 @@ def introspect_schema(
         warnings.append(f"No tables found for owner '{owner}' matching '{table_like}'.")
         return IntrospectionResult(schema=schema, warnings=warnings, truncated=truncated)
 
+    # Warnings are returned to the client (a 200 success payload), so they carry a
+    # GENERIC message only — the raw driver exception (which can embed host/service/
+    # object names) is logged server-side, never echoed (review F-2).
     try:
         sql, binds = primary_keys_sql(owner, table_like)
         pk_result = client.run_select(sql, limits=limits, binds=binds)
         truncated = truncated or bool(getattr(pk_result, "truncated", False))
         apply_primary_keys(schema, _rows_as_dicts(pk_result))
     except Exception as exc:  # noqa: BLE001 - constraint views may not be visible
-        warnings.append(f"Primary keys unavailable ({exc}).")
+        logger.info("Primary-key introspection unavailable for %s: %s", owner, exc)
+        warnings.append("Primary keys unavailable for this account.")
 
     try:
         sql, binds = foreign_keys_sql(owner, table_like)
@@ -172,6 +179,7 @@ def introspect_schema(
         truncated = truncated or bool(getattr(fk_result, "truncated", False))
         apply_foreign_keys(schema, _rows_as_dicts(fk_result))
     except Exception as exc:  # noqa: BLE001
-        warnings.append(f"Foreign keys unavailable ({exc}).")
+        logger.info("Foreign-key introspection unavailable for %s: %s", owner, exc)
+        warnings.append("Foreign keys unavailable for this account.")
 
     return IntrospectionResult(schema=schema, warnings=warnings, truncated=truncated)

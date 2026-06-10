@@ -459,10 +459,13 @@ def draw_schema_sources(conn_cfg: Optional[OracleConnectionConfig]):
                 if st.button("Load", key="schema_load_btn", use_container_width=True):
                     record = store.get(labels[chosen].id)
                     if record:
-                        st.session_state.schema = schema_from_dict(record.definition)
-                        st.session_state.schema_source = record.source
-                        st.success(f"Loaded '{record.name}'.")
-                        st.rerun()
+                        try:
+                            st.session_state.schema = schema_from_dict(record.definition)
+                            st.session_state.schema_source = record.source
+                            st.success(f"Loaded '{record.name}'.")
+                            st.rerun()
+                        except Exception as e:  # noqa: BLE001 - never crash on a bad stored blob
+                            st.error(f"Could not load schema: {e}")
             with lc2:
                 if st.button("Delete", key="schema_delete_btn", use_container_width=True):
                     store.delete(labels[chosen].id)

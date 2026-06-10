@@ -109,6 +109,8 @@ def test_introspect_schema_degrades_gracefully():
     assert result.schema.list_tables() == ["DEPT", "EMP"]
     assert len(result.warnings) == 2
     assert result.schema.tables["EMP"].primary_keys() == []
+    # F-2: warnings must NOT echo the raw driver exception (ORA-… host/object names)
+    assert all("ORA" not in w for w in result.warnings)
 
 
 def test_introspect_requires_owner():

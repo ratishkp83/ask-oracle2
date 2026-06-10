@@ -280,14 +280,58 @@ def schema_to_dict(schema: Schema) -> Dict[str, object]:
     }
 
 
-def schema_from_dict(data: Dict[str, object]) -> Schema:
+def _opt_str(value: object) -> Optional[str]:
+    return str(value) if value is not None else None
+
+
+def schema_from_dict(data: object) -> Schema:
+    """Reconstruct a Schema, reading **only** known table/column/relationship
+    fields and ignoring anything else.
+
+    This is deliberately tolerant and whitelist-based: it never raises on
+    malformed input, and any extra keys in the incoming dict (e.g. injected
+    secrets, row data, connection strings) are **dropped** — which is what
+    enforces the "metadata only" guarantee when a definition arrives from an
+    untrusted ``POST /schemas`` body (see ADR-011, review F-1/F-3).
+    """
     schema = Schema()
-    tables = data.get("tables") or {}
-    for name, cols in tables.items():  # type: ignore[assignment]
-        schema.tables[name] = TableDefinition(
-            name=name, columns=[ColumnDefinition(**c) for c in cols]
-        )
-    schema.relationships = [
-        RelationshipDefinition(**r) for r in (data.get("relationships") or [])  # type: ignore[arg-type]
-    ]
+    if not isinstance(data, dict):
+        return schema
+
+    tables = data.get("tables")
+    if isinstance(tables, dict):
+        for name, cols in tables.items():
+            tname = str(name)
+            columns: List[ColumnDefinition] = []
+            if isinstance(cols, list):
+                for c in cols:
+                    if not isinstance(c, dict):
+                        continue
+                    columns.append(
+                        ColumnDefinition(
+                            table_name=str(c.get("table_name") or tname),
+                            column_name=str(c.get("column_name") or ""),
+                            data_type=_opt_str(c.get("data_type")),
+                            is_primary_key=bool(c.get("is_primary_key", False)),
+                            is_foreign_key=bool(c.get("is_foreign_key", False)),
+                            references_table=_opt_str(c.get("references_table")),
+                            references_column=_opt_str(c.get("references_column")),
+                        )
+                    )
+            schema.tables[tname] = TableDefinition(name=tname, columns=columns)
+
+    rels = data.get("relationships")
+    if isinstance(rels, list):
+        for r in rels:
+            if not isinstance(r, dict):
+                continue
+            schema.relationships.append(
+                RelationshipDefinition(
+                    from_table=str(r.get("from_table") or ""),
+                    from_column=str(r.get("from_column") or ""),
+                    to_table=str(r.get("to_table") or ""),
+                    to_column=str(r.get("to_column") or ""),
+                    relationship_type=_opt_str(r.get("relationship_type")),
+                )
+            )
     return schema
