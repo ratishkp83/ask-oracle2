@@ -101,8 +101,8 @@ lightweight in-process metrics.
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | P6-0 | Open Phase 6 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-G; pending owner approval before any code |
-| P6-D | Owner approval + decision resolution (D-A…D-G) | 📋 Planned | metrics approach (D-A), log format (D-B), error-envelope shape (D-C), ITM-015 breadth (D-D), correlation-ID handling (D-E), metrics persistence (D-F), fold-in ITM-016 (D-G) |
-| P6-DES | Design + build sequence (owner-approved) | 📋 Planned | gated on P6-D |
+| P6-D | Owner approval + decision resolution (D-A…D-G) | ✅ Completed | resolved 2026-06-10: all seven as recommended — in-process metrics+`/metrics` (D-A); JSON-to-stdout + `LOG_LEVEL`/`LOG_FORMAT` (D-B); additive `error_id` keep `detail` (D-C); sanitize raw driver errors only (D-D); UUID + honour/echo `X-Request-ID` (D-E); in-memory metrics (D-F); CI 3.11+3.13 matrix (D-G) |
+| P6-DES | Design + build sequence (owner-approved) | 🔄 In Progress | drafting design doc for owner approval; **gated before code** |
 | P6-1 | Central logging config (`src/core/logging_config.py`) — JSON/text, env-driven, idempotent | 📋 Planned | audit payloads emit valid JSON; configured at API + UI startup |
 | P6-2 | Request-correlation middleware + central exception handler + uniform error envelope | 📋 Planned | `error_id` additive to `detail`; `X-Request-ID` echo |
 | P6-3 | Shared DB-error sanitizer across all DB-touching endpoints — **resolves ITM-015** | 📋 Planned | generic client `detail` + `error_id`; full detail logged server-side |
@@ -156,3 +156,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.7 | 2026-06-10 | Delivery | Phase 5 r1 = FAIL (F-1 S2) → remediated (159 tests; F-1 fixed, F-2…F-5); r2 re-review pending. |
 | 1.8 | 2026-06-10 | Delivery | Phase 5 r2 = PASS-WITH-FIXES; N-1 fixed at closure (160 tests); gate PASSED; Phase 5 CLOSED. |
 | 1.9 | 2026-06-10 | Delivery | Phase 6 Discovery opened (P6-0); P6-D…P6-7 + P6-G + R6.x seeded as Planned; build gated on owner decisions (P6-D). |
+| 1.10 | 2026-06-10 | Delivery | Phase 6 decisions D-A…D-G resolved (all as recommended); P6-D Completed; P6-DES (design) In Progress — design doc pending owner approval before code. |

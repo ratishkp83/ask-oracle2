@@ -1,13 +1,14 @@
 # Phase 6 Charter — Observability & Error Handling
 
-> **Document:** Phase Charter · **Version:** 1.0 · **Status:** 🔄 Discovery (decisions pending owner approval) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.1 · **Status:** ✅ Discovery complete (decisions resolved) → Design · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**DISCOVERY — opened 2026-06-10.** This charter defines objectives, scope, deliverables,
-risks, success criteria, and the **open decisions (D-A…D-G)** the owner must resolve before
-any code is written. Per the operating model: **present for owner approval → resolve
-decisions → design + build sequence (owner-approved) → build + tests + doc updates →
-independent adversarial exit-gate review (reviewer ≠ author) → remediate to PASS → close.**
+**DISCOVERY COMPLETE — 2026-06-10.** Owner approved the charter and resolved **all seven
+decisions D-A…D-G as recommended**. Now in **Design**: a design + build sequence is being
+prepared for owner approval before any code. Per the operating model: present for owner
+approval → resolve decisions ✅ → **design + build sequence (owner-approved)** → build +
+tests + doc updates → independent adversarial exit-gate review (reviewer ≠ author) →
+remediate to PASS → close.
 
 ## Context — where we are today (grounding facts)
 - **There is no logging configuration anywhere.** No `logging.basicConfig`, no handlers, no
@@ -193,12 +194,30 @@ independent adversarial exit-gate review (reviewer ≠ author) → remediate to 
   (b) No — leave ITM-016 as a standalone backlog item.
   *Recommendation: (a)* — cheap, observability-adjacent, retires a carried item.
 
-## Decisions (to be filled on owner approval)
-*Pending — this section will record the owner's resolutions (and any deviations from the
-recommendations) before Design opens.*
+## Decisions (resolved 2026-06-10)
+Owner approved the charter and resolved **all seven decisions as recommended**.
+
+- **D-A — Metrics approach:** ✅ **In-process counters + `GET /metrics` JSON** (no new deps;
+  resets on restart). Prometheus deferred to Phase 7 (networked/multi-instance).
+- **D-B — Log format & destination:** ✅ **JSON to stdout**, level via `LOG_LEVEL`
+  (default `INFO`), optional `LOG_FORMAT=text` for local-dev readability.
+- **D-C — Error-envelope shape:** ✅ **Keep `detail`, add `error_id`** (additive,
+  back-compatible). Only the DB-error `detail` *content* becomes generic. No breaking
+  restructure. (An optional `error_code` category may be added if cheap — at engineering
+  discretion during design, non-breaking.)
+- **D-D — ITM-015 sanitization breadth:** ✅ **Sanitize only the raw driver/connection
+  `Exception` arms** (the DB-touching paths); intentional `ValueError` / safety-`reason` /
+  "not found" messages stay verbatim.
+- **D-E — Correlation-ID handling:** ✅ **Generate a server-side UUID, honour an inbound
+  `X-Request-ID`, echo it back**, reuse it as `error_id`.
+- **D-F — Metrics persistence:** ✅ **In-memory only** (resets on restart; documented
+  limitation).
+- **D-G — Fold in ITM-016 (CI Python matrix):** ✅ **Yes — add a 3.11 + 3.13 CI matrix**
+  this phase (closes ITM-016).
 
 ## Revision history
 
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product/Eng | Discovery charter opened; objectives/scope/deliverables/risks/success criteria + open decisions D-A…D-G; **pending owner approval before any code**. |
+| 1.1 | 2026-06-10 | Product/Eng | Owner approved; decisions D-A…D-G resolved (all as recommended). Discovery complete → Design (design + build sequence pending owner approval before code). |
