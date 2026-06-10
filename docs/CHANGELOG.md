@@ -4,6 +4,35 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 4 — Reports, Templates & UX · dev complete, pending exit-gate review)
+- **Parameterized saved reports.** New `src/core/reports.py`: Report v2 model
+  (`id, name, description, sql, parameters[], default_profile_id?, template_id?,
+  timestamps`), `ReportStore` (JSON/in-memory) with **legacy `{name:{sql}}` → v2
+  migration on load**, and `coerce_report_binds` (defaults/required/typing, rejects
+  unknown keys). Parameters are Oracle **bind variables**, never interpolated.
+- **Bind safety at the chokepoint** ([ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)).
+  `src/db.py`: `validate_binds` (scalar-only, name-validated) + `run_select(sql, limits,
+  binds)`; `/execute` gains an optional `binds` map. The SELECT/CTE-only text check is
+  unchanged, so the safety verdict is independent of bind values.
+- **`/reports` API parity** ([ADR-008](adr/ADR-008-reports-core-module-api-parity.md)).
+  CRUD + `POST /reports/{id}/run`; `/execute` refactored into shared `_resolve_target`
+  + `_run_sql` so reports run through the exact same safety+limits+audit chokepoint.
+- **EBS template catalog.** `src/core/templates.py`: 13 curated standard-EBS reference
+  SELECTs (GL×3, AP×3, AR×2, PO×3, OM×2), parameterized, review-before-run; read-only
+  `/templates` + `/templates/{id}`.
+- **Left-nav UX.** Streamlit top tabs → sidebar radio nav (Connections, Schema Upload,
+  Explore Schema, Query Builder, **Reports**, **Templates**, Settings) over one app with
+  shared session state. Reports section runs parameterized reports with profile binding +
+  export and saves SQL as reports; Templates section browses/loads/saves the catalog.
+- **Governed docs:** `docs/reports-templates-ux-design.md`, ADR-007 & ADR-008; D3/D4/D5/D6
+  and BRD/PRD (FR-8 upgraded, FR-10 added) + traceability updated in lockstep.
+- Tests: **+43** (reports store/migration, bind safety, `/reports` API, templates,
+  7-section smoke) → **118 total** green.
+
+### Removed
+- Dead report helpers in `src/storage.py` (`list_reports`/`save_report`/`get_report`/
+  `delete_report`/`REPORTS_FILE`), superseded by the Report v2 store.
+
 ### Added
 - **Governance baseline (P2.5):** full `/docs` governed set (Vision, BRD/PRD, Architecture, Data Models, API Contracts, Test Strategy, Deployment Plan), ADR log, Risk Register, Task Tracker, Issue Log, Traceability Matrix, Roadmap, and this changelog.
 - Git version control initialized for the repository.

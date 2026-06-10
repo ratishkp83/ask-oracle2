@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 1.0 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Session Handoff · **Version:** 1.1 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -29,8 +29,14 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 5. Active charter under [charters/](charters/), plus [oracle-llm-design.md](oracle-llm-design.md), [issue-log.md](issue-log.md), [risk-register.md](risk-register.md), [adr/](adr/), [CHANGELOG.md](CHANGELOG.md).
 
 ## 4. Current state (2026-06-10)
-- **Phases 1–3 complete.** Phase 2 (Hardened Connectivity & Safety) closed; **Phase 3 (NL→SQL 2.0 & LLM Abstraction) CLOSED** via the gate: independent review **r1 FAIL → remediated → r2 `PASS-WITH-FIXES`** (no open blocking). See [reviews/](reviews/).
-- **75 automated tests green.** Phase-3 clean baseline was commit `8cf8b3f` (+ this handoff/relocation commit). Repo relocated to `ask-oracle2`.
+- **Phases 1–3 complete.** Phase 3 CLOSED via the gate (r1 FAIL → r2 `PASS-WITH-FIXES`).
+- **Phase 4 (Reports, Templates & UX): DEV + TEST COMPLETE, exit gate pending.** Built across
+  `78f1ad3 → HEAD`: Report v2 store + legacy migration (`core/reports.py`); **bind variables
+  through the chokepoint** (`db.py:validate_binds`, `/execute` `binds`; [ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md));
+  `/reports` CRUD + `/reports/{id}/run` sharing `_run_sql` ([ADR-008](adr/ADR-008-reports-core-module-api-parity.md));
+  13 curated EBS templates (`core/templates.py`, `/templates`); left-nav UI with Reports +
+  Templates sections. Design: [reports-templates-ux-design.md](reports-templates-ux-design.md).
+- **118 automated tests green** (75 + 43 new). Commits are local and **unpushed** (owner controls push).
 
 ## 5. Non-negotiables (must never regress)
 - **SELECT/CTE only.** All DML/DDL/PL-SQL/stacked/`FOR UPDATE` rejected, fail-closed, via the single `/execute` chokepoint (`src/core/sql_safety.py`); both UI and API route through it. Verify with `tests/test_sql_safety.py` + `test_execute_endpoint.py`.
@@ -45,11 +51,21 @@ A phase is not "closed" until an **independent adversarial code review + QA** re
 - **Pre-GA:** manual UI + live-Oracle pass (RISK-04). See [issue-log.md](issue-log.md) / [risk-register.md](risk-register.md) for the full list.
 
 ## 8. Next action
-**Open Phase 4 — "Reports, Templates & UX" — Discovery charter** (`docs/charters/phase-4-charter.md`): objectives; scope (saved reports with parameters + connection-profile binding; EBS-oriented templates GL/AP/AR/PO/OM; left-nav UX rework); deliverables; risks; success criteria; open decisions. **Present it for owner approval before writing code.** Then: decisions → build + tests + doc updates → owner runs the exit-gate reviewer → remediate to PASS → close Phase 4.
+**Run the Phase 4 exit gate (R4.x).** Development + testing are complete; the remaining
+step is the mandatory **independent adversarial review + QA** (reviewer ≠ author). The
+**owner supplies a fresh reviewer agent** briefed with
+[process/adversarial-reviewer-prompt.md](process/adversarial-reviewer-prompt.md) over the
+Phase-4 change range **`3f6c03e..HEAD`**. Reviewer focus areas: the bind-through-chokepoint
+change (can a parameter value defeat SELECT-only? — see `test_bind_safety.py`), `/reports`
+run path, legacy report migration, and the left-nav UX. Then: triage → remediate blocking
+→ re-review until **PASS** → record sign-off (tracker + CHANGELOG) → **push when the owner
+asks**.
 
-First steps on resume: confirm the working tree is clean and 75 tests pass, then draft the Phase 4 Discovery charter.
+First steps on resume: confirm the working tree is clean and **118 tests pass**
+(`pytest tests -q`), then proceed with the R4.x exit-gate review.
 
 ## Revision history
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Delivery | Initial handoff after Phase 3 closure + repo relocation to ask-oracle2. |
+| 1.1 | 2026-06-10 | Delivery | Phase 4 dev+test complete (118 tests); next action = R4.x exit-gate review over `3f6c03e..HEAD`. |

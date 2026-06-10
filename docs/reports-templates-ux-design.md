@@ -1,6 +1,6 @@
 # Reports, Templates & UX — Design (Phase 4)
 
-> **Document:** Design · **Version:** 1.0 · **Status:** Proposed → Baseline on build · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Design · **Version:** 1.0 · **Status:** Baseline (built; pending exit-gate review) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 > Implements [phase-4-charter.md](charters/phase-4-charter.md) (decisions D-A…D-I resolved 2026-06-10).
 
 ## 1. Overview

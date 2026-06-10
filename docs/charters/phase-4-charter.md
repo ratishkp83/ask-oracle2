@@ -1,11 +1,13 @@
 # Phase 4 Charter — Reports, Templates & UX
 
-> **Document:** Phase Charter · **Version:** 1.1 · **Status:** Discovery complete → Design (proposed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.2 · **Status:** Development complete → exit-gate review · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**Discovery complete** — owner approved the charter and resolved decisions D-A…D-I on
-2026-06-10 (see § Decisions). **Design proposed next; Development begins on owner
-approval of the design + build sequence.**
+**Development + Testing complete** (2026-06-10). Decisions D-A…D-I resolved and the
+[design](../reports-templates-ux-design.md) approved; built across commits
+`78f1ad3 → HEAD` with **118 tests green** and governed docs updated in lockstep.
+**Next: the mandatory independent adversarial review + QA exit gate (R4.x) — the owner
+supplies a fresh reviewer agent over `3f6c03e..HEAD`; remediate to PASS, then close.**
 
 ## Context — where we are today (grounding facts)
 - **Saved reports exist but are minimal.** `src/storage.py` persists a flat
@@ -138,3 +140,4 @@ confirmed **as recommended**; the remaining defaults were accepted without chang
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product/Eng | Discovery charter opened; decisions pending owner approval. |
 | 1.1 | 2026-06-10 | Product/Eng | Owner approved; decisions D-A…D-I resolved (4 pivotal as recommended; defaults accepted). Discovery complete → Design. |
+| 1.2 | 2026-06-10 | Product/Eng | Design approved + built (reports v2, bind safety, /reports + /templates, left-nav UX); 118 tests green; docs updated. Dev+Test complete → exit-gate review (R4.x). |

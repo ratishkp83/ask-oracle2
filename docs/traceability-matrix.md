@@ -13,16 +13,18 @@ Maps requirements → design → implementation → tests, so coverage gaps are 
 | FR-5 NL→SQL propose-only | [Arch §3](03-architecture.md) | `nl2sql.py`, `api.py:/nl2sql` | `test_nl2sql_config.py` (config); generation = manual |
 | FR-6 Per-user LLM | [ADR-004](adr/ADR-004-per-user-llm-config.md) | `nl2sql.LLMConfig`, `app.py` Settings | `test_nl2sql_config.py` |
 | FR-7 Export CSV/Excel | — | `utils.py`, `app.py` | manual UI smoke |
-| FR-8 Saved reports | — | `storage.py`, `app.py` | manual UI smoke |
+| FR-8 Saved/parameterized reports | [Design](reports-templates-ux-design.md), [ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md), [ADR-008](adr/ADR-008-reports-core-module-api-parity.md) | `core/reports.py`, `api.py:/reports`, `app.py` Reports | `test_reports.py`, `test_reports_api.py`, `test_bind_safety.py` |
 | FR-9 Audit without leakage | [Arch §4](03-architecture.md) | `core/audit.py`, `api.py:/execute` | asserted indirectly; dedicated test = backlog |
-| NFR-1 Safety/fail-closed | [ADR-001](adr/ADR-001-sql-safety-engine.md) | `core/sql_safety.py` | `test_sql_safety.py` (24 cases) |
+| FR-10 EBS templates | [Design §2.4](reports-templates-ux-design.md) | `core/templates.py`, `api.py:/templates`, `app.py` Templates | `test_templates.py` |
+| NFR-1 Safety/fail-closed | [ADR-001](adr/ADR-001-sql-safety-engine.md), [ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md) | `core/sql_safety.py`, `db.py:validate_binds` | `test_sql_safety.py` (24), `test_bind_safety.py` (11) |
 | NFR-2 Secret confidentiality | [ADR-002](adr/ADR-002-encrypted-profiles.md), [ADR-003](adr/ADR-003-secrets-via-env.md) | `core/crypto.py`, `.gitignore` | `test_profiles.py::test_file_store_encrypts_at_rest` |
-| NFR-6 Testability/CI | [Test Strategy](06-test-strategy.md) | `tests/`, CI workflow | full suite (48) |
+| NFR-6 Testability/CI | [Test Strategy](06-test-strategy.md) | `tests/`, CI workflow | full suite (118) |
 
-**Known gaps:** FR-4 (no live-DB limit test), FR-9 (no dedicated audit-redaction test), FR-5 generation quality (manual only). Tracked in [task-tracker](task-tracker.md).
+**Known gaps:** FR-4 (no live-DB limit test), FR-9 (no dedicated audit-redaction test), FR-5 generation quality (manual only), FR-10 template SQL not validated vs. a live EBS instance (pre-GA RISK-04). Tracked in [task-tracker](task-tracker.md).
 
 ## Revision history
 
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | QA/Eng | Initial matrix; gaps flagged. |
+| 1.1 | 2026-06-10 | QA/Eng | Phase 4: FR-8 upgraded, FR-10 added, bind-safety traced (ADR-007/008); suite 118. |

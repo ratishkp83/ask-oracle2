@@ -34,8 +34,9 @@
 | FR-5 | As an analyst, I ask in English and get proposed SQL. | NL→SQL returns SQL + (future: explanation); never auto-executes. | ✅ (explanation: Phase 3) |
 | FR-6 | As a user, I configure my own LLM provider/model/key. | Per-session override in Settings; env fallback; key never persisted/logged. | ✅ Phase 2 |
 | FR-7 | As an analyst, I export results to CSV/Excel. | Download buttons produce valid CSV/XLSX of current result. | ✅ (existing) |
-| FR-8 | As an analyst, I save and re-run reports. | Save SQL by name; list; re-open. | ✅ (existing, basic) |
+| FR-8 | As an analyst, I save, parameterize, and re-run reports. | Save SQL by name with typed **parameters** (bind variables) + optional **connection-profile binding**; list/open/update/delete; run with parameter values; export. | ✅ Phase 4 |
 | FR-9 | As a user, every executed query is audited without leaking data. | Audit record = source, profile, user, SQL **hash**, rows, time; no raw SQL/creds. | ✅ Phase 2 |
+| FR-10 | As an analyst, I start from EBS report templates. | Curated GL/AP/AR/PO/OM starter SELECTs, parameterized; review before running (never auto-run); load into builder or save as a report. | ✅ Phase 4 |
 
 ## 5. Non-functional requirements
 
@@ -60,3 +61,4 @@
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product/Eng | Baseline; FR/NFR captured, Phase-2 marked delivered. |
 | 1.1 | 2026-06-10 | Eng | GitHub remote reference updated to `ratishkp83/ask-oracle2`. |
+| 1.2 | 2026-06-10 | Product/Eng | Phase 4: FR-8 upgraded (parameters + profile binding); FR-10 added (EBS templates). |

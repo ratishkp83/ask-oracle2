@@ -53,15 +53,15 @@ until the owner approves the charter and resolves decisions D-A…D-I.**
 |----|------|--------|-------|
 | P4-0 | Open Phase 4 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-I |
 | P4-D | Owner approval + decision resolution (D-A…D-I) | ✅ Completed | resolved 2026-06-10: keep JSON store; scalar binds; curated EBS SQL; ~10–15 templates across 5 modules; sidebar nav; **core + /reports API**; bind-through-execute; nullable profile binding |
-| P4-DES | Design + build sequence (proposed) | ⏳ Awaiting owner go-ahead | governed design doc + contracts (Report v2, /execute binds, /reports); build begins on approval |
-| P4-1 | `src/core/reports.py` — Report v2 model + store + legacy migration | 📋 Planned | depends on D-A/D-H |
-| P4-2 | Bind-parameter plumbing through `run_select`/`/execute` | 📋 Planned | depends on D-B/D-G; **touches chokepoint** |
-| P4-3 | EBS template catalog (GL/AP/AR/PO/OM, starter set) | 📋 Planned | depends on D-C/D-D |
-| P4-4 | Left-nav UX rework | 📋 Planned | depends on D-E |
-| P4-5 | `/reports` CRUD + `/reports/{id}/run` API | 📋 Planned | depends on D-F (conditional) |
-| P4-6 | Tests (CRUD, **bind-safety**, migration, template shape, execute-with-binds, UI smoke) | 📋 Planned | — |
-| P4-7 | Governed-doc updates (D3/D4/D5/D6, ADR(s), CHANGELOG, traceability, registers) | 📋 Planned | code + docs same change set |
-| R4.x | Phase-4 independent adversarial review + QA gate | 📋 Planned | reviewer ≠ author; owner supplies reviewer |
+| P4-DES | Design + build sequence (approved) | ✅ Completed | `docs/reports-templates-ux-design.md` (`78f1ad3`); owner approved → build |
+| P4-1 | `src/core/reports.py` — Report v2 model + store + legacy migration | ✅ Completed | `43e603d`; 13 tests |
+| P4-2 | Bind-parameter plumbing through `run_select`/`/execute` (ADR-007) | ✅ Completed | `e53fc51`; **chokepoint** `validate_binds` + 11 bind-safety tests |
+| P4-3 | EBS template catalog (GL/AP/AR/PO/OM, 13 templates) | ✅ Completed | `50eea97`; every template proven a safe SELECT |
+| P4-4 | Left-nav UX rework + Reports/Templates sections | ✅ Completed | `dc2daed`; 7-section smoke green |
+| P4-5 | `/reports` CRUD + `/reports/{id}/run` API (ADR-008) | ✅ Completed | `50eea97`; shares `_run_sql` chokepoint |
+| P4-6 | Tests (CRUD, **bind-safety**, migration, template shape, execute-with-binds, UI smoke) | ✅ Completed | +43 → **118 green** |
+| P4-7 | Governed-doc updates (D3/D4/D5/D6, BRD, ADR-007/008, CHANGELOG, traceability, registers) | ✅ Completed | code + docs in lockstep |
+| **R4.x** | **Phase-4 independent adversarial review + QA gate** | ⏳ **Next — awaiting owner** | reviewer ≠ author; **owner supplies a fresh reviewer agent** ([prompt](process/adversarial-reviewer-prompt.md)) over range `3f6c03e..HEAD`; iterate to PASS |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -86,7 +86,7 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 
 - **Phase-2 closure gate: PASSED (2026-06-10).** Phase 3 Discovery may open.
 - **Phase-3 closure gate: PASSED (2026-06-10)** — r2 PASS-WITH-FIXES, no open blocking. Phase 4 may open.
-- **Phase 4 Discovery: OPEN (2026-06-10)** — charter awaiting owner approval + decisions (P4-D). Build (P4-1…P4-7) is gated on those decisions.
+- **Phase 4: DEV+TEST COMPLETE (2026-06-10)** — P4-1…P4-7 done, 118 tests green, docs in lockstep. **Exit gate (R4.x) pending: owner supplies the independent adversarial reviewer** over `3f6c03e..HEAD`; remediate to PASS, then close Phase 4.
 - Pre-GA (not gating Phase 3): manual UI/live-DB pass (RISK-04), `/v1` API prefix (T-18), legacy `connection.json` migration (T-19).
 - **Hard precondition for any networked/multi-tenant deployment (Phase 7):** CORS/auth hardening (ITM-009/RISK-12) + `base_url` host-normalization (F7/ITM-010).
 
@@ -97,3 +97,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.0 | 2026-06-10 | Delivery | Initial tracker; Phase-2 delivered, P2.5 in progress. |
 | 1.1 | 2026-06-10 | Delivery | Phase-3 exit gate PASSED (r2 PASS-WITH-FIXES); R3.3/P3-7 closed; Phase 4 may open. |
 | 1.2 | 2026-06-10 | Delivery | Phase 4 Discovery opened (P4-0); P4-1…P4-7 + R4.x seeded as Planned; build gated on owner decisions (P4-D). |
+| 1.3 | 2026-06-10 | Delivery | Phase 4 decisions resolved + built: P4-DES…P4-7 Completed (118 tests); R4.x exit-gate review is the next action (owner-supplied reviewer). |

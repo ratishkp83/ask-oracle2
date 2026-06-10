@@ -18,9 +18,12 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | RISK-10 | Phase 2 received author-only review (gate introduced post-closure) | Low | Possible undetected defect in Phase-2 scope | Low | Strong automated coverage (51 tests); gate applies Phase 3+ ([ADR-006](adr/ADR-006-external-review-gate.md)) | Delivery | **Accepted** |
 | RISK-11 | Per-request `base_url` SSRF (F4) | Medium | Server egress to internal/metadata endpoints | Low | `validate_base_url` blocks non-https + private/loopback/link-local/metadata. **Residuals:** (a) hostname → private-IP via DNS rebinding; (b) integer/hex/octal IP encodings of loopback bypass the literal check (F7/ITM-010) — not exploitable on tested stack (`getaddrinfo` fails closed), platform-dependent | Eng | **Mitigating** |
 | RISK-12 | Permissive CORS `*` + credentials + `0.0.0.0` bind (pre-existing) | Medium | Cross-origin/SSRF amplification once exposed/multi-tenant | Medium | Restrict origins + add auth before multi-tenant ([ITM-009](issue-log.md)) | Eng | Open |
+| RISK-13 | Parameterized reports could re-introduce SQL injection / SELECT-only bypass | High | Read-only guarantee defeated via parameter values | Low | **Bind variables only**, never interpolated ([ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)); `validate_binds` (scalar-only); SQL-text safety check unchanged + runs first; 11 bind-safety tests (injection-as-value inert; DML-with-binds rejected) | Eng | **Mitigating** |
+| RISK-14 | EBS templates assume a standard schema; may fail/mislead on customized instances | Low | Template run errors or wrong results on customized EBS | Medium | Labelled "standard EBS reference — review before running"; editable; never auto-run; live-EBS validation deferred to pre-GA pass ([RISK-04](#)) / [ITM-012](issue-log.md) | Product/Eng | **Accepted** |
 
 ## Revision history
 
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Delivery | Initial register from P2.5 issue triage. |
+| 1.1 | 2026-06-10 | Delivery | Phase 4: RISK-13 (bind-injection, mitigated by ADR-007) + RISK-14 (EBS template schema variance, accepted) added. |
