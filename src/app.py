@@ -46,6 +46,8 @@ from src.core.reports import (
 )
 from src.core.templates import get_template, list_templates
 from src.core.logging_config import configure_logging
+from src.core.errors import sanitize_db_error_for_ui
+from src.core.sql_safety import SqlSafetyError
 
 load_dotenv()
 
@@ -112,8 +114,9 @@ def _try_connect(cfg: OracleConnectionConfig) -> Tuple[bool, str]:
     try:
         result = OracleClient(cfg).run_select("SELECT 1 FROM DUAL")
         return True, f"Connected successfully in {result.elapsed_seconds:.2f}s"
-    except Exception as e:  # noqa: BLE001 - surface a friendly message
-        return False, f"Connection failed: {e}"
+    except Exception as e:  # noqa: BLE001 - driver/connection error: sanitize (ITM-015)
+        error_id, msg = sanitize_db_error_for_ui(e, context="ui-test-connection")
+        return False, f"Connection failed — {msg} (ref: {error_id})"
 
 
 # --------------------------------------------------------------------------- #
@@ -428,8 +431,12 @@ def draw_schema_sources(conn_cfg: Optional[OracleConnectionConfig]):
                     )
                     for w in result.warnings:
                         st.info(w)
-                except Exception as e:  # noqa: BLE001
-                    st.error(f"Introspection failed: {e}")
+                except ValueError as e:
+                    # Safe, intentional validation message — show verbatim.
+                    st.error(str(e))
+                except Exception as e:  # noqa: BLE001 - driver error: sanitize (ITM-015)
+                    error_id, msg = sanitize_db_error_for_ui(e, context="ui-introspect")
+                    st.error(f"Introspection failed — {msg} (ref: {error_id})")
 
     # --- Library -------------------------------------------------------- #
     with st.expander("Library (saved schemas)"):
@@ -579,8 +586,12 @@ def _run_and_display(client: OracleClient, sql: str, binds: Optional[Dict[str, o
                 file_name="results.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
-    except Exception as e:  # noqa: BLE001 - includes SqlSafetyError
-        st.error(f"Execution error: {e}")
+    except SqlSafetyError as e:
+        # Safety rejection reason is user-actionable — show verbatim.
+        st.error(f"Query rejected: {e}")
+    except Exception as e:  # noqa: BLE001 - driver error: sanitize (ITM-015)
+        error_id, msg = sanitize_db_error_for_ui(e, context="ui-execute")
+        st.error(f"{msg} (ref: {error_id})")
 
 
 def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optional[Schema]):

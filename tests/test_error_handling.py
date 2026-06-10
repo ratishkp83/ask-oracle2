@@ -160,3 +160,17 @@ def test_unhandled_error_returns_generic_500(monkeypatch):
     assert body["detail"] == "Internal server error."
     assert body["error_id"]
     assert "kaboom" not in resp.text
+
+
+# --------------------------------------------------------------------------- #
+# Shared UI sanitizer (used by src/app.py, which bypasses HTTP) — same rule
+# --------------------------------------------------------------------------- #
+def test_ui_sanitizer_returns_ref_and_logs_full_detail(server_logs):
+    from src.core.errors import GENERIC_DB_DETAIL, sanitize_db_error_for_ui
+
+    error_id, msg = sanitize_db_error_for_ui(RuntimeError(LEAKY), context="ui-execute")
+    assert msg == GENERIC_DB_DETAIL  # generic to the user
+    assert error_id
+    joined = "\n".join(server_logs.lines)
+    assert LEAKY in joined  # full detail server-side
+    assert error_id in joined  # keyed by the same ref

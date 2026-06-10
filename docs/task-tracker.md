@@ -107,7 +107,7 @@ lightweight in-process metrics.
 | P6-2 | Request-correlation middleware + central exception handler + uniform error envelope | ✅ Completed | **B2**; `request_id_middleware` (honour/echo `X-Request-ID`); handlers for HTTPException/validation/catch-all inject `error_id`; additive to `detail` |
 | P6-3 | Shared DB-error sanitizer across all DB-touching endpoints — **resolves ITM-015** | ✅ Completed | **B2**; `core/errors.py` (`log_error`/`sanitize_db_error_for_ui`) + `_db_error`; 4 arms refactored; **ITM-015 CLOSED**; 9 tests (176 total); D5/ADR-012 updated |
 | P6-4 | In-process metrics (`src/core/metrics.py`) + read-only `/metrics` endpoint | ✅ Completed | **B3**; thread-safe counters + latency; wired into `_run_sql`; `GET /metrics`; 5 tests (181 total); D3/D5 updated |
-| P6-5 | UI surfaces generic message + `error_id` | 📋 Planned | `src/app.py` error displays |
+| P6-5 | UI surfaces generic message + `error_id` | ✅ Completed | **B4**; 3 UI driver-error surfaces (`_try_connect`, introspection, `_run_and_display`) use shared `sanitize_db_error_for_ui` → generic msg + ref; `SqlSafetyError`/`ValueError` stay verbatim; +1 test (182 total) |
 | P6-6 | Tests (sanitization/no-leak, error-id + header, log JSON shape, metrics, regression) | 📋 Planned | no chokepoint/safety regression |
 | P6-7 | Governed-doc updates (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers) + **close ITM-015** | 📋 Planned | code + docs in lockstep |
 | P6-G | (Optional, D-G) CI Python matrix 3.11 + 3.13 — **closes ITM-016** | 📋 Planned | gated on D-G |
@@ -160,3 +160,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.11 | 2026-06-10 | Delivery | Phase 6 design approved (P6-DES Completed); Build started — B1 (logging core) done: P6-1 Completed, 167 tests, ADR-012, D3 updated. |
 | 1.12 | 2026-06-10 | Delivery | Phase 6 B2 done: P6-2/P6-3 Completed; request-id middleware + exception handlers + `core/errors` sanitizer; **ITM-015 CLOSED**; 176 tests; D5 updated. |
 | 1.13 | 2026-06-10 | Delivery | Phase 6 B3 done: P6-4 Completed; `core/metrics` + `GET /metrics`, counters wired into chokepoint; 181 tests; D3/D5 updated. |
+| 1.14 | 2026-06-10 | Delivery | Phase 6 B4 done: P6-5 Completed; UI driver-error surfaces sanitized (shared helper) + ref id; safety/validation messages verbatim; 182 tests. |
