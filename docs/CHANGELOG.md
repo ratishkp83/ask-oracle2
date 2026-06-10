@@ -4,6 +4,27 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 5 — Data Dictionary Browser & Schema Tools · dev complete, pending exit-gate review)
+- **Data-dictionary helpers** (`src/schema.py`): `find_columns` (name + data-type/PK/FK
+  filters), `table_detail`, `references_out`, `referenced_by` (**where-used**), plus
+  `schema_to_dict`/`schema_from_dict` serialization.
+- **Schema persistence** ([ADR-011](adr/ADR-011-schema-persistence-store.md)):
+  `src/core/schema_store.py` — `SchemaRecord`/`SchemaSummary` + `SchemaStore`
+  (JSON/in-memory), metadata only; survives sessions.
+- **Live SELECT-only introspection** ([ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md)):
+  `src/core/introspection.py` builds a `Schema` from `ALL_TAB_COLUMNS`/`ALL_CONSTRAINTS`/
+  `ALL_CONS_COLUMNS` **through the existing `run_select` chokepoint** — bind-parameterized,
+  scoped (owner + filter), capped by `SafetyLimits`, `ALL_*` only, graceful degradation. No
+  new DB path.
+- **`/schemas` API**: CRUD + `POST /schemas/introspect` (introspect via the chokepoint,
+  optionally save).
+- **UI**: left-nav `Schema Upload → Schema Sources` (upload + introspect + save/load library)
+  and `Explore Schema → Data Dictionary` (search/filter, column-detail grid, relationship
+  navigation incl. where-used, export CSV/Excel/Markdown).
+- **Governed docs:** `docs/data-dictionary-design.md`, ADR-010/011; D2 (FR-11/12/13), D3, D4,
+  D5, D6, traceability updated in lockstep.
+- Tests: **+25** → **155 total** green.
+
 ### Notes (Phase 4 closure)
 - **Phase 4 CLOSED** (exit gate passed 2026-06-10): independent adversarial review
   **r1 = `PASS-WITH-FIXES`** (no S1/S2) — [phase-4-review-r1.md](reviews/phase-4-review-r1.md).

@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 1.2 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Session Handoff · **Version:** 1.3 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -29,19 +29,20 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 5. Active charter under [charters/](charters/), plus [oracle-llm-design.md](oracle-llm-design.md), [issue-log.md](issue-log.md), [risk-register.md](risk-register.md), [adr/](adr/), [CHANGELOG.md](CHANGELOG.md).
 
 ## 4. Current state (2026-06-10)
-- **Phases 1–4 complete.** Phase 3 CLOSED (r1 FAIL → r2 PASS-WITH-FIXES). **Phase 4
-  (Reports, Templates & UX) CLOSED** — exit gate **r1 = PASS-WITH-FIXES** (no S1/S2;
-  [phase-4-review-r1.md](reviews/phase-4-review-r1.md)). Built across `78f1ad3 → d8cd29d`:
-  Report v2 store + legacy migration; **bind variables through the chokepoint**
-  ([ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)); `/reports` CRUD + run
-  sharing `_run_sql` ([ADR-008](adr/ADR-008-reports-core-module-api-parity.md)); 13 curated
-  EBS templates + `/templates`; left-nav UI.
-- **r1 remediation:** F2 (`SELECT…INTO` reject), F3 (non-finite bind reject), F4 (`/execute`
-  exactly-one target), F5 (manual `connection.json` no longer stores the password) all fixed;
-  **F1** (a SELECT can call a side-effecting fn) closed by documenting a **required
-  least-privilege read-only DB account** ([ADR-009](adr/ADR-009-readonly-db-account-precondition.md),
-  [Deployment §0](07-deployment-plan.md)); F6 → Phase 7 (ITM-015), R1/R2 backlogged.
-- **130 automated tests green.** Commits are local and **unpushed** (owner controls push).
+- **Phases 1–4 complete.** Phase 4 CLOSED — exit gate r1 = PASS-WITH-FIXES; F1 → read-only
+  account precondition ([ADR-009](adr/ADR-009-readonly-db-account-precondition.md)). Earlier
+  Phase-4 pieces: Report v2 + bind-through-chokepoint ([ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)),
+  `/reports` ([ADR-008](adr/ADR-008-reports-core-module-api-parity.md)), `/templates`, left-nav.
+- **Phase 5 (Data Dictionary Browser & Schema Tools): DEV + TEST COMPLETE, exit gate pending.**
+  Built across `4d08844 → 2067ec7`: dictionary helpers + serialization (`schema.py`); schema
+  persistence (`core/schema_store.py`, [ADR-011](adr/ADR-011-schema-persistence-store.md));
+  **live SELECT-only introspection through the chokepoint** (`core/introspection.py`,
+  [ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md)); `/schemas` CRUD + introspect;
+  UI renamed to **Schema Sources** + **Data Dictionary** (search/filter, where-used, export).
+  Design: [data-dictionary-design.md](data-dictionary-design.md).
+- **155 automated tests green** (130 + 25). Commits local and **unpushed** (owner controls push).
+- **Note:** `openpyxl` (declared in `requirements.txt`) was missing from the local `.venv` and
+  was installed; CI installs it from requirements. Needed for `.xlsx` upload + Excel export.
 
 ## 5. Non-negotiables (must never regress)
 - **SELECT/CTE only.** All DML/DDL/PL-SQL/stacked/`FOR UPDATE` rejected, fail-closed, via the single `/execute` chokepoint (`src/core/sql_safety.py`); both UI and API route through it. Verify with `tests/test_sql_safety.py` + `test_execute_endpoint.py`.
@@ -56,20 +57,22 @@ A phase is not "closed" until an **independent adversarial code review + QA** re
 - **Pre-GA:** manual UI + live-Oracle pass (RISK-04). See [issue-log.md](issue-log.md) / [risk-register.md](risk-register.md) for the full list.
 
 ## 8. Next action
-**Open Phase 5 — "Data dictionary browser & schema tools" — Discovery charter**
-(`docs/charters/phase-5-charter.md`): objectives; scope (table/column/relationship browser
-over uploaded metadata; schema search/inspection tools); deliverables; risks; success
-criteria; open decisions. **Present it for owner approval before writing code.** Then:
-decisions → build + tests + doc updates → owner runs the exit-gate reviewer → remediate to
-PASS → close Phase 5.
+**Run the Phase 5 exit gate (R5.x).** Development + testing are complete; the remaining step
+is the mandatory **independent adversarial review + QA** (reviewer ≠ author). The **owner
+supplies a fresh reviewer agent** briefed with
+[process/adversarial-reviewer-prompt.md](process/adversarial-reviewer-prompt.md) over the
+Phase-5 change range **`6a299f8..HEAD`**. Reviewer focus areas: **introspection safety** (are
+all dictionary queries SELECT-only, bind-parameterized, scoped/capped, with no new DB path? —
+see `test_introspection.py`), the `/schemas` CRUD + introspect path, schema persistence, and
+the renamed Data Dictionary / Schema Sources UX. Then: triage → remediate blocking → re-review
+until **PASS** → record sign-off (tracker + CHANGELOG) → **push when the owner asks**.
 
-**Unpushed:** all Phase-4 commits (`ad1c34c → d8cd29d`) are local; **push when the owner
-asks**. Carried items: pre-GA manual/live-Oracle pass (RISK-04); Phase-7 preconditions
-(CORS/auth ITM-009, base_url ITM-010, driver-error sanitization ITM-015, file-store
-durability ITM-013/014).
+**Unpushed:** all Phase-4 + Phase-5 commits are local; **push when the owner asks**. Carried
+items: pre-GA manual/live-Oracle pass (RISK-04); Phase-7 preconditions (CORS/auth ITM-009,
+base_url ITM-010, driver-error sanitization ITM-015, file-store durability ITM-013/014).
 
-First steps on resume: confirm the working tree is clean and **130 tests pass**
-(`pytest tests -q`), then draft the Phase 5 Discovery charter.
+First steps on resume: confirm the working tree is clean and **155 tests pass**
+(`pytest tests -q`), then proceed with the R5.x exit-gate review.
 
 ## Revision history
 | Version | Date | Author | Change |
@@ -77,3 +80,4 @@ First steps on resume: confirm the working tree is clean and **130 tests pass**
 | 1.0 | 2026-06-10 | Delivery | Initial handoff after Phase 3 closure + repo relocation to ask-oracle2. |
 | 1.1 | 2026-06-10 | Delivery | Phase 4 dev+test complete (118 tests); next action = R4.x exit-gate review over `3f6c03e..HEAD`. |
 | 1.2 | 2026-06-10 | Delivery | Phase 4 CLOSED — gate r1 PASS-WITH-FIXES; F1–F6/R1–R2 dispositioned (F1 → ADR-009 read-only-account precondition); 130 tests. Next = Phase 5 Discovery. |
+| 1.3 | 2026-06-10 | Delivery | Phase 5 dev+test complete (155 tests): dictionary browser, schema store (ADR-011), SELECT-only introspection (ADR-010), /schemas API, Data Dictionary UI. Next = R5.x exit-gate review over `6a299f8..HEAD`. |

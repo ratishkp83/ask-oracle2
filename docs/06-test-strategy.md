@@ -17,7 +17,18 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 
 ## 3. Current coverage (baseline)
 
-**130 automated tests pass locally** (75 from Phases 2–3 + 43 in Phase 4 build + 12 from the Phase-4 review-r1 remediation: `SELECT…INTO` reject, non-finite bind rejects, `/execute` exactly-one-target, and `connection.json` no-plaintext-password — `test_storage.py`):
+**155 automated tests pass locally** (130 through Phase 4 + 25 in Phase 5):
+
+- **Data dictionary & schema tools (Phase 5)** — `test_schema_tools.py` (6): helpers
+  (`find_columns` filters, `references_out`, **`referenced_by`/where-used**, serialization
+  round-trip). `test_schema_store.py` (4): store CRUD, duplicate-name, summary-vs-full,
+  file round-trip. `test_introspection.py` (7): **every dictionary query is a safe SELECT**
+  + bind-parameterized, mappers (PK/FK/relationships), orchestrator happy-path +
+  graceful-degradation + owner-required (mocked DB). `test_schemas_api.py` (7): `/schemas`
+  CRUD + 404/409/422, `/schemas/introspect` inline + save + require-target + blank-owner-400.
+  `test_app_smoke.py` +1: Data Dictionary renders with a seeded schema.
+
+Through Phase 4 (130):
 - `test_sql_safety.py` (24): accept/reject matrix incl. literal/identifier false-positive guards, stacked statements, `FOR UPDATE`, PL/SQL, MERGE/GRANT/DDL/DML.
 - `test_profiles.py` (6): encryption-at-rest, decrypt round-trip, no password leakage, duplicate-name & service/sid validation.
 - `test_execute_endpoint.py` (13): unsafe-SQL rejection, target validation (422), unknown profile (404), success inline + via profile, `/profiles` CRUD without password, clean provider-failure error (F2).
@@ -50,6 +61,7 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 - [ ] Missing `APP_SECRET_KEY`: Connections shows a clear configuration error.
 - [ ] Reports: save SQL with `:params`, bind a profile, run with parameter values, export CSV/XLSX; missing required param shows a clear error.
 - [ ] Templates: load a GL/AP/AR/PO/OM template, run vs. a **real EBS** instance (schema-variance caveat), save-as-report.
+- [ ] Data Dictionary: **introspect** a schema from a live read-only connection (owner + filter); verify scoping/caps; browse/search; export CSV/Excel/Markdown; save + reload from the library.
 
 ## Revision history
 
@@ -58,3 +70,4 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 | 1.0 | 2026-06-10 | QA/Eng | Baseline; 48-test coverage recorded, CI + UI smoke defined. |
 | 1.1 | 2026-06-10 | QA/Eng | Phase 4: +43 tests (reports store/migration, bind safety, /reports API, templates, 7-section smoke) → 118 total; manual checklist extended. |
 | 1.2 | 2026-06-10 | QA/Eng | Phase-4 review r1 remediation: +12 tests (SELECT INTO, non-finite binds, exactly-one target, no-plaintext connection.json) → 130 total. |
+| 1.3 | 2026-06-10 | QA/Eng | Phase 5: +25 tests (dictionary helpers, schema store, introspection SELECT-safety + mapping, /schemas API, dictionary smoke) → 155 total. |

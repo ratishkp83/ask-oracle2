@@ -1,11 +1,13 @@
 # Phase 5 Charter — Data Dictionary Browser & Schema Tools
 
-> **Document:** Phase Charter · **Version:** 1.1 · **Status:** Discovery complete → Design (proposed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.2 · **Status:** Development complete → exit-gate review · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**Discovery complete** — owner approved the charter and resolved decisions D-A…D-E on
-2026-06-10 (see § Decisions). **Design proposed next; Development begins on owner approval
-of the design + build sequence.**
+**Development + Testing complete** (2026-06-10). Decisions D-A…D-E resolved and the
+[design](../data-dictionary-design.md) approved; built across commits `4d08844 → HEAD`
+with **155 tests green** and governed docs updated in lockstep. **Next: the mandatory
+independent adversarial review + QA exit gate (R5.x) — the owner supplies a fresh reviewer
+agent over `6a299f8..HEAD`; remediate to PASS, then close.**
 
 ## Context — where we are today (grounding facts)
 - **A schema model already exists** (`src/schema.py`): `Schema` → `TableDefinition` →
@@ -118,3 +120,4 @@ Owner resolved all five at charter approval — the four pivotal scope decisions
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product/Eng | Discovery charter opened; decisions pending owner approval. |
 | 1.1 | 2026-06-10 | Product/Eng | Owner approved; decisions D-A…D-E resolved (4 pivotal as recommended; D-E default accepted). Discovery complete → Design. |
+| 1.2 | 2026-06-10 | Product/Eng | Design approved + built (helpers, schema store, introspection, /schemas, Data Dictionary UI); 155 tests; docs updated. Dev+Test complete → exit-gate review (R5.x). |

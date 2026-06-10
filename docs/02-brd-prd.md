@@ -37,6 +37,9 @@
 | FR-8 | As an analyst, I save, parameterize, and re-run reports. | Save SQL by name with typed **parameters** (bind variables) + optional **connection-profile binding**; list/open/update/delete; run with parameter values; export. | ✅ Phase 4 |
 | FR-9 | As a user, every executed query is audited without leaking data. | Audit record = source, profile, user, SQL **hash**, rows, time; no raw SQL/creds. | ✅ Phase 2 |
 | FR-10 | As an analyst, I start from EBS report templates. | Curated GL/AP/AR/PO/OM starter SELECTs, parameterized; review before running (never auto-run); load into builder or save as a report. | ✅ Phase 4 |
+| FR-11 | As an analyst, I browse a searchable data dictionary. | Search/filter tables & columns (name, data type, PK/FK); column-detail grid; relationship navigation (references-out + where-used); export CSV/Excel/Markdown. | ✅ Phase 5 |
+| FR-12 | As an analyst, I auto-load the dictionary from the database. | SELECT-only introspection of `ALL_*` views via the chokepoint under a read-only account; scoped (owner + filter) + capped; graceful degradation. | ✅ Phase 5 |
+| FR-13 | As an analyst, I save and reload schemas. | Persist a schema snapshot (metadata only); list/load/delete; survives sessions (no re-upload); UI + `/schemas` API. | ✅ Phase 5 |
 
 ## 5. Non-functional requirements
 
@@ -62,3 +65,4 @@
 | 1.0 | 2026-06-10 | Product/Eng | Baseline; FR/NFR captured, Phase-2 marked delivered. |
 | 1.1 | 2026-06-10 | Eng | GitHub remote reference updated to `ratishkp83/ask-oracle2`. |
 | 1.2 | 2026-06-10 | Product/Eng | Phase 4: FR-8 upgraded (parameters + profile binding); FR-10 added (EBS templates). |
+| 1.3 | 2026-06-10 | Product/Eng | Phase 5: FR-11 (data-dictionary browser), FR-12 (read-only introspection), FR-13 (schema persistence) added. |
