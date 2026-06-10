@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from src.core import audit
 from src.core.config import load_safety_limits
+from src.core.logging_config import configure_logging
 from src.core.crypto import SecretConfigError
 from src.core.profiles import (
     JsonFileProfileStore,
@@ -45,6 +46,9 @@ from src.schema import (
 # Load .env for local/bare-metal runs. In Docker/Render real env vars are set
 # directly, so this is a harmless no-op there. No secrets live in source.
 load_dotenv()
+
+# Structured logging to stdout (JSON by default; LOG_LEVEL/LOG_FORMAT via env).
+configure_logging()
 
 app = FastAPI(title="Ask Oracle Reports API", version="2.1.0")
 

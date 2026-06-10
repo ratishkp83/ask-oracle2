@@ -49,12 +49,21 @@ def audit_execution(
         "truncated": truncated,
         "reason": reason,
     }
-    logger.info("%s", payload)
+    # Structured emission: the message is the event name; the secret-free payload
+    # rides as `extra_fields` so JsonFormatter renders one machine-parseable line.
+    logger.info(payload["event"], extra={"extra_fields": payload})
 
 
 def audit_profile_usage(profile_id: str, username: Optional[str], action: str) -> None:
     """Record a profile lifecycle/usage event (create, delete, test, connect)."""
     logger.info(
-        "%s",
-        {"event": "profile_usage", "action": action, "profile_id": profile_id, "user": username},
+        "profile_usage",
+        extra={
+            "extra_fields": {
+                "event": "profile_usage",
+                "action": action,
+                "profile_id": profile_id,
+                "user": username,
+            }
+        },
     )

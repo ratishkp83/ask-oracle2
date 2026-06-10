@@ -102,8 +102,8 @@ lightweight in-process metrics.
 |----|------|--------|-------|
 | P6-0 | Open Phase 6 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-G; pending owner approval before any code |
 | P6-D | Owner approval + decision resolution (D-A…D-G) | ✅ Completed | resolved 2026-06-10: all seven as recommended — in-process metrics+`/metrics` (D-A); JSON-to-stdout + `LOG_LEVEL`/`LOG_FORMAT` (D-B); additive `error_id` keep `detail` (D-C); sanitize raw driver errors only (D-D); UUID + honour/echo `X-Request-ID` (D-E); in-memory metrics (D-F); CI 3.11+3.13 matrix (D-G) |
-| P6-DES | Design + build sequence (owner-approved) | 🔄 In Progress | drafting design doc for owner approval; **gated before code** |
-| P6-1 | Central logging config (`src/core/logging_config.py`) — JSON/text, env-driven, idempotent | 📋 Planned | audit payloads emit valid JSON; configured at API + UI startup |
+| P6-DES | Design + build sequence (owner-approved) | ✅ Completed | `docs/observability-error-handling-design.md` (`0b61061`); owner approved as-is 2026-06-10 → build |
+| P6-1 | Central logging config (`src/core/logging_config.py`) — JSON/text, env-driven, idempotent | ✅ Completed | **B1**; `logging_config.py` + `JsonFormatter`/`TextFormatter` + `request_id` ContextVar; audit emits valid JSON; wired at API + UI startup; 7 tests (167 total); ADR-012; D3 updated |
 | P6-2 | Request-correlation middleware + central exception handler + uniform error envelope | 📋 Planned | `error_id` additive to `detail`; `X-Request-ID` echo |
 | P6-3 | Shared DB-error sanitizer across all DB-touching endpoints — **resolves ITM-015** | 📋 Planned | generic client `detail` + `error_id`; full detail logged server-side |
 | P6-4 | In-process metrics (`src/core/metrics.py`) + read-only `/metrics` endpoint | 📋 Planned | counts (executed/rejected/errored) + latency; shape per D-A |
@@ -157,3 +157,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.8 | 2026-06-10 | Delivery | Phase 5 r2 = PASS-WITH-FIXES; N-1 fixed at closure (160 tests); gate PASSED; Phase 5 CLOSED. |
 | 1.9 | 2026-06-10 | Delivery | Phase 6 Discovery opened (P6-0); P6-D…P6-7 + P6-G + R6.x seeded as Planned; build gated on owner decisions (P6-D). |
 | 1.10 | 2026-06-10 | Delivery | Phase 6 decisions D-A…D-G resolved (all as recommended); P6-D Completed; P6-DES (design) In Progress — design doc pending owner approval before code. |
+| 1.11 | 2026-06-10 | Delivery | Phase 6 design approved (P6-DES Completed); Build started — B1 (logging core) done: P6-1 Completed, 167 tests, ADR-012, D3 updated. |

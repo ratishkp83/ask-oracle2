@@ -45,8 +45,12 @@ from src.core.reports import (
     coerce_report_binds,
 )
 from src.core.templates import get_template, list_templates
+from src.core.logging_config import configure_logging
 
 load_dotenv()
+
+# Structured logging to stdout. Idempotent — safe across Streamlit re-runs.
+configure_logging()
 
 st.set_page_config(page_title="Ask Oracle Reports", layout="wide")
 

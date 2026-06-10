@@ -1,6 +1,6 @@
 # Observability & Error Handling — Design + Build Sequence (Phase 6)
 
-> **Document:** Phase-6 Design · **Version:** 1.0 · **Status:** 🔄 Proposed (owner approval pending before code) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase-6 Design · **Version:** 1.1 · **Status:** ✅ Baseline (owner-approved 2026-06-10) — in Build · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 > **Charter:** [charters/phase-6-charter.md](charters/phase-6-charter.md) (Discovery complete; decisions D-A…D-G resolved as recommended).
 
 ## 1. Purpose & scope recap
@@ -217,3 +217,4 @@ step regresses a test, revert that commit — earlier steps remain valid. The ex
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product/Eng | Proposed design + build sequence (B1…B6) for owner approval; grounded in verified current state; additive contract changes; shared core sanitizer for API + UI. |
+| 1.1 | 2026-06-10 | Product/Eng | **Owner approved as-is** → Baseline; Build started. Minor refinement: `request_id` accessors live in `core/logging_config` (not `errors`) to avoid an import cycle (formatter is the central reader). |

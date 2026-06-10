@@ -1,6 +1,6 @@
 # D3 — Architecture
 
-> **Document:** Architecture · **Version:** 1.1 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
+> **Document:** Architecture · **Version:** 1.3 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
 
 ## 1. Container view
 
@@ -36,7 +36,8 @@ Both the UI and the API converge on `src/core/`. The React/Vite scaffold exists 
 | `core/config.py` | `SafetyLimits` + `load_safety_limits()` from env. |
 | `core/crypto.py` | Fernet encrypt/decrypt; key derived from `APP_SECRET_KEY` ([ADR-002](adr/ADR-002-encrypted-profiles.md)). |
 | `core/profiles.py` | Profile models + `ProfileStore` (JSON/in-memory); passwords encrypted, never in `ProfilePublic`. |
-| `core/audit.py` | Secret-free audit logging (SQL SHA-256 only). |
+| `core/audit.py` | Secret-free audit logging (SQL SHA-256 only); emits valid JSON via the formatter. |
+| `core/logging_config.py` | `configure_logging()` — idempotent structured logging (JSON to stdout; `LOG_LEVEL`/`LOG_FORMAT`); `request_id` `ContextVar` + accessors; `JsonFormatter`/`TextFormatter` ([ADR-012](adr/ADR-012-observability-and-error-handling.md)). Phase 6. |
 | `core/reports.py` | Report v2 models + `ReportStore` (JSON/in-memory) + legacy migration; `coerce_report_binds()` (defaults/required/typing, rejects unknown keys). Phase 4. |
 | `core/templates.py` | Curated read-only EBS template catalog (GL/AP/AR/PO/OM); parameterized `:bind` SQL, review-before-run. Phase 4. |
 | `core/schema_store.py` | `SchemaRecord` + `SchemaStore` (JSON/in-memory); persisted dictionary snapshots, metadata only ([ADR-011](adr/ADR-011-schema-persistence-store.md)). Phase 5. |
@@ -74,6 +75,11 @@ constraint-view privileges ([ADR-010](adr/ADR-010-schema-introspection-via-choke
 - **Secrets:** env-only; no inline keys; `.env` git-ignored; profile passwords encrypted at rest.
 - **Audit:** every attempt (allowed/rejected) logged with SQL fingerprint, never raw SQL/creds.
 - **Limits:** centrally configured; per-request `max_rows` may only narrow.
+- **Observability (Phase 6):** structured JSON logs to stdout via `configure_logging()`
+  (`LOG_LEVEL`/`LOG_FORMAT`); a per-request `request_id` (= client `error_id`) stamped on
+  every record and echoed as `X-Request-ID`; raw DB-driver errors sanitized to a generic
+  message + `error_id` (full detail server-side) by the shared `core/errors` helper used by
+  **both** API and UI; in-process metrics via `GET /metrics` ([ADR-012](adr/ADR-012-observability-and-error-handling.md)).
 
 ## 5. Tech stack
 
@@ -81,7 +87,7 @@ Python 3.11/3.13 · FastAPI · Streamlit · python-oracledb (thin) · sqlglot ·
 
 ## 6. Architecture decisions
 
-See [ADR index](adr/). Ratified: ADR-001…011.
+See [ADR index](adr/). Ratified: ADR-001…012.
 
 ## Revision history
 
@@ -90,3 +96,4 @@ See [ADR index](adr/). Ratified: ADR-001…011.
 | 1.0 | 2026-06-10 | Engineering | Baseline incl. Phase-2 `src/core/` and chokepoint. |
 | 1.1 | 2026-06-10 | Engineering | Phase 4: `core/reports` + `core/templates`, bind-through-chokepoint flow, `/reports` + `/templates` endpoints, left-nav UI. |
 | 1.2 | 2026-06-10 | Engineering | Phase 5: `core/schema_store` + `core/introspection`, schema-introspection flow (via chokepoint), dictionary helpers; ADR-010/011. |
+| 1.3 | 2026-06-10 | Engineering | Phase 6 (B1): `core/logging_config` (structured JSON logging, `request_id`); audit emits JSON; Observability cross-cutting concern; ADR-012. |

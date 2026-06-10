@@ -1,14 +1,15 @@
 # Phase 6 Charter — Observability & Error Handling
 
-> **Document:** Phase Charter · **Version:** 1.1 · **Status:** ✅ Discovery complete (decisions resolved) → Design · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.2 · **Status:** 🔨 Build (design approved) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**DISCOVERY COMPLETE — 2026-06-10.** Owner approved the charter and resolved **all seven
-decisions D-A…D-G as recommended**. Now in **Design**: a design + build sequence is being
-prepared for owner approval before any code. Per the operating model: present for owner
-approval → resolve decisions ✅ → **design + build sequence (owner-approved)** → build +
-tests + doc updates → independent adversarial exit-gate review (reviewer ≠ author) →
-remediate to PASS → close.
+**BUILD — 2026-06-10.** Owner approved the charter, resolved **all seven decisions D-A…D-G as
+recommended**, and approved the design + build sequence
+([observability-error-handling-design.md](../observability-error-handling-design.md), Baseline).
+Now executing build steps **B1…B6** (commit-per-step, tests + docs in lockstep). Per the
+operating model: present for owner approval → resolve decisions ✅ → design + build sequence
+(owner-approved) ✅ → **build + tests + doc updates** → independent adversarial exit-gate
+review (reviewer ≠ author) → remediate to PASS → close.
 
 ## Context — where we are today (grounding facts)
 - **There is no logging configuration anywhere.** No `logging.basicConfig`, no handlers, no
@@ -221,3 +222,4 @@ Owner approved the charter and resolved **all seven decisions as recommended**.
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Product/Eng | Discovery charter opened; objectives/scope/deliverables/risks/success criteria + open decisions D-A…D-G; **pending owner approval before any code**. |
 | 1.1 | 2026-06-10 | Product/Eng | Owner approved; decisions D-A…D-G resolved (all as recommended). Discovery complete → Design (design + build sequence pending owner approval before code). |
+| 1.2 | 2026-06-10 | Product/Eng | Design + build sequence approved (Baseline) → Build started; executing B1…B6. |
