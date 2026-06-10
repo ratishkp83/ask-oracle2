@@ -59,12 +59,27 @@ All models are in-process (no relational DB yet). Persistence is JSON under `STO
 - **Store:** `ReportStore` ABC with `JsonFileReportStore` (default) and `InMemoryReportStore`
   (tests), mirroring `ProfileStore`.
 
+### Saved schemas (`src/core/schema_store.py`, `src/schema.py`) — Phase 5
+
+| Model | Fields | Notes |
+|-------|--------|-------|
+| `SchemaRecord` (at rest / output) | id, name, source∈{upload,introspection}, profile_id?, table_count, created_at, updated_at, **definition** | `definition` = serialized schema dict (`schema_to_dict`); **metadata only**, no values/creds. Field named `definition` (not `schema`) to avoid a Pydantic attribute clash. |
+| `SchemaSummary` (list output) | id, name, source, profile_id?, table_count, created_at, updated_at | No `definition` blob. |
+
+- **Serialization:** `schema_to_dict(schema)` / `schema_from_dict(d)` (`src/schema.py`) round-trip
+  the dataclass `Schema` (tables → columns + relationships) to/from a plain dict.
+- **Data-dictionary helpers** (`src/schema.py`, no DB): `find_columns`, `table_detail`,
+  `references_out`, `referenced_by` (where-used).
+- **Store:** `SchemaStore` ABC with `JsonFileSchemaStore` (default) + `InMemorySchemaStore`,
+  mirroring `ProfileStore`/`ReportStore` ([ADR-011](adr/ADR-011-schema-persistence-store.md)).
+
 ## 6. Persistence formats (`STORAGE_DIR`)
 
 | File | Shape | Sensitivity |
 |------|-------|-------------|
 | `profiles.json` | `{ profile_id: StoredProfile }` | Password **encrypted**; file git-ignored. |
 | `reports.json` | `{ report_id: Report }` (v2) — legacy `{ report_name: { sql } }` auto-migrated on load | SQL text + parameter metadata (no creds). |
+| `schemas.json` | `{ schema_id: SchemaRecord }` (Phase 5) | Schema metadata only (tables/columns/relationships); no data values/creds. |
 | `connection.json` | single manual connection (legacy) | **Contains plaintext password** — git-ignored; candidate for migration to profiles (see [issue-log](issue-log.md)). |
 
 ## Revision history
@@ -73,3 +88,4 @@ All models are in-process (no relational DB yet). Persistence is JSON under `STO
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Engineering | Baseline catalogue of Phase-2 models. |
 | 1.1 | 2026-06-10 | Engineering | Phase 4: Report/ReportParam/Template models, bind-safety note, reports.json v2 shape + legacy migration. |
+| 1.2 | 2026-06-10 | Engineering | Phase 5: SchemaRecord/SchemaSummary, schema serialization + dictionary helpers, schemas.json persistence. |

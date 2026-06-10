@@ -17,5 +17,6 @@ new ADR that references the old one (don't rewrite history).
 | [ADR-007](ADR-007-parameterized-reports-bind-variables.md) | Parameterized reports use bind variables (never interpolation) | Accepted |
 | [ADR-008](ADR-008-reports-core-module-api-parity.md) | Reports are a core module with API parity | Accepted |
 | [ADR-009](ADR-009-readonly-db-account-precondition.md) | Least-privilege read-only DB account is a required deployment precondition | Accepted |
+| [ADR-011](ADR-011-schema-persistence-store.md) | Schema persistence store (metadata only) | Accepted |
 
 Template: [ADR-template.md](ADR-template.md).
