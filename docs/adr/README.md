@@ -13,5 +13,6 @@ new ADR that references the old one (don't rewrite history).
 | [ADR-003](ADR-003-secrets-via-env.md) | Secrets via environment only; remediate + rotate | Accepted |
 | [ADR-004](ADR-004-per-user-llm-config.md) | Per-user LLM config, per-session (no auth yet) | Accepted |
 | [ADR-005](ADR-005-execute-chokepoint.md) | `/execute` is the single execution chokepoint | Accepted |
+| [ADR-006](ADR-006-external-review-gate.md) | Independent adversarial review & QA gate (effective Phase 3; reviewer supplied by owner) | Accepted |
 
 Template: [ADR-template.md](ADR-template.md).

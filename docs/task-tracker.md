@@ -36,8 +36,8 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| R2.x | Phase-2 independent adversarial review + QA | 📋 Pending decision | Gate introduced *after* Phase-2 closure — retro-apply vs apply-from-Phase-3 (awaiting direction) |
-| R3.x | Phase-3 independent adversarial review + QA | 📋 Planned | Runs at Phase-3 exit |
+| R2.x | Phase-2 independent adversarial review + QA | ⏭️ Waived | Gate effective Phase 3+ ([ADR-006](adr/ADR-006-external-review-gate.md)); Phase-2 author-only review accepted ([RISK-10](risk-register.md)) |
+| R3.x | Phase-3 independent adversarial review + QA | 📋 Planned | At Phase-3 exit; **reviewer agent supplied by product owner** |
 
 ## Backlog (next phases)
 

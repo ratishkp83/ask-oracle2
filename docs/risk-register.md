@@ -15,6 +15,7 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | RISK-07 | "Per-user" LLM is per-session (no auth) | Low | Not true multi-tenant isolation | n/a | Revisit when identity layer added | Product | **Accepted** |
 | RISK-08 | `APP_SECRET_KEY` rotation invalidates stored passwords | Low | Profiles need re-entry | Low | Documented in crypto + deployment runbook | Eng | Accepted |
 | RISK-09 | `connection.json` (manual) stores plaintext password | Medium | Local-file credential exposure | Medium | git-ignored; migrate manual conn to encrypted profiles | Eng | Open |
+| RISK-10 | Phase 2 received author-only review (gate introduced post-closure) | Low | Possible undetected defect in Phase-2 scope | Low | Strong automated coverage (51 tests); gate applies Phase 3+ ([ADR-006](adr/ADR-006-external-review-gate.md)) | Delivery | **Accepted** |
 
 ## Revision history
 
