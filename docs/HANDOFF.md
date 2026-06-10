@@ -86,8 +86,9 @@ work — but its hard preconditions gate any networked/multi-tenant deploy: CORS
 `base_url` normalization (ITM-010), file-store durability (ITM-013/14), non-DB error
 sanitization (ITM-017), plus the pre-GA manual/live-Oracle pass (RISK-04).
 
-**Unpushed:** all of Phase 4 + 5 + 6 is local (≈26 commits ahead of `origin/main`) — **push
-when the owner asks** (and that push is also what demonstrates the CI matrix / closes ITM-016).
+**Unpushed:** `origin/main` is at `d059295` (Phase 5 close), so **Phase 4 + 5 are already on
+origin**; only the **12 Phase-6 commits** (`6b0671c..HEAD`) are local — **push when the owner
+asks** (that push also runs CI / demonstrates the 3.11+3.13 matrix / closes ITM-016).
 
 **Unpushed:** all Phase-4 + Phase-5 commits are local; **push when the owner asks**. Carried
 items: pre-GA manual/live-Oracle pass (RISK-04); Phase-7 preconditions (CORS/auth ITM-009,
