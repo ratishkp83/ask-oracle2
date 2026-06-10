@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from src.core import audit
+from src.core import audit, metrics
 from src.core.config import load_safety_limits
 from src.core.errors import (
     GENERIC_SERVER_DETAIL,
@@ -251,6 +251,16 @@ def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/metrics")
+def get_metrics() -> Dict[str, Any]:
+    """Read-only in-process metrics: query counts + latency (no data/secrets).
+
+    In-memory; resets on restart. Unauthenticated in the current single-user
+    posture — gate behind auth at Phase 7 (ITM-009), like /health.
+    """
+    return metrics.snapshot()
+
+
 # --------------------------------------------------------------------------- #
 # Connection profiles
 # --------------------------------------------------------------------------- #
@@ -417,6 +427,7 @@ def _run_sql(
         audit.audit_execution(
             source="api", sql=sql, allowed=False, profile_id=profile_id, username=username, reason=safety.reason
         )
+        metrics.increment("queries_rejected")
         raise HTTPException(status_code=400, detail=safety.reason or "Query rejected by safety layer.")
 
     # Narrow (never widen) the global row cap if the caller requested fewer rows.
@@ -431,11 +442,13 @@ def _run_sql(
         audit.audit_execution(
             source="api", sql=sql, allowed=False, profile_id=profile_id, username=username, reason=str(exc)
         )
+        metrics.increment("queries_rejected")
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:  # noqa: BLE001 - DB/connection errors (sanitized, ITM-015)
         audit.audit_execution(
             source="api", sql=sql, allowed=True, profile_id=profile_id, username=username, reason="execution_error"
         )
+        metrics.increment("queries_errored")
         raise _db_error(exc, "execute")
 
     audit.audit_execution(
@@ -448,6 +461,8 @@ def _run_sql(
         elapsed_seconds=result.elapsed_seconds,
         truncated=result.truncated,
     )
+    metrics.increment("queries_executed")
+    metrics.observe_latency(result.elapsed_seconds)
     return {
         "columns": result.columns,
         "rows": result.rows,

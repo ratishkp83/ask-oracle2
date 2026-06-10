@@ -38,6 +38,8 @@ Both the UI and the API converge on `src/core/`. The React/Vite scaffold exists 
 | `core/profiles.py` | Profile models + `ProfileStore` (JSON/in-memory); passwords encrypted, never in `ProfilePublic`. |
 | `core/audit.py` | Secret-free audit logging (SQL SHA-256 only); emits valid JSON via the formatter. |
 | `core/logging_config.py` | `configure_logging()` — idempotent structured logging (JSON to stdout; `LOG_LEVEL`/`LOG_FORMAT`); `request_id` `ContextVar` + accessors; `JsonFormatter`/`TextFormatter` ([ADR-012](adr/ADR-012-observability-and-error-handling.md)). Phase 6. |
+| `core/errors.py` | Shared (API + UI) DB-error sanitization: `log_error()` (secret-free), `sanitize_db_error_for_ui()`, `GENERIC_*` messages — closes ITM-015 ([ADR-012](adr/ADR-012-observability-and-error-handling.md)). Phase 6. |
+| `core/metrics.py` | Thread-safe in-process counters (executed/rejected/errored) + latency; `snapshot()` for `GET /metrics` ([ADR-012](adr/ADR-012-observability-and-error-handling.md)). Phase 6. |
 | `core/reports.py` | Report v2 models + `ReportStore` (JSON/in-memory) + legacy migration; `coerce_report_binds()` (defaults/required/typing, rejects unknown keys). Phase 4. |
 | `core/templates.py` | Curated read-only EBS template catalog (GL/AP/AR/PO/OM); parameterized `:bind` SQL, review-before-run. Phase 4. |
 | `core/schema_store.py` | `SchemaRecord` + `SchemaStore` (JSON/in-memory); persisted dictionary snapshots, metadata only ([ADR-011](adr/ADR-011-schema-persistence-store.md)). Phase 5. |

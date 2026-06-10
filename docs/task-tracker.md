@@ -106,7 +106,7 @@ lightweight in-process metrics.
 | P6-1 | Central logging config (`src/core/logging_config.py`) — JSON/text, env-driven, idempotent | ✅ Completed | **B1**; `logging_config.py` + `JsonFormatter`/`TextFormatter` + `request_id` ContextVar; audit emits valid JSON; wired at API + UI startup; 7 tests (167 total); ADR-012; D3 updated |
 | P6-2 | Request-correlation middleware + central exception handler + uniform error envelope | ✅ Completed | **B2**; `request_id_middleware` (honour/echo `X-Request-ID`); handlers for HTTPException/validation/catch-all inject `error_id`; additive to `detail` |
 | P6-3 | Shared DB-error sanitizer across all DB-touching endpoints — **resolves ITM-015** | ✅ Completed | **B2**; `core/errors.py` (`log_error`/`sanitize_db_error_for_ui`) + `_db_error`; 4 arms refactored; **ITM-015 CLOSED**; 9 tests (176 total); D5/ADR-012 updated |
-| P6-4 | In-process metrics (`src/core/metrics.py`) + read-only `/metrics` endpoint | 📋 Planned | counts (executed/rejected/errored) + latency; shape per D-A |
+| P6-4 | In-process metrics (`src/core/metrics.py`) + read-only `/metrics` endpoint | ✅ Completed | **B3**; thread-safe counters + latency; wired into `_run_sql`; `GET /metrics`; 5 tests (181 total); D3/D5 updated |
 | P6-5 | UI surfaces generic message + `error_id` | 📋 Planned | `src/app.py` error displays |
 | P6-6 | Tests (sanitization/no-leak, error-id + header, log JSON shape, metrics, regression) | 📋 Planned | no chokepoint/safety regression |
 | P6-7 | Governed-doc updates (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers) + **close ITM-015** | 📋 Planned | code + docs in lockstep |
@@ -159,3 +159,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.10 | 2026-06-10 | Delivery | Phase 6 decisions D-A…D-G resolved (all as recommended); P6-D Completed; P6-DES (design) In Progress — design doc pending owner approval before code. |
 | 1.11 | 2026-06-10 | Delivery | Phase 6 design approved (P6-DES Completed); Build started — B1 (logging core) done: P6-1 Completed, 167 tests, ADR-012, D3 updated. |
 | 1.12 | 2026-06-10 | Delivery | Phase 6 B2 done: P6-2/P6-3 Completed; request-id middleware + exception handlers + `core/errors` sanitizer; **ITM-015 CLOSED**; 176 tests; D5 updated. |
+| 1.13 | 2026-06-10 | Delivery | Phase 6 B3 done: P6-4 Completed; `core/metrics` + `GET /metrics`, counters wired into chokepoint; 181 tests; D3/D5 updated. |

@@ -25,6 +25,11 @@
 ### GET /health
 → `200 { "status": "ok" }`
 
+### GET /metrics  *(Phase 6, read-only)*
+In-process operational metrics — query counts + latency only (no data, SQL, or secrets);
+**in-memory**, resets on restart. Unauthenticated like `/health` (gate at Phase 7 / ITM-009).
+→ `200 { "counters": { "queries_executed", "queries_rejected", "queries_errored" }, "latency_seconds": { "count", "avg", "max" } }`
+
 ### POST /profiles
 Body: `{ name, host, port?=1521, service_name?, sid?, username, password, environment?=DEV }` (service_name **or** sid required)
 → `201 ProfilePublic` · `409` duplicate name / missing service|sid · `500` `APP_SECRET_KEY` not configured
@@ -141,3 +146,4 @@ if constraint views aren't visible.
 | 1.2 | 2026-06-10 | Engineering | Phase 4: `/reports` CRUD + `/reports/{id}/run` (runs via chokepoint) and read-only `/templates` documented. |
 | 1.3 | 2026-06-10 | Engineering | Phase 5: `/schemas` CRUD + `/schemas/introspect` (SELECT-only dictionary introspection via the chokepoint). |
 | 1.4 | 2026-06-10 | Engineering | Phase 6 (B2): additive `error_id` on every error body; `X-Request-ID` correlation header; DB/driver errors sanitized to a generic message (ITM-015); ADR-012. |
+| 1.5 | 2026-06-10 | Engineering | Phase 6 (B3): read-only `GET /metrics` (in-process query counts + latency). |
