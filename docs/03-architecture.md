@@ -39,10 +39,12 @@ Both the UI and the API converge on `src/core/`. The React/Vite scaffold exists 
 | `core/audit.py` | Secret-free audit logging (SQL SHA-256 only). |
 | `core/reports.py` | Report v2 models + `ReportStore` (JSON/in-memory) + legacy migration; `coerce_report_binds()` (defaults/required/typing, rejects unknown keys). Phase 4. |
 | `core/templates.py` | Curated read-only EBS template catalog (GL/AP/AR/PO/OM); parameterized `:bind` SQL, review-before-run. Phase 4. |
+| `core/schema_store.py` | `SchemaRecord` + `SchemaStore` (JSON/in-memory); persisted dictionary snapshots, metadata only ([ADR-011](adr/ADR-011-schema-persistence-store.md)). Phase 5. |
+| `core/introspection.py` | Live SELECT-only schema introspection from `ALL_*` views via `run_select` (bind-parameterized, scoped/capped, graceful) — [ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md). Phase 5. |
 | `db.py` | `OracleClient` (thin mode); `run_select(sql, limits, binds)` enforces limits, returns `QueryResult`; `validate_binds()` chokepoint backstop (scalar-only, never interpolated — [ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)). |
 | `nl2sql.py` | NL→SQL orchestration → `NLSQLResult` (sql + explanation + confidence); selects a provider via policy. |
 | `core/llm/` | Provider abstraction: `base` (LLMProvider/LLMConfig/NLSQLResult), `providers` (External/Local), `policy` (`LLM_POLICY` toggle + selection), `redaction` (strict external context + tripwire), `confidence` (heuristic). |
-| `schema.py` | Metadata model + CSV/Excel parsers + prompt context. |
+| `schema.py` | Metadata model + CSV/Excel parsers + prompt context; data-dictionary helpers (`find_columns`/`references_out`/`referenced_by`) + serialization. |
 | `storage.py` | JSON persistence for manual connection config + storage dir resolution. |
 | `api.py` / `app.py` | FastAPI routes / Streamlit UI. |
 
@@ -53,6 +55,12 @@ Both the UI and the API converge on `src/core/`. The React/Vite scaffold exists 
 **Execute (single chokepoint):** request (`profile_id` *or* inline `connection`, optional `binds`) → `_resolve_target` (creds) → `_run_sql`: `assert_safe_select` on the SQL **text** (reject → 400 + audit) → `validate_binds` → `OracleClient.run_select(sql, limits, binds)` → `cur.execute(sql, binds)` under `SafetyLimits` → audit (hash only) → `{columns, rows, elapsed, row_count, truncated}`.
 
 **Run report:** `GET` report → `coerce_report_binds(params, raw_values)` (defaults/required/typing, reject unknown) → resolve target (request override → report `default_profile_id`) → **same** `_run_sql` chokepoint. Binds are bound as values, never interpolated ([ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)); the SELECT-only verdict is independent of bind values.
+
+**Schema introspection (Phase 5):** `introspect_schema(client, owner, table_like)` → SELECT-only
+queries over `ALL_TAB_COLUMNS` / `ALL_CONSTRAINTS` / `ALL_CONS_COLUMNS` via the **same**
+`run_select` chokepoint (bind-parameterized, capped by `SafetyLimits`, `ALL_*` only) → mappers
+build a `Schema` → optionally saved to the `SchemaStore`. Degrades to columns-only on missing
+constraint-view privileges ([ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md)).
 
 **Profile test:** resolve (decrypt) → `SELECT 1 FROM DUAL` → ok/elapsed.
 
@@ -73,7 +81,7 @@ Python 3.11/3.13 · FastAPI · Streamlit · python-oracledb (thin) · sqlglot ·
 
 ## 6. Architecture decisions
 
-See [ADR index](adr/). Ratified: ADR-001…009.
+See [ADR index](adr/). Ratified: ADR-001…011.
 
 ## Revision history
 
@@ -81,3 +89,4 @@ See [ADR index](adr/). Ratified: ADR-001…009.
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Engineering | Baseline incl. Phase-2 `src/core/` and chokepoint. |
 | 1.1 | 2026-06-10 | Engineering | Phase 4: `core/reports` + `core/templates`, bind-through-chokepoint flow, `/reports` + `/templates` endpoints, left-nav UI. |
+| 1.2 | 2026-06-10 | Engineering | Phase 5: `core/schema_store` + `core/introspection`, schema-introspection flow (via chokepoint), dictionary helpers; ADR-010/011. |
