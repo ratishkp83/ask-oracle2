@@ -23,8 +23,16 @@ from src.core.reports import (
     ReportStore,
     coerce_report_binds,
 )
+from src.core.schema_store import (
+    JsonFileSchemaStore,
+    SchemaRecord,
+    SchemaStore,
+    SchemaSummary,
+)
+from src.core.introspection import introspect_schema
 from src.core.sql_safety import SqlSafetyError, assert_safe_select
 from src.core.templates import Template, get_template, list_templates
+from src.schema import schema_to_dict
 from src.db import OracleClient, OracleConnectionConfig
 from src.nl2sql import LLMConfig, generate_sql_from_nl
 from src.schema import (
@@ -52,6 +60,7 @@ app.add_middleware(
 # routes below.
 _store: ProfileStore = JsonFileProfileStore()
 _report_store: ReportStore = JsonFileReportStore()
+_schema_store: SchemaStore = JsonFileSchemaStore()
 
 
 # --------------------------------------------------------------------------- #
@@ -119,6 +128,40 @@ class RunReportRequest(BaseModel):
     connection: Optional[ConnectionConfig] = None
     binds: Optional[Dict[str, Any]] = None
     max_rows: Optional[int] = None
+
+
+class SchemaCreate(BaseModel):
+    """Save a schema snapshot from a serialized definition OR uploaded CSV text."""
+
+    name: str = Field(..., min_length=1, max_length=120)
+    definition: Optional[Dict[str, Any]] = None
+    schema_csv: Optional[str] = None
+    relationships_csv: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _require_source(self) -> "SchemaCreate":
+        if self.definition is None and not self.schema_csv:
+            raise ValueError("Provide either 'definition' or 'schema_csv'.")
+        return self
+
+
+class IntrospectRequest(BaseModel):
+    """Introspect a schema from the data-dictionary via the SELECT-only chokepoint."""
+
+    profile_id: Optional[str] = None
+    connection: Optional[ConnectionConfig] = None
+    owner: str = Field(..., min_length=1)
+    table_like: str = "%"
+    save: bool = False
+    name: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _require_target(self) -> "IntrospectRequest":
+        if not self.profile_id and self.connection is None:
+            raise ValueError("Provide either profile_id or connection.")
+        if self.profile_id and self.connection is not None:
+            raise ValueError("Provide exactly one of profile_id or connection, not both.")
+        return self
 
 
 # --------------------------------------------------------------------------- #
@@ -439,6 +482,80 @@ def get_template_by_id(template_id: str) -> Template:
     if template is None:
         raise HTTPException(status_code=404, detail="Template not found.")
     return template
+
+
+# --------------------------------------------------------------------------- #
+# Saved schemas (data-dictionary snapshots) + live introspection
+# --------------------------------------------------------------------------- #
+@app.post("/schemas", response_model=SchemaRecord, status_code=201)
+def create_schema(body: SchemaCreate) -> SchemaRecord:
+    if body.definition is not None:
+        definition = body.definition
+    else:
+        import pandas as pd
+        from io import StringIO
+
+        parsed = parse_schema_dataframe(pd.read_csv(StringIO(body.schema_csv)))
+        if body.relationships_csv:
+            rels = parse_relationships_dataframe(pd.read_csv(StringIO(body.relationships_csv)))
+            parsed = attach_relationships(parsed, rels)
+        definition = schema_to_dict(parsed)
+    try:
+        return _schema_store.create(body.name, definition, source="upload")
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+
+@app.get("/schemas", response_model=List[SchemaSummary])
+def list_schemas() -> List[SchemaSummary]:
+    return _schema_store.list()
+
+
+@app.get("/schemas/{schema_id}", response_model=SchemaRecord)
+def get_schema(schema_id: str) -> SchemaRecord:
+    record = _schema_store.get(schema_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Schema not found.")
+    return record
+
+
+@app.delete("/schemas/{schema_id}", status_code=204)
+def delete_schema(schema_id: str) -> Response:
+    if not _schema_store.delete(schema_id):
+        raise HTTPException(status_code=404, detail="Schema not found.")
+    return Response(status_code=204)
+
+
+@app.post("/schemas/introspect")
+def introspect(req: IntrospectRequest) -> Dict[str, Any]:
+    conn_cfg, _username, profile_id = _resolve_target(req.profile_id, req.connection)
+    client = OracleClient(conn_cfg)
+    try:
+        result = introspect_schema(client, owner=req.owner, table_like=req.table_like)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001 - DB/connection errors
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    definition = schema_to_dict(result.schema)
+    saved: Optional[Dict[str, Any]] = None
+    if req.save:
+        name = req.name or f"{req.owner.upper()} (introspected)"
+        try:
+            record = _schema_store.create(
+                name, definition, source="introspection", profile_id=profile_id
+            )
+            saved = record.summary().model_dump()
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+
+    return {
+        "definition": definition,
+        "table_count": len(definition.get("tables") or {}),
+        "warnings": result.warnings,
+        "truncated": result.truncated,
+        "saved": saved,
+    }
 
 
 # Run: uvicorn src.api:app --reload --host 0.0.0.0 --port 8000

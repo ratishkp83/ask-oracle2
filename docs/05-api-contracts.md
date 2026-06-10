@@ -94,6 +94,26 @@ standard-EBS starter queries; review before running; never auto-executed.
 #### GET /templates → `200 Template[]`
 #### GET /templates/{id} → `200 Template` · `404` not found
 
+### Saved schemas & introspection *(Phase 5)*
+`SchemaRecord = { id, name, source∈{upload,introspection}, profile_id?, table_count, created_at, updated_at, definition }`
+— `definition` is the serialized schema (tables/columns/relationships); **metadata only**.
+`SchemaSummary` = `SchemaRecord` without `definition` (list view).
+
+#### POST /schemas
+Body: `{ name, definition? }` **or** `{ name, schema_csv, relationships_csv? }` (provide one source)
+→ `201 SchemaRecord` · `409` duplicate name · `422` no source
+#### GET /schemas → `200 SchemaSummary[]`
+#### GET /schemas/{id} → `200 SchemaRecord` (full) · `404` not found
+#### DELETE /schemas/{id} → `204` · `404` not found
+
+#### POST /schemas/introspect  *(SELECT-only, via the chokepoint — [ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md))*
+Body: `{ profile_id? | connection?, owner, table_like?="%", save?=false, name? }` — provide
+**exactly one** of `profile_id`/`connection`. Builds a schema from `ALL_*` data-dictionary
+views (bind-parameterized, capped by `SafetyLimits`); `ALL_*` only; columns-only + a warning
+if constraint views aren't visible.
+→ `200 { definition, table_count, warnings[], truncated, saved?: SchemaSummary }`
+→ `400` blank owner / DB error · `404` unknown profile · `409` duplicate name (when `save`) · `422` neither/both target
+
 ## Revision history
 
 | Version | Date | Author | Change |
@@ -101,3 +121,4 @@ standard-EBS starter queries; review before running; never auto-executed.
 | 1.0 | 2026-06-10 | Engineering | Baseline; profiles + safe /execute + per-user llm documented. |
 | 1.1 | 2026-06-10 | Engineering | Phase 4: `/execute` gains optional `binds` (bound, never interpolated; ADR-007). |
 | 1.2 | 2026-06-10 | Engineering | Phase 4: `/reports` CRUD + `/reports/{id}/run` (runs via chokepoint) and read-only `/templates` documented. |
+| 1.3 | 2026-06-10 | Engineering | Phase 5: `/schemas` CRUD + `/schemas/introspect` (SELECT-only dictionary introspection via the chokepoint). |
