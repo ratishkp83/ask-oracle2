@@ -1,5 +1,11 @@
-streamlit==1.36.0
-pandas==2.2.2
+# Phase 6 (R6.2 remediation): the validated set is re-pinned to a Python-3.13-
+# capable, clean-installable configuration (review r1 F-1). Numpy/pandas are
+# bumped to the minimum versions that ship cp313 wheels; streamlit is bumped to
+# a numpy-2-compatible release; fastapi/uvicorn match the versions the Phase-6
+# middleware/exception handlers were validated against (Starlette-version-
+# sensitive). openai stays at 1.43.0 (paired with httpx<0.28 in -dev; review F-2).
+streamlit==1.58.0
+pandas==2.2.3
 openpyxl==3.1.5
 oracledb==4.0.1
 pydantic==2.13.4
@@ -7,13 +13,13 @@ python-dotenv==1.0.1
 tenacity==8.5.0
 openai==1.43.0
 requests==2.32.3
-numpy==1.26.4
+numpy==2.2.6
 plotly==5.23.0
-Pillow==10.4.0
+Pillow==11.0.0
 networkx==3.3
 pyvis==0.3.2
-fastapi==0.112.0
-uvicorn[standard]==0.30.5
+fastapi==0.136.3
+uvicorn[standard]==0.49.0
 # Phase 2 — hardened connectivity & safety
 # sqlglot is pinned EXACTLY: the SELECT-only safety layer depends on its parse
 # behaviour, so an unpinned upgrade could silently change fail-closed semantics

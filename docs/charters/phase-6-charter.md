@@ -1,16 +1,18 @@
 # Phase 6 Charter — Observability & Error Handling
 
-> **Document:** Phase Charter · **Version:** 1.3 · **Status:** 🔍 Build complete — exit-gate review pending · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.4 · **Status:** ✅ CLOSED (exit gate passed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**BUILD COMPLETE — 2026-06-10; exit-gate review pending.** Charter approved, decisions D-A…D-G
-resolved (all as recommended), design approved
-([observability-error-handling-design.md](../observability-error-handling-design.md), Baseline),
-and build steps **B1…B6 complete** (`d059295..HEAD`; 182 tests green; **ITM-015 + ITM-016
-CLOSED**). The review package is ready
-([reviews/phase-6-review-package.md](../reviews/phase-6-review-package.md)). Per the operating
-model: owner approval ✅ → decisions ✅ → design ✅ → build + tests + docs ✅ → **independent
-adversarial exit-gate review (reviewer ≠ author — owner-supplied)** → remediate to PASS → close.
+**CLOSED — 2026-06-10.** Charter approved, decisions D-A…D-G resolved (all as recommended),
+design approved, build **B1…B6** complete. **Exit gate PASSED:** independent review
+**r1 = PASS-WITH-FIXES** (2 blocking S2 — F-1/F-2, dependency/CI hygiene external to the
+Phase-6 code) → remediated → **r2 = PASS** ([r1](../reviews/phase-6-review-r1.md) ·
+[r2](../reviews/phase-6-review-r2.md)). ITM-015 closed (uniform DB-error sanitization);
+the validated set re-pinned to a **clean-install-proven 3.13-capable** configuration
+(F-1/F-2); F-3/F-4/F-5 fixed; F-7→ITM-017 (Phase-7). **185 tests green**; the SELECT-only
+chokepoint (`db.py`/`sql_safety.py`) unchanged. **Sole residual:** ITM-016 is Mitigating —
+the owner pushes so CI demonstrates green on both interpreter legs (process step, not a code
+defect).
 
 ## Context — where we are today (grounding facts)
 - **There is no logging configuration anywhere.** No `logging.basicConfig`, no handlers, no
@@ -225,3 +227,4 @@ Owner approved the charter and resolved **all seven decisions as recommended**.
 | 1.1 | 2026-06-10 | Product/Eng | Owner approved; decisions D-A…D-G resolved (all as recommended). Discovery complete → Design (design + build sequence pending owner approval before code). |
 | 1.2 | 2026-06-10 | Product/Eng | Design + build sequence approved (Baseline) → Build started; executing B1…B6. |
 | 1.3 | 2026-06-10 | Product/Eng | Build B1…B6 complete (182 tests; ITM-015 + ITM-016 CLOSED); review package prepared; exit-gate review (R6.2) pending. |
+| 1.4 | 2026-06-10 | Product/Eng | Exit gate PASSED — r1 PASS-WITH-FIXES (F-1/F-2 S2) → re-pinned to a clean-install-proven 3.13-capable set + F-3/F-4/F-5 fixed → r2 PASS; 185 tests; Phase 6 CLOSED. ITM-016 Mitigating (CI demo pending push). |

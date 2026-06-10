@@ -1,4 +1,8 @@
 # Test-only dependencies. Install with: pip install -r requirements-dev.txt
 -r requirements.txt
 pytest>=8.0
-httpx>=0.27
+# httpx is pinned BELOW 0.28: openai==1.43.0's client passes the `proxies` kwarg
+# that httpx 0.28 removed, so an unpinned floor (>=0.27) resolves to 0.28+ and
+# breaks the LLM tests on every interpreter (review r1 F-2). Bump openai +
+# this pin together if moving to httpx 0.28+.
+httpx>=0.27,<0.28

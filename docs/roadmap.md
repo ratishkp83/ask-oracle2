@@ -13,15 +13,17 @@ Each feature phase runs through the lifecycle micro-cycle (Discovery → Design 
 | 3 | NL→SQL 2.0 & LLM abstraction | ✅ Done | `LLMProvider` interface, explanation + confidence, strict redaction. Closed via gate (r2 PASS-WITH-FIXES) 2026-06-10. |
 | 4 | **Reports, Templates & UX** | ✅ Done | Saved reports w/ bind params + profile binding, 13 EBS templates (GL/AP/AR/PO/OM), left-nav UX. Closed via gate (r1 PASS-WITH-FIXES) 2026-06-10; 130 tests. F1→read-only-account precondition ([ADR-009](adr/ADR-009-readonly-db-account-precondition.md)). |
 | 5 | **Data dictionary browser & schema tools** | ✅ Done | Searchable dictionary (where-used + export), SELECT-only introspection ([ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md)), schema persistence + `/schemas` ([ADR-011](adr/ADR-011-schema-persistence-store.md)). Closed via gate (r1 FAIL → r2 PASS-WITH-FIXES) 2026-06-10; 160 tests. |
-| 6 | Observability & error handling | 🔄 Discovery | Structured JSON logs, request/error-reference IDs, uniform DB-error sanitization (**folds in ITM-015**), lightweight metrics. Charter drafted ([phase-6-charter.md](charters/phase-6-charter.md)); **build gated on owner decisions D-A…D-G**. |
-| 7 | Optional: Oracle 23ai & EBS enhancements | 📋 Optional | Vector search / in-DB ML; EBS metadata packs. |
+| 6 | **Observability & Error Handling** | ✅ Done | Structured JSON logs, request/error-reference IDs, uniform DB-error sanitization (**ITM-015 closed**), in-process metrics + `/metrics`. Closed via gate (r1 PASS-WITH-FIXES → r2 PASS) 2026-06-10; 185 tests; ADR-012. r1 F-1/F-2 re-pinned the validated set to a clean-install-proven 3.13-capable config. Residual: ITM-016 (CI demo pending push). |
+| 7 | Optional: Oracle 23ai & EBS enhancements | 📋 Optional | Vector search / in-DB ML; EBS metadata packs. Carries Phase-7 preconditions (CORS/auth ITM-009, base_url ITM-010, file-store ITM-013/14, non-DB error surfaces ITM-017). |
 
 ## Current focus
-**Phase 6 Discovery OPEN** (2026-06-10). The Discovery charter
-([phase-6-charter.md](charters/phase-6-charter.md)) is drafted and **awaiting owner approval +
-resolution of decisions D-A…D-G** before any code. Phase 6 folds in **ITM-015** (uniform
-DB-error-detail sanitization across all endpoints) and optionally **ITM-016** (CI Python
-matrix, per D-G). See [task-tracker](task-tracker.md).
+**Phase 6 CLOSED** (exit gate passed 2026-06-10; r1 PASS-WITH-FIXES → r2 PASS; 185 tests).
+ITM-015 closed; the validated dependency set was re-pinned to a clean-install-proven
+3.13-capable configuration (review F-1/F-2). **Sole open follow-up:** the owner pushes so CI
+demonstrates green on both interpreter legs (ITM-016). Next feature work: **Phase 7
+(optional)** — but its hard preconditions (CORS/auth ITM-009, base_url ITM-010, file-store
+durability ITM-013/14, non-DB error sanitization ITM-017) gate any networked/multi-tenant
+deployment. See [task-tracker](task-tracker.md).
 
 ## Revision history
 
@@ -34,3 +36,4 @@ matrix, per D-G). See [task-tracker](task-tracker.md).
 | 1.4 | 2026-06-10 | Delivery | Phase 5 Dev+Test done (155 tests); exit gate (R5.x) pending. |
 | 1.5 | 2026-06-10 | Delivery | Phase 5 CLOSED (gate passed r1 FAIL → r2 PASS-WITH-FIXES, 160 tests); Phase 6 is next. |
 | 1.6 | 2026-06-10 | Delivery | Phase 6 Discovery opened (charter awaiting owner decisions D-A…D-G). |
+| 1.7 | 2026-06-10 | Delivery | Phase 6 CLOSED (gate passed r1 PASS-WITH-FIXES → r2 PASS, 185 tests); ITM-015 closed; validated set re-pinned 3.13-capable (F-1/F-2); residual ITM-016 (CI demo pending push). |

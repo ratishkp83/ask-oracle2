@@ -19,7 +19,8 @@ password, bind value, or raw SQL.
 from __future__ import annotations
 
 import logging
-from typing import Tuple
+import re
+from typing import Optional, Tuple
 from uuid import uuid4
 
 from src.core.logging_config import get_logger
@@ -29,10 +30,29 @@ GENERIC_SERVER_DETAIL = "Internal server error."
 
 logger = get_logger("errors")
 
+# A correlation id is echoed into a response header, error bodies, and logs.
+# An inbound X-Request-ID is attacker-controlled, so reduce it to a bounded,
+# safe token at ingress (review r1 F-3): strip anything outside this set so
+# CR/LF/control chars cannot forge a log line (text format) or split a header.
+_SAFE_ID_RE = re.compile(r"[^A-Za-z0-9_.\-]")
+_MAX_ID_LEN = 128
+
 
 def new_error_id() -> str:
     """A fresh correlation id (used when there is no request scope, e.g. the UI)."""
     return uuid4().hex
+
+
+def sanitize_correlation_id(value: Optional[str]) -> Optional[str]:
+    """Reduce an inbound ``X-Request-ID`` to a safe, bounded token, or ``None``.
+
+    Keeps only ``[A-Za-z0-9_.-]`` and caps the length; returns ``None`` if
+    nothing safe remains so the caller generates a fresh id instead.
+    """
+    if not value:
+        return None
+    cleaned = _SAFE_ID_RE.sub("", value)[:_MAX_ID_LEN]
+    return cleaned or None
 
 
 def log_error(

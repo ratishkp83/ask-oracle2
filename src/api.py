@@ -17,6 +17,7 @@ from src.core.errors import (
     GENERIC_SERVER_DETAIL,
     log_error,
     new_error_id,
+    sanitize_correlation_id,
 )
 from src.core.logging_config import configure_logging, get_request_id, set_request_id
 from src.core.crypto import SecretConfigError
@@ -82,7 +83,8 @@ async def request_id_middleware(request: Request, call_next):
     exception handlers below — so a client-visible failure maps to one exact
     server log line.
     """
-    rid = request.headers.get("X-Request-ID") or new_error_id()
+    # Sanitize any inbound id (attacker-controlled) before it reaches headers/logs (F-3).
+    rid = sanitize_correlation_id(request.headers.get("X-Request-ID")) or new_error_id()
     set_request_id(rid)
     try:
         response = await call_next(request)
@@ -96,8 +98,11 @@ async def request_id_middleware(request: Request, call_next):
 def _db_error(exc: Exception, context: str) -> HTTPException:
     """Sanitize a raw driver/connection error: log it server-side (full detail,
     keyed by the request's error_id) and return a generic 400. The error body's
-    ``error_id`` is attached by the HTTPException handler."""
+    ``error_id`` is attached by the HTTPException handler — and we bind the same
+    id to the context so the logged id and the returned id cannot diverge even if
+    the middleware was skipped (F-4)."""
     error_id = get_request_id() or new_error_id()
+    set_request_id(error_id)
     log_error(exc, context=context, error_id=error_id, event="db_error")
     return HTTPException(status_code=400, detail="Database error — see server logs.")
 
@@ -108,7 +113,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
     ``error_id`` — additive, no contract break."""
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.detail, "error_id": get_request_id()},
+        content={"detail": exc.detail, "error_id": get_request_id() or new_error_id()},
         headers=getattr(exc, "headers", None),
     )
 
@@ -118,7 +123,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     """422 body keeps FastAPI's ``detail`` list and gains ``error_id``."""
     return JSONResponse(
         status_code=422,
-        content={"detail": jsonable_encoder(exc.errors()), "error_id": get_request_id()},
+        content={"detail": jsonable_encoder(exc.errors()), "error_id": get_request_id() or new_error_id()},
     )
 
 

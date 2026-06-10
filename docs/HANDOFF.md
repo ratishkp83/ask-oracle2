@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 1.6 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Session Handoff · **Version:** 1.7 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -13,7 +13,7 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 - **Local repo (git):** `D:\Ratish\Personal\Project\ask-oracle-reports-main` (branch `main`). Note: the *folder* name is legacy (`-reports-main`); it is not a tracked reference.
 - **Remote:** `origin` = https://github.com/ratishkp83/ask-oracle2 (branch `main`, in sync). Push with `git push` (upstream set). `gh` is **not** installed; auth works via cached Git Credential Manager. Commit per change; **push only when the owner asks.**
 - **OS/shell:** Windows / PowerShell. Python via `py -3`. Project virtualenv at `.venv` (deps installed; both `.venv` and `.env` are git-ignored).
-- **Run the suite (expect 182 passed):**
+- **Run the suite (expect 185 passed):**
   ```powershell
   $env:PYTHONPATH = "D:\Ratish\Personal\Project\ask-oracle-reports-main"
   $env:APP_SECRET_KEY = "test-secret-key-not-for-production"
@@ -46,12 +46,17 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 - **160 automated tests green** (130 + 30). Commits local and **unpushed** (owner controls push).
 - **Note:** `openpyxl` (declared) was missing from the local `.venv` and was installed; CI
   installs it from requirements.
-- **Phase 6 (Observability & error handling): BUILD COMPLETE — exit-gate review pending.**
-  Build B1…B6 (`d059295..HEAD`): structured JSON logging + `request_id`/`error_id`, uniform
-  DB-error sanitization (**ITM-015 CLOSED**), in-process metrics + `GET /metrics`, UI
-  surfacing, CI 3.11+3.13 matrix (**ITM-016 CLOSED**); **182 tests**. New modules:
-  `core/logging_config.py`, `core/errors.py` (shared by API + UI), `core/metrics.py`.
-  Chokepoint (`db.py`/`sql_safety.py`) unchanged. See §8.
+- **Phase 6 (Observability & Error Handling): CLOSED** — exit gate PASSED (**r1
+  PASS-WITH-FIXES → r2 PASS**; [r1](reviews/phase-6-review-r1.md)/[r2](reviews/phase-6-review-r2.md)).
+  Build B1…B6: structured JSON logging + `request_id`/`error_id`, uniform DB-error
+  sanitization (**ITM-015 CLOSED**), in-process metrics + `GET /metrics`, UI surfacing
+  ([ADR-012](adr/ADR-012-observability-and-error-handling.md)). New modules:
+  `core/logging_config.py`, `core/errors.py` (shared by API + UI), `core/metrics.py`;
+  chokepoint (`db.py`/`sql_safety.py`) unchanged. **r1 F-1/F-2** corrected a premature
+  ITM-016 closure: the validated set was **re-pinned to a clean-install-proven 3.13-capable
+  configuration** (numpy 2.2.6 / pandas 2.2.3 / streamlit 1.58.0 / fastapi 0.136.3 / Pillow
+  11.0.0; `httpx<0.28` keeps openai 1.43.0); F-3/F-4/F-5 fixed. **185 tests.** **Residual:
+  ITM-016 Mitigating** — push so CI demonstrates green on both interpreter legs. See §8.
 
 ## 5. Non-negotiables (must never regress)
 - **SELECT/CTE only.** All DML/DDL/PL-SQL/stacked/`FOR UPDATE` rejected, fail-closed, via the single `/execute` chokepoint (`src/core/sql_safety.py`); both UI and API route through it. Verify with `tests/test_sql_safety.py` + `test_execute_endpoint.py`.
@@ -66,21 +71,23 @@ A phase is not "closed" until an **independent adversarial code review + QA** re
 - **Pre-GA:** manual UI + live-Oracle pass (RISK-04). See [issue-log.md](issue-log.md) / [risk-register.md](risk-register.md) for the full list.
 
 ## 8. Next action
-**Phase 6 — "Observability & error handling" — BUILD COMPLETE; exit-gate review pending.**
-Decisions D-A…D-G resolved (all as recommended); design approved
-([observability-error-handling-design.md](observability-error-handling-design.md)); build
-**B1…B6 complete** (`d059295..HEAD`, 9 commits): structured JSON logging
-([ADR-012](adr/ADR-012-observability-and-error-handling.md)), per-request correlation
-`error_id` + `X-Request-ID`, **uniform DB-error sanitization (ITM-015 CLOSED)**, in-process
-metrics + `GET /metrics`, UI surfacing, and a CI 3.11+3.13 matrix (**ITM-016 CLOSED**).
-**182 tests green.** The SELECT-only chokepoint (`db.py`/`sql_safety.py`) is **unchanged**.
+**Phase 6 — "Observability & Error Handling" — CLOSED** (exit gate passed 2026-06-10). The
+independent review ran **r1 = PASS-WITH-FIXES → r2 = PASS**
+([r1](reviews/phase-6-review-r1.md) · [r2](reviews/phase-6-review-r2.md)). r1's two blocking
+S2s (F-1/F-2) were dependency/CI hygiene, not Phase-6 code: the pins didn't install on 3.13
+and `httpx` floated past `openai==1.43.0`'s compat. **Remediated:** the validated set is
+re-pinned to a **clean-install-proven 3.13-capable** configuration (verified by a fresh-venv
+`pip install` + `pytest` → **185 passed** on 3.13); F-3/F-4/F-5 fixed.
 
-**NEXT: the owner runs the independent adversarial exit-gate reviewer (R6.2)** — reviewer ≠
-author. Package is ready: [reviews/phase-6-review-package.md](reviews/phase-6-review-package.md)
-(range `d059295..HEAD` + 9 Phase-6 invariants to attack). Then: triage → remediate any
-blocking → re-review to PASS → close Phase 6 (tracker + CHANGELOG).
+**The one open follow-up is a process step, not code:** **push so CI demonstrates green on
+both 3.11 + 3.13** (closes [ITM-016](issue-log.md); the 3.11 leg is wheel-confirmed +
+interpreter-agnostic but not yet CI-run). After that, **Phase 7 (optional)** is next feature
+work — but its hard preconditions gate any networked/multi-tenant deploy: CORS/auth (ITM-009),
+`base_url` normalization (ITM-010), file-store durability (ITM-013/14), non-DB error
+sanitization (ITM-017), plus the pre-GA manual/live-Oracle pass (RISK-04).
 
-**Unpushed:** all of Phase 4 + 5 + 6 is local — **push when the owner asks.**
+**Unpushed:** all of Phase 4 + 5 + 6 is local (≈26 commits ahead of `origin/main`) — **push
+when the owner asks** (and that push is also what demonstrates the CI matrix / closes ITM-016).
 
 **Unpushed:** all Phase-4 + Phase-5 commits are local; **push when the owner asks**. Carried
 items: pre-GA manual/live-Oracle pass (RISK-04); Phase-7 preconditions (CORS/auth ITM-009,
@@ -100,3 +107,4 @@ First steps on resume: confirm the working tree is clean and **160 tests pass**
 | 1.4 | 2026-06-10 | Delivery | Phase 5 CLOSED — gate r1 FAIL (F-1) → r2 PASS-WITH-FIXES; F-1…F-5/N-1 fixed, F-2(400)→ITM-015; 160 tests. Next = Phase 6 Discovery (Observability; folds in ITM-015). |
 | 1.5 | 2026-06-10 | Delivery | Phase 6 Discovery OPENED — charter drafted (`charters/phase-6-charter.md`); decisions D-A…D-G pending owner approval; **no code until approved**. Folds in ITM-015 (+ optional ITM-016 per D-G). |
 | 1.6 | 2026-06-10 | Delivery | Phase 6 decisions resolved + design approved + **build B1…B6 complete** (182 tests; ITM-015 + ITM-016 CLOSED); review package ready. Next = owner runs the exit-gate reviewer (R6.2). |
+| 1.7 | 2026-06-10 | Delivery | Phase 6 **CLOSED** — exit gate r1 PASS-WITH-FIXES (F-1/F-2 S2 dependency/CI hygiene) → re-pinned to a clean-install-proven 3.13-capable set + F-3/F-4/F-5 fixed → r2 PASS; **185 tests**. Residual: push to demonstrate CI matrix (ITM-016). |

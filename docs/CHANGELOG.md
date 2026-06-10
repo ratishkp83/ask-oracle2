@@ -24,20 +24,42 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   data/secrets; in-memory, resets on restart).
 - **Governed docs:** `docs/observability-error-handling-design.md`, ADR-012; D3, D5, D6 (and
   D7/traceability/registers) updated in lockstep.
-- Tests: **+22** → **182 total** green; CI now runs a **Python 3.11 + 3.13 matrix**.
+- Tests: **+25** → **185 total** green; CI runs a **Python 3.11 + 3.13 matrix** against a
+  re-pinned, clean-install-proven 3.13-capable validated set (see the r1→r2 review below).
 
 ### Fixed (Phase 6)
 - **ITM-015 (S3) CLOSED:** verbatim driver errors no longer leak DSN/host/port/username from
   `/execute`, `/reports/{id}/run`, `/schemas/introspect`, `/test-connection`,
   `/profiles/{id}/test`, or the UI — all sanitized uniformly (generic message + `error_id`;
   full detail server-side). Proven by `tests/test_error_handling.py`.
-- **ITM-016 (S4) CLOSED:** CI matrix (3.11 + 3.13) confirms the pinned set green on every
-  interpreter actually used.
+
+### Fixed (Phase 6 exit-gate review r1 → r2)
+- **Phase 6 CLOSED** (gate passed 2026-06-10): independent review **r1 = PASS-WITH-FIXES**
+  ([r1](reviews/phase-6-review-r1.md)) → remediated → **r2 = PASS** ([r2](reviews/phase-6-review-r2.md)).
+  All 9 phase invariants + the suite were verified green; the 2 blocking S2 findings were
+  **dependency/CI hygiene external to the Phase-6 code**.
+- **F-1 / F-2 (S2):** the B5/ITM-016 "CI green on 3.11+3.13" claim was premature — the pinned
+  `numpy==1.26.4`/`pandas==2.2.2` had **no Python-3.13 wheels** (3.13 leg uninstallable) and
+  `httpx>=0.27` floated to 0.28, breaking `openai==1.43.0` on **every** leg; the branch being
+  unpushed meant CI had **never run**. **Fixed:** the validated set was re-pinned to a
+  clean-installable, 3.13-capable configuration (`numpy==2.2.6`, `pandas==2.2.3`,
+  `streamlit==1.58.0`, `fastapi==0.136.3`, `uvicorn==0.49.0`, `Pillow==11.0.0`;
+  `httpx>=0.27,<0.28` keeping `openai==1.43.0`; safety-critical `sqlglot==30.10.0` unchanged)
+  and **proven by a clean-room `pip install` + `pytest` → 185 passed on a fresh Python-3.13 venv**.
+- **F-3 (S3):** inbound `X-Request-ID` is now sanitized at ingress (`sanitize_correlation_id`:
+  `[A-Za-z0-9_.-]`, ≤128) so it cannot forge a log line or split a header. **F-4 (S4):** the
+  DB-error helper binds its `error_id` so the logged and returned ids cannot diverge. **F-5
+  (S4):** leak tests now cover `/schemas/introspect` and assert response **headers** are clean.
+  **F-7 (Info):** non-DB `str(exc)` surfaces deferred → ITM-017 (Phase-7). Suite **+3 → 185**.
+- **ITM-016 (S4):** corrected from the premature B5 "closed" to **Mitigating** — the fix is in
+  and clean-install-proven on 3.13; it **closes when the owner pushes** and CI demonstrates
+  green on both interpreter legs (3.11 wheels confirmed; code interpreter-agnostic).
 
 ### Notes (Phase 6)
 - All changes are **additive** and **do not touch** the SELECT-only chokepoint (`src/db.py`,
   `src/core/sql_safety.py`); error responses keep `detail` and add `error_id`; status codes
-  unchanged. **Build complete (B1…B6); independent exit-gate review (R6.x) pending.**
+  unchanged. **Phase 6 CLOSED via the gate (r1 → r2 PASS); 185 tests; push pending for the CI
+  demonstration (ITM-016).**
 
 ### Notes (Phase 5 closure)
 - **Phase 5 CLOSED** (exit gate passed 2026-06-10): independent review **r1 = FAIL**

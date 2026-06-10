@@ -17,18 +17,23 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 
 ## 3. Current coverage (baseline)
 
-**182 automated tests pass locally** (160 through Phase 5 + 22 in Phase 6):
+**185 automated tests pass locally** (160 through Phase 5 + 25 in Phase 6):
 
 - **Observability & error handling (Phase 6)** — `test_logging_config.py` (7): JSON formatter
   emits valid JSON + base keys, `request_id` stamping, text mode, **idempotent** handlers,
   `LOG_LEVEL`, audit record round-trips as **secret-free** JSON. `test_error_handling.py`
-  (10): **ITM-015 leak proof** (no host/DSN/username in any client body; full driver detail
-  present server-side keyed by the same `error_id`) across the DB-touching endpoints,
-  inbound `X-Request-ID` honoured + echoed + reused as `error_id`, safe messages
-  (404/409/safety-400) stay verbatim and merely **gain** `error_id`, validation `422` gains
-  `error_id`, catch-all generic `500`, and the **shared UI sanitizer** returns a ref + logs
-  full detail. `test_metrics.py` (5): counter increments (executed/rejected/errored) + latency
-  via the chokepoint, `GET /metrics` JSON is secret-free.
+  (13): **ITM-015 leak proof** (no host/DSN/username in any client body **or headers**; full
+  driver detail present server-side keyed by the same `error_id`) across `/execute`,
+  `/test-connection`, `/profiles/{id}/test`, **and `/schemas/introspect`**, inbound
+  `X-Request-ID` honoured + **sanitized** (no CR/LF/header injection) + echoed + reused as
+  `error_id`, safe messages (404/409/safety-400) stay verbatim and merely **gain** `error_id`,
+  validation `422` gains `error_id`, catch-all generic `500`, and the **shared UI sanitizer**
+  returns a ref + logs full detail. `test_metrics.py` (5): counter increments
+  (executed/rejected/errored) + latency via the chokepoint, `GET /metrics` JSON is secret-free.
+- **Reproducibility (review r1 F-1/F-2):** the validated set was re-pinned to a clean-installable,
+  Python-3.13-capable configuration and **proven by a clean-room `pip install -r
+  requirements-dev.txt` + `pytest` → 185 passed on a fresh 3.13 venv** (not the resident
+  dev venv) — restoring the "green == shipped" guarantee.
 
 - **Data dictionary & schema tools (Phase 5)** — `test_schema_tools.py` (6): helpers
   (`find_columns` filters, `references_out`, **`referenced_by`/where-used**, serialization
@@ -84,3 +89,4 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 | 1.2 | 2026-06-10 | QA/Eng | Phase-4 review r1 remediation: +12 tests (SELECT INTO, non-finite binds, exactly-one target, no-plaintext connection.json) → 130 total. |
 | 1.3 | 2026-06-10 | QA/Eng | Phase 5: +25 tests (dictionary helpers, schema store, introspection SELECT-safety + mapping, /schemas API, dictionary smoke) → 155 total. |
 | 1.4 | 2026-06-10 | QA/Eng | Phase 6: +22 tests (logging config/JSON, error sanitization + correlation incl. ITM-015 leak proof, metrics) → 182 total; CI 3.11+3.13 matrix; observability manual-check added. |
+| 1.5 | 2026-06-10 | QA/Eng | Phase 6 r1 remediation: +3 tests (introspect leak, inbound-id sanitization, sanitize unit) → 185; re-pinned to a clean-install-proven 3.13-capable set (F-1/F-2); leak tests now assert headers + cover `/schemas/introspect`. |

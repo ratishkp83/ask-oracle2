@@ -4,8 +4,10 @@
 > Hand the **filled Context block** below (plus this package) to the reviewer along with the [Adversarial Review & QA Prompt](../process/adversarial-reviewer-prompt.md). The reviewer (a fresh-context agent, **not** the author) writes findings to `docs/reviews/phase-6-review-r1.md`.
 
 ## Change set
-- **Range:** `d059295..HEAD` — the 9 Phase-6 commits (`6b0671c → fc55a46`).
-- **Diff:** `git diff d059295..HEAD` (25 files, +1472/−55).
+- **Code range:** `d059295..fc55a46` — the 9 Phase-6 build commits (`6b0671c → fc55a46`).
+  *(Note: `d059295..HEAD` resolves through the R6.1 package-prep commit `8758d82` → 10 commits;
+  a literal `git diff d059295..HEAD` is +1 doc commit over the code range — see review r1 F-6.)*
+- **Diff:** `git diff d059295..fc55a46` (25 files, +1472/−55).
 - **Primary new code:**
   - `src/core/logging_config.py` — idempotent structured logging (JSON/text), `request_id` `ContextVar` + accessors, `JsonFormatter`/`TextFormatter`.
   - `src/core/errors.py` — framework-agnostic DB-error sanitization shared by API + UI (`log_error`, `sanitize_db_error_for_ui`, `GENERIC_*`).

@@ -66,14 +66,46 @@ def test_db_error_is_sanitized_but_logged_server_side(monkeypatch, server_logs):
     body = resp.json()
     assert body["detail"] == "Database error — see server logs."
     assert body["error_id"]
-    # No infrastructure detail leaks to the client.
+    # No infrastructure detail leaks to the client — body OR headers (F-5).
     assert "dbhost.internal" not in resp.text
     assert "SCOTT" not in resp.text
     assert "ORA-12541" not in resp.text
+    header_blob = " ".join(f"{k}:{v}" for k, v in resp.headers.items())
+    assert "dbhost.internal" not in header_blob and "SCOTT" not in header_blob
     # But the full detail IS captured server-side, keyed by the same error_id.
     joined = "\n".join(server_logs.lines)
     assert LEAKY in joined
     assert body["error_id"] in joined
+
+
+def test_introspect_db_error_is_sanitized(monkeypatch, server_logs):
+    """F-5: /schemas/introspect must sanitize raw driver errors like the others."""
+
+    def boom(*args, **kwargs):
+        raise RuntimeError(LEAKY)
+
+    monkeypatch.setattr(api_module, "introspect_schema", boom)
+    resp = client.post("/schemas/introspect", json={"connection": INLINE, "owner": "HR"})
+
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["detail"] == "Database error — see server logs."
+    assert body["error_id"]
+    assert "dbhost.internal" not in resp.text and "SCOTT" not in resp.text
+    header_blob = " ".join(f"{k}:{v}" for k, v in resp.headers.items())
+    assert "dbhost.internal" not in header_blob and "SCOTT" not in header_blob
+    assert LEAKY in "\n".join(server_logs.lines)
+
+
+def test_inbound_request_id_is_sanitized_in_echo_header():
+    """F-3: a malicious inbound X-Request-ID cannot inject control chars into
+    the echoed header / body / logs — it is reduced to a safe token."""
+    resp = client.get("/health", headers={"X-Request-ID": "ok-1\r\nSet-Cookie: x=y"})
+    echoed = resp.headers.get("X-Request-ID")
+    # The id is reduced to an opaque token: no CR/LF/space/colon survive, so it
+    # cannot terminate the header or forge a new one.
+    assert echoed and not any(c in echoed for c in "\r\n :")
+    assert resp.headers.get("Set-Cookie") is None  # no header was injected
 
 
 @pytest.mark.parametrize("path", ["/test-connection", "/profiles-test"])
@@ -174,3 +206,14 @@ def test_ui_sanitizer_returns_ref_and_logs_full_detail(server_logs):
     joined = "\n".join(server_logs.lines)
     assert LEAKY in joined  # full detail server-side
     assert error_id in joined  # keyed by the same ref
+
+
+def test_sanitize_correlation_id_strips_unsafe_and_bounds_length():
+    from src.core.errors import sanitize_correlation_id
+
+    assert sanitize_correlation_id("abc-123_.ok") == "abc-123_.ok"  # safe chars kept
+    assert sanitize_correlation_id("a\r\nb c:d") == "abcd"  # CR/LF/space/colon stripped
+    assert sanitize_correlation_id(None) is None
+    assert sanitize_correlation_id("") is None
+    assert sanitize_correlation_id("!@#$%") is None  # nothing safe → None (caller regenerates)
+    assert len(sanitize_correlation_id("x" * 500)) == 128  # length-bounded
