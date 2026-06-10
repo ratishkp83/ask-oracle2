@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 1.4 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Session Handoff · **Version:** 1.5 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -60,12 +60,15 @@ A phase is not "closed" until an **independent adversarial code review + QA** re
 - **Pre-GA:** manual UI + live-Oracle pass (RISK-04). See [issue-log.md](issue-log.md) / [risk-register.md](risk-register.md) for the full list.
 
 ## 8. Next action
-**Open Phase 6 — "Observability & error handling" — Discovery charter**
-(`docs/charters/phase-6-charter.md`): objectives; scope (structured logs, metrics, error
-reference IDs, and **uniform DB-error-`detail` sanitization across all endpoints — folds in
-ITM-015**); deliverables; risks; success criteria; open decisions. **Present it for owner
-approval before writing code.** Then: decisions → build + tests + doc updates → owner runs the
-exit-gate reviewer → remediate to PASS → close Phase 6.
+**Phase 6 — "Observability & error handling" — Discovery is OPEN.** The charter
+([charters/phase-6-charter.md](charters/phase-6-charter.md)) is **drafted and awaiting owner
+approval + resolution of decisions D-A…D-G** (metrics approach, log format, error-envelope
+shape, ITM-015 sanitization breadth, correlation-ID handling, metrics persistence, fold-in
+ITM-016). Scope: structured JSON logging, request/error-reference IDs, **uniform
+DB-error-`detail` sanitization across all endpoints (closes ITM-015)**, and lightweight
+in-process metrics. **No code until the owner approves.** Then: decisions → owner-approved
+design + build sequence → build + tests + doc updates → owner runs the exit-gate reviewer →
+remediate to PASS → close Phase 6.
 
 **Unpushed:** all Phase-4 + Phase-5 commits are local; **push when the owner asks**. Carried
 items: pre-GA manual/live-Oracle pass (RISK-04); Phase-7 preconditions (CORS/auth ITM-009,
@@ -83,3 +86,4 @@ First steps on resume: confirm the working tree is clean and **160 tests pass**
 | 1.2 | 2026-06-10 | Delivery | Phase 4 CLOSED — gate r1 PASS-WITH-FIXES; F1–F6/R1–R2 dispositioned (F1 → ADR-009 read-only-account precondition); 130 tests. Next = Phase 5 Discovery. |
 | 1.3 | 2026-06-10 | Delivery | Phase 5 dev+test complete (155 tests): dictionary browser, schema store (ADR-011), SELECT-only introspection (ADR-010), /schemas API, Data Dictionary UI. Next = R5.x exit-gate review over `6a299f8..HEAD`. |
 | 1.4 | 2026-06-10 | Delivery | Phase 5 CLOSED — gate r1 FAIL (F-1) → r2 PASS-WITH-FIXES; F-1…F-5/N-1 fixed, F-2(400)→ITM-015; 160 tests. Next = Phase 6 Discovery (Observability; folds in ITM-015). |
+| 1.5 | 2026-06-10 | Delivery | Phase 6 Discovery OPENED — charter drafted (`charters/phase-6-charter.md`); decisions D-A…D-G pending owner approval; **no code until approved**. Folds in ITM-015 (+ optional ITM-016 per D-G). |

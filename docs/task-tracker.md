@@ -90,6 +90,29 @@ fixed; **160 tests green**.
 | R5.4 | Re-review (r2) on fixes + regression | ✅ Done | verdict **PASS-WITH-FIXES — gate cleared** ([phase-5-review-r2.md](reviews/phase-5-review-r2.md)); F-1 re-verified closed; F-2(400)/ITM-015 + N-1 carried; N-1 fixed at closure (160 tests) |
 | P5-CLOSE | Phase-5 closure sign-off | ✅ Completed | **gate PASSED 2026-06-10**: r2 = PASS-WITH-FIXES (no open blocking), 160 tests green, governed docs current, all findings fixed-or-formally-deferred |
 
+## Phase 6 — Observability & Error Handling (🔄 Discovery — charter awaiting owner decisions)
+
+Charter: [phase-6-charter.md](charters/phase-6-charter.md). **Discovery opened 2026-06-10**;
+objectives/scope/deliverables/risks/success criteria + open decisions **D-A…D-G** drafted.
+**Build is gated on owner approval + decision resolution (P6-D).** Theme: structured JSON
+logging, request/error-reference IDs, uniform DB-error sanitization (**closes ITM-015**), and
+lightweight in-process metrics.
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| P6-0 | Open Phase 6 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-G; pending owner approval before any code |
+| P6-D | Owner approval + decision resolution (D-A…D-G) | 📋 Planned | metrics approach (D-A), log format (D-B), error-envelope shape (D-C), ITM-015 breadth (D-D), correlation-ID handling (D-E), metrics persistence (D-F), fold-in ITM-016 (D-G) |
+| P6-DES | Design + build sequence (owner-approved) | 📋 Planned | gated on P6-D |
+| P6-1 | Central logging config (`src/core/logging_config.py`) — JSON/text, env-driven, idempotent | 📋 Planned | audit payloads emit valid JSON; configured at API + UI startup |
+| P6-2 | Request-correlation middleware + central exception handler + uniform error envelope | 📋 Planned | `error_id` additive to `detail`; `X-Request-ID` echo |
+| P6-3 | Shared DB-error sanitizer across all DB-touching endpoints — **resolves ITM-015** | 📋 Planned | generic client `detail` + `error_id`; full detail logged server-side |
+| P6-4 | In-process metrics (`src/core/metrics.py`) + read-only `/metrics` endpoint | 📋 Planned | counts (executed/rejected/errored) + latency; shape per D-A |
+| P6-5 | UI surfaces generic message + `error_id` | 📋 Planned | `src/app.py` error displays |
+| P6-6 | Tests (sanitization/no-leak, error-id + header, log JSON shape, metrics, regression) | 📋 Planned | no chokepoint/safety regression |
+| P6-7 | Governed-doc updates (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers) + **close ITM-015** | 📋 Planned | code + docs in lockstep |
+| P6-G | (Optional, D-G) CI Python matrix 3.11 + 3.13 — **closes ITM-016** | 📋 Planned | gated on D-G |
+| R6.1–.7 | Phase-6 independent adversarial review + QA gate | 📋 Planned | owner-supplied reviewer; iterate to PASS |
+
 ## Standing per-phase review gate (applies to EVERY phase)
 
 Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](process/external-review-gate.md)):
@@ -114,7 +137,8 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 - **Phase-2 closure gate: PASSED (2026-06-10).** Phase 3 Discovery may open.
 - **Phase-3 closure gate: PASSED (2026-06-10)** — r2 PASS-WITH-FIXES, no open blocking. Phase 4 may open.
 - **Phase 4: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES, no open blocking; 130 tests).
-- **Phase 5: CLOSED (2026-06-10)** — exit gate PASSED (r1 FAIL → r2 PASS-WITH-FIXES, no open blocking; 160 tests). Phase 6 (Observability & error handling) may open next.
+- **Phase 5: CLOSED (2026-06-10)** — exit gate PASSED (r1 FAIL → r2 PASS-WITH-FIXES, no open blocking; 160 tests). Phase 6 may open next.
+- **Phase 6: Discovery OPEN (2026-06-10)** — charter drafted; **build gated on owner approval + decisions D-A…D-G (P6-D)**. Folds in ITM-015 (and optionally ITM-016 per D-G).
 - Pre-GA (not gating Phase 3): manual UI/live-DB pass (RISK-04), `/v1` API prefix (T-18), legacy `connection.json` migration (T-19).
 - **Hard precondition for any networked/multi-tenant deployment (Phase 7):** CORS/auth hardening (ITM-009/RISK-12) + `base_url` host-normalization (F7/ITM-010).
 
@@ -131,3 +155,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.6 | 2026-06-10 | Delivery | Phase 5 decisions resolved + built: P5-DES…P5-6 Completed (155 tests); R5.x exit-gate review is the next action (owner-supplied reviewer). |
 | 1.7 | 2026-06-10 | Delivery | Phase 5 r1 = FAIL (F-1 S2) → remediated (159 tests; F-1 fixed, F-2…F-5); r2 re-review pending. |
 | 1.8 | 2026-06-10 | Delivery | Phase 5 r2 = PASS-WITH-FIXES; N-1 fixed at closure (160 tests); gate PASSED; Phase 5 CLOSED. |
+| 1.9 | 2026-06-10 | Delivery | Phase 6 Discovery opened (P6-0); P6-D…P6-7 + P6-G + R6.x seeded as Planned; build gated on owner decisions (P6-D). |
