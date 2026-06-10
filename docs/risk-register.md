@@ -16,6 +16,8 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | RISK-08 | `APP_SECRET_KEY` rotation invalidates stored passwords | Low | Profiles need re-entry | Low | Documented in crypto + deployment runbook | Eng | Accepted |
 | RISK-09 | `connection.json` (manual) stores plaintext password | Medium | Local-file credential exposure | Medium | git-ignored; migrate manual conn to encrypted profiles | Eng | Open |
 | RISK-10 | Phase 2 received author-only review (gate introduced post-closure) | Low | Possible undetected defect in Phase-2 scope | Low | Strong automated coverage (51 tests); gate applies Phase 3+ ([ADR-006](adr/ADR-006-external-review-gate.md)) | Delivery | **Accepted** |
+| RISK-11 | Per-request `base_url` SSRF (F4) | Medium | Server egress to internal/metadata endpoints | Low | `validate_base_url` blocks non-https + private/loopback/link-local/metadata. **Residual:** hostname → private-IP via DNS rebinding (ITM) | Eng | **Mitigating** |
+| RISK-12 | Permissive CORS `*` + credentials + `0.0.0.0` bind (pre-existing) | Medium | Cross-origin/SSRF amplification once exposed/multi-tenant | Medium | Restrict origins + add auth before multi-tenant ([ITM-009](issue-log.md)) | Eng | Open |
 
 ## Revision history
 

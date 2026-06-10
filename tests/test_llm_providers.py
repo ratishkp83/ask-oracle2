@@ -49,3 +49,24 @@ def test_local_provider_is_stub():
     assert not p.is_available()
     with pytest.raises(LLMError):
         p.complete("system", "user")
+
+
+# F4 — user-supplied base_url SSRF guard.
+def test_base_url_private_ip_rejected():
+    with pytest.raises(LLMError):
+        ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url="https://169.254.169.254/v1"))
+
+
+def test_base_url_requires_https():
+    with pytest.raises(LLMError):
+        ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url="http://example.com/v1"))
+
+
+def test_base_url_public_https_ok():
+    p = ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url="https://api.example.com/v1"))
+    assert p.is_available()
+
+
+# F6 — api_key must not appear in repr.
+def test_llmconfig_repr_hides_key():
+    assert "sk-SECRET" not in repr(LLMConfig(api_key="sk-SECRET"))

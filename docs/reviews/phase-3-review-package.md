@@ -28,4 +28,19 @@
 - UI verified via headless `AppTest` only (no browser/visual pass).
 
 ## Expected reviewer output
-Verdict (`PASS` / `PASS-WITH-FIXES` / `FAIL`), findings table (severity + exact repro), blocking list, QA results, could-not-verify — saved to `docs/reviews/phase-3-review-r1.md`.
+Verdict (`PASS` / `PASS-WITH-FIXES` / `FAIL`), findings table (severity + exact repro), blocking list, QA results, could-not-verify — saved to `docs/reviews/phase-3-review-r<n>.md`.
+
+---
+
+## r2 scope (after r1 remediation)
+
+- **r1 verdict:** FAIL — see [phase-3-review-r1.md](phase-3-review-r1.md). All 6 findings worked; triage + dispositions in [issue-log.md](../issue-log.md) (Phase-3 section).
+- **Remediation change set for r2:** `b77b571..HEAD` (the remediation commit). Focus on:
+  - **F1** — `confidence.py` now validates JOIN predicates vs `schema.relationships`; re-run the bad-join probe → expect not `High`.
+  - **F2** — provider failure → clean `LLMError` (no `RetryError`/repr); re-run the wrong-key probe at the HTTP layer.
+  - **F4** — `validate_base_url` blocks non-https + private/loopback/link-local; re-run the `169.254.169.254` probe.
+  - **F5** — per-table column resolution; re-run wrong-table-column probe.
+  - **F6** — `repr(LLMConfig(api_key=…))` no longer shows the key.
+  - **Regression:** full suite (now **75**) green; confirm no new gaps.
+- F3 scrubbing and the CORS note are **deferred** (ITM-008/009, [RISK-12](../risk-register.md)) — confirm the deferral rationale is acceptable rather than re-raising as blocking.
+- Output → `docs/reviews/phase-3-review-r2.md`.

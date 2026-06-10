@@ -66,3 +66,19 @@ def test_graceful_when_no_provider(monkeypatch):
 def test_requires_non_empty_schema():
     with pytest.raises(ValueError):
         nl2sql.generate_sql_from_nl("anything", Schema())
+
+
+def test_provider_failure_returns_clean_message(monkeypatch):
+    """F2 — a failing provider call must not leak RetryError/internal repr or the key."""
+    _patch_provider(monkeypatch, "ignored")
+
+    def boom(provider, system, user, model):
+        raise RuntimeError("401 Unauthorized sk-leak-123")
+
+    monkeypatch.setattr(nl2sql, "_complete_with_retry", boom)
+    with pytest.raises(LLMError) as ei:
+        nl2sql.generate_sql_from_nl("show salaries", _schema())
+    msg = str(ei.value)
+    assert "RetryError" not in msg
+    assert "sk-leak-123" not in msg
+    assert "RuntimeError" in msg  # the exception *type* is acceptable signal

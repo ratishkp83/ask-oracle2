@@ -82,6 +82,40 @@ def test_execute_via_profile(no_db, fresh_store):
     assert resp.status_code == 200
 
 
+def test_nl2sql_provider_failure_is_clean(monkeypatch):
+    """F2 at the HTTP layer — provider failure must not return RetryError/internal repr or the key."""
+    from src import nl2sql
+
+    class FakeProvider:
+        name = "external"
+
+        def is_available(self):
+            return True
+
+        def resolve_model(self, requested=None):
+            return "m"
+
+        def complete(self, system, user, model=None):
+            return "x"
+
+    monkeypatch.setattr(nl2sql, "select_provider", lambda cfg=None, policy=None: FakeProvider())
+
+    def boom(provider, system, user, model):
+        raise RuntimeError("401 Unauthorized sk-leak-123")
+
+    monkeypatch.setattr(nl2sql, "_complete_with_retry", boom)
+
+    csv = (
+        "table_name,column_name,data_type,is_primary_key,is_foreign_key,references_table,references_column\n"
+        "EMP,EMP_ID,NUMBER,true,false,,\n"
+    )
+    resp = client.post("/nl2sql", json={"natural_language": "show employees", "schema_csv": csv})
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert "RetryError" not in detail
+    assert "sk-leak-123" not in detail
+
+
 def test_profiles_crud_and_password_not_returned():
     payload = {"name": "EBS DEV", "host": "db", "service_name": "XE", "username": "u", "password": "p"}
 

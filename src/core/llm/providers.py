@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ipaddress
 import os
 from typing import Optional, Tuple
+from urllib.parse import urlparse
 
 from openai import OpenAI
 
@@ -11,6 +13,29 @@ from src.core.llm.base import LLMConfig, LLMError
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 DEFAULT_GROQ_MODEL = "llama3-70b-8192"
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+
+_BLOCKED_HOSTS = {"localhost", "metadata.google.internal", "metadata"}
+
+
+def validate_base_url(base_url: str) -> None:
+    """Reject a user-supplied external base_url that could enable SSRF (F4).
+
+    Requires https and blocks loopback/private/link-local/reserved IP literals and
+    known metadata hostnames. (Hostnames that resolve to private IPs via DNS are a
+    residual risk — see issue log ITM.)
+    """
+    parsed = urlparse(base_url)
+    if parsed.scheme != "https":
+        raise LLMError("Custom LLM base_url must use https.")
+    host = (parsed.hostname or "").lower()
+    if not host or host in _BLOCKED_HOSTS:
+        raise LLMError("Custom LLM base_url host is not allowed.")
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return  # a hostname, not an IP literal
+    if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+        raise LLMError("Custom LLM base_url may not point at a private/internal address.")
 
 
 class ExternalLLMProvider:
@@ -30,6 +55,8 @@ class ExternalLLMProvider:
         cfg = self._config
         if cfg.api_key:
             provider = (cfg.provider or "").lower()
+            if cfg.base_url:
+                validate_base_url(cfg.base_url)  # SSRF guard on user-supplied URLs only
             base_url = cfg.base_url or (GROQ_BASE_URL if provider == "groq" else None)
             if base_url:
                 return OpenAI(api_key=cfg.api_key, base_url=base_url), (provider or "openai")

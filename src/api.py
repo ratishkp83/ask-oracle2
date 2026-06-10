@@ -70,7 +70,7 @@ class LLMSettings(BaseModel):
 
     provider: Optional[str] = Field(None, description='"groq" or "openai"')
     model: Optional[str] = None
-    api_key: Optional[str] = None
+    api_key: Optional[str] = Field(None, repr=False)  # never echoed in repr/logs (F6)
     base_url: Optional[str] = None
 
 

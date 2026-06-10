@@ -17,7 +17,8 @@ class LLMConfig:
 
     provider: Optional[str] = None  # "groq" | "openai"
     model: Optional[str] = None
-    api_key: Optional[str] = None
+    # repr=False so a stray log/traceback never prints the secret (F6).
+    api_key: Optional[str] = field(default=None, repr=False)
     base_url: Optional[str] = None
 
     def is_empty(self) -> bool:

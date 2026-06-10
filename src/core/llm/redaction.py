@@ -36,8 +36,13 @@ def build_external_context(schema: Schema, max_chars: int = 12000) -> str:
 
 
 def assert_no_values(schema_context: str) -> None:
-    """Raise if the schema context destined for an external LLM looks like it
-    contains data values rather than just schema names."""
+    """Tripwire over the **schema context** only — raises if it looks like data
+    values leaked into what is otherwise name-only schema markdown.
+
+    Scope note (F3): this does NOT scan the user's NL question, which is sent to
+    the provider verbatim *by design* (it is the user's own intent). Tenants who
+    must not send question text externally set ``LLM_POLICY=external_disabled``.
+    Optional question-text scrubbing is tracked as a backlog item."""
     match = _FORBIDDEN_RE.search(schema_context)
     if match is not None:
         raise RedactionError(

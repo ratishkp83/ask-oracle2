@@ -58,7 +58,9 @@ def _parse_sql_and_explanation(text: str) -> Tuple[str, Optional[str]]:
     return sql, explanation
 
 
-@retry(wait=wait_exponential(multiplier=1, min=1, max=10), stop=stop_after_attempt(3))
+# reraise=True so a persistent failure surfaces the underlying exception rather
+# than tenacity's RetryError wrapper (F2).
+@retry(wait=wait_exponential(multiplier=1, min=1, max=10), stop=stop_after_attempt(3), reraise=True)
 def _complete_with_retry(provider: LLMProvider, system: str, user: str, model: Optional[str]) -> str:
     return provider.complete(system, user, model)
 
@@ -96,7 +98,16 @@ def generate_sql_from_nl(
         "Return the Oracle SQL in a ```sql fence, then an 'Explanation:' line."
     )
 
-    raw = _complete_with_retry(provider, SYSTEM_PROMPT, user, model)
+    try:
+        raw = _complete_with_retry(provider, SYSTEM_PROMPT, user, model)
+    except LLMError:
+        raise  # already a clean, user-safe message
+    except Exception as exc:  # noqa: BLE001 — provider/network/auth failure
+        # Map to a clean message; never surface RetryError/internal reprs or the key (F2).
+        raise LLMError(
+            f"LLM request failed ({type(exc).__name__}). Check the API key, model, and provider settings."
+        ) from exc
+
     sql, explanation = _parse_sql_and_explanation(raw)
     if not sql_is_safe_select(sql):
         raise ValueError("Generated SQL is not a SELECT/CTE. Aborting for safety.")

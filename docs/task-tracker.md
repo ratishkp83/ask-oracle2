@@ -39,8 +39,10 @@ Status: Planned · In Progress · Blocked · Completed.
 | P3-4 | Heuristic confidence | ✅ Completed | High/Med/Low + reasons |
 | P3-5 | `/nl2sql` → SQL+explanation+confidence; UI display | ✅ Completed | D5/D4/D3 updated |
 | P3-6 | Tests (20 new; **65 total** green) | ✅ Completed | mocked provider, no network |
-| R3.x | Independent adversarial review + QA | ⛔ Pending | **owner-supplied reviewer**; Phase-3 exit gate |
-| P3-7 | Phase-3 closure sign-off | ⛔ Blocked | gated by R3.x |
+| R3.1 | Independent adversarial review + QA (r1) | ✅ Done | verdict **FAIL** — 2 blocking (F1,F2) + 4 non-blocking; [phase-3-review-r1.md](reviews/phase-3-review-r1.md) |
+| R3.2 | Remediate findings F1–F6 + regression tests | ✅ Done | F1/F2/F4/F5/F6 fixed; F3 wording fixed, scrubbing deferred (ITM-008); **75 tests green** |
+| R3.3 | Re-review (r2) on the fixes + regression | ⛔ Pending | **owner-supplied reviewer**; range `b77b571..HEAD` |
+| P3-7 | Phase-3 closure sign-off | ⛔ Blocked | gated by r2 = PASS |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
