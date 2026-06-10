@@ -65,9 +65,39 @@ POST /execute { "sql": "SELECT 1 FROM DUAL", "profile_id": "ab12…" }
 → 200 { "columns": ["1"], "rows": [[1]], "elapsed_seconds": 0.03, "row_count": 1, "truncated": false }
 ```
 
+### Saved reports *(Phase 4)*
+`Report = { id, name, description, sql, parameters[], default_profile_id?, template_id?, created_at, updated_at }`
+`ReportParam = { name, label, type∈{string,number,date}, required, default? }` — `name` is the bind name.
+
+#### POST /reports
+Body: `ReportCreate { name, description?, sql?, parameters?[], default_profile_id?, template_id? }`
+→ `201 Report` · `409` duplicate name
+
+#### GET /reports → `200 Report[]`
+#### GET /reports/{id} → `200 Report` · `404` not found
+#### PUT /reports/{id}
+Body: `ReportCreate` → `200 Report` · `404` not found · `409` duplicate name
+#### DELETE /reports/{id} → `204` · `404` not found
+
+#### POST /reports/{id}/run  *(executes via the /execute chokepoint)*
+Body: `{ profile_id?, connection?, binds?, max_rows? }` — `binds` are **raw** values keyed by
+parameter name; they are coerced via the report's declared params (defaults applied,
+`required` enforced, typed, unknown keys rejected) then bound as values.
+Connection target: `profile_id`/`connection` from the request, else the report's
+`default_profile_id`.
+→ `200 { columns, rows, elapsed_seconds, row_count, truncated }`
+→ `400` unsafe SQL / bad-or-missing bind / no connection target · `404` unknown report or bound profile
+
+### Templates *(Phase 4, read-only)*
+`Template = { id, module∈{GL,AP,AR,PO,OM}, name, description, sql, parameters[] }` — curated
+standard-EBS starter queries; review before running; never auto-executed.
+#### GET /templates → `200 Template[]`
+#### GET /templates/{id} → `200 Template` · `404` not found
+
 ## Revision history
 
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Engineering | Baseline; profiles + safe /execute + per-user llm documented. |
 | 1.1 | 2026-06-10 | Engineering | Phase 4: `/execute` gains optional `binds` (bound, never interpolated; ADR-007). |
+| 1.2 | 2026-06-10 | Engineering | Phase 4: `/reports` CRUD + `/reports/{id}/run` (runs via chokepoint) and read-only `/templates` documented. |
