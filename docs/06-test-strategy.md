@@ -17,7 +17,7 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 
 ## 3. Current coverage (baseline)
 
-**118 automated tests pass locally** (75 from Phases 2–3 + 43 new in Phase 4):
+**130 automated tests pass locally** (75 from Phases 2–3 + 43 in Phase 4 build + 12 from the Phase-4 review-r1 remediation: `SELECT…INTO` reject, non-finite bind rejects, `/execute` exactly-one-target, and `connection.json` no-plaintext-password — `test_storage.py`):
 - `test_sql_safety.py` (24): accept/reject matrix incl. literal/identifier false-positive guards, stacked statements, `FOR UPDATE`, PL/SQL, MERGE/GRANT/DDL/DML.
 - `test_profiles.py` (6): encryption-at-rest, decrypt round-trip, no password leakage, duplicate-name & service/sid validation.
 - `test_execute_endpoint.py` (13): unsafe-SQL rejection, target validation (422), unknown profile (404), success inline + via profile, `/profiles` CRUD without password, clean provider-failure error (F2).
@@ -57,3 +57,4 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | QA/Eng | Baseline; 48-test coverage recorded, CI + UI smoke defined. |
 | 1.1 | 2026-06-10 | QA/Eng | Phase 4: +43 tests (reports store/migration, bind safety, /reports API, templates, 7-section smoke) → 118 total; manual checklist extended. |
+| 1.2 | 2026-06-10 | QA/Eng | Phase-4 review r1 remediation: +12 tests (SELECT INTO, non-finite binds, exactly-one target, no-plaintext connection.json) → 130 total. |

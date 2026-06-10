@@ -4,7 +4,21 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
-### Added (Phase 4 — Reports, Templates & UX · dev complete, pending exit-gate review)
+### Notes (Phase 4 closure)
+- **Phase 4 CLOSED** (exit gate passed 2026-06-10): independent adversarial review
+  **r1 = `PASS-WITH-FIXES`** (no S1/S2) — [phase-4-review-r1.md](reviews/phase-4-review-r1.md).
+  Remediation: **F2** (reject `SELECT…INTO`), **F3** (reject non-finite number binds), **F4**
+  (`/execute` exactly-one target → 422), **F5** (manual `connection.json` no longer persists
+  the password — owner-approved) all **fixed** with regression tests; **F1** (a SELECT can
+  call a side-effecting function — parse gate can't prove side-effect-freedom) **documented**
+  as defense-in-depth: a least-privilege **read-only DB account is now a required deployment
+  precondition** ([ADR-009](adr/ADR-009-readonly-db-account-precondition.md), Deployment §0),
+  and the "no data modification" guarantee is reframed accordingly (D1/D3). **F6** (verbatim
+  driver errors) deferred to Phase 7 (ITM-015); **R1/R2** (file-store durability/migration)
+  backlogged (ITM-013/014, RISK-16). Owner closed F1 (account is the control) and F5 (don't
+  persist the password). Suite now **130 tests** green.
+
+### Added (Phase 4 — Reports, Templates & UX)
 - **Parameterized saved reports.** New `src/core/reports.py`: Report v2 model
   (`id, name, description, sql, parameters[], default_profile_id?, template_id?,
   timestamps`), `ReportStore` (JSON/in-memory) with **legacy `{name:{sql}}` → v2
@@ -26,8 +40,8 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   export and saves SQL as reports; Templates section browses/loads/saves the catalog.
 - **Governed docs:** `docs/reports-templates-ux-design.md`, ADR-007 & ADR-008; D3/D4/D5/D6
   and BRD/PRD (FR-8 upgraded, FR-10 added) + traceability updated in lockstep.
-- Tests: **+43** (reports store/migration, bind safety, `/reports` API, templates,
-  7-section smoke) → **118 total** green.
+- Tests: **+43** at dev-complete (reports store/migration, bind safety, `/reports` API,
+  templates, 7-section smoke) → 118; **+12** from r1 remediation → **130 total** green.
 
 ### Removed
 - Dead report helpers in `src/storage.py` (`list_reports`/`save_report`/`get_report`/

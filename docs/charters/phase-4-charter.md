@@ -1,13 +1,13 @@
 # Phase 4 Charter — Reports, Templates & UX
 
-> **Document:** Phase Charter · **Version:** 1.2 · **Status:** Development complete → exit-gate review · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
+> **Document:** Phase Charter · **Version:** 1.3 · **Status:** ✅ CLOSED (exit gate passed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-10
 
 ## Lifecycle stage
-**Development + Testing complete** (2026-06-10). Decisions D-A…D-I resolved and the
-[design](../reports-templates-ux-design.md) approved; built across commits
-`78f1ad3 → HEAD` with **118 tests green** and governed docs updated in lockstep.
-**Next: the mandatory independent adversarial review + QA exit gate (R4.x) — the owner
-supplies a fresh reviewer agent over `3f6c03e..HEAD`; remediate to PASS, then close.**
+**CLOSED (2026-06-10).** Decisions D-A…D-I resolved, [design](../reports-templates-ux-design.md)
+approved, built across `78f1ad3 → HEAD`. **Exit gate PASSED:** independent review
+**r1 = PASS-WITH-FIXES** (no S1/S2 — [phase-4-review-r1.md](../reviews/phase-4-review-r1.md));
+F2/F3/F4/F5 fixed, F1 documented (read-only-account precondition, [ADR-009](../adr/ADR-009-readonly-db-account-precondition.md)),
+F6/R1/R2 deferred-or-backlogged; **130 tests green**; governed docs current.
 
 ## Context — where we are today (grounding facts)
 - **Saved reports exist but are minimal.** `src/storage.py` persists a flat
@@ -141,3 +141,4 @@ confirmed **as recommended**; the remaining defaults were accepted without chang
 | 1.0 | 2026-06-10 | Product/Eng | Discovery charter opened; decisions pending owner approval. |
 | 1.1 | 2026-06-10 | Product/Eng | Owner approved; decisions D-A…D-I resolved (4 pivotal as recommended; defaults accepted). Discovery complete → Design. |
 | 1.2 | 2026-06-10 | Product/Eng | Design approved + built (reports v2, bind safety, /reports + /templates, left-nav UX); 118 tests green; docs updated. Dev+Test complete → exit-gate review (R4.x). |
+| 1.3 | 2026-06-10 | Product/Eng | Exit gate PASSED — r1 PASS-WITH-FIXES; F2/F3/F4/F5 fixed, F1 documented (ADR-009), F6/R1/R2 deferred; 130 tests. Phase 4 CLOSED. |

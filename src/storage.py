@@ -22,9 +22,16 @@ def _ensure_dir(path: str) -> None:
 
 
 def save_connection_config(config: Dict[str, object]) -> None:
+    """Persist the manual connection — **never** the password (F5).
+
+    Profiles are the encrypted persistence path; this legacy single-connection
+    file must not hold a plaintext secret at rest. The password (if supplied) is
+    stripped before writing, so it lives only in the running session.
+    """
     _ensure_dir(CONFIG_FILE)
+    safe = {k: v for k, v in config.items() if k != "password"}
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2)
+        json.dump(safe, f, indent=2)
 
 
 def load_connection_config() -> Optional[Dict[str, object]]:

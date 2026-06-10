@@ -121,7 +121,10 @@ def _draw_manual_connection() -> Optional[OracleConnectionConfig]:
                 "password": password,
             }
             save_connection_config(st.session_state.conn_config)
-            st.sidebar.success("Saved connection configuration.")
+            st.sidebar.success(
+                "Saved connection (password kept for this session only — not written to "
+                "disk). Use a saved profile to store credentials encrypted at rest."
+            )
     with col2:
         test_clicked = st.button("Test", use_container_width=True)
 
