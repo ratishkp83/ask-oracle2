@@ -110,7 +110,7 @@ lightweight in-process metrics.
 | P6-5 | UI surfaces generic message + `error_id` | ✅ Completed | **B4**; 3 UI driver-error surfaces (`_try_connect`, introspection, `_run_and_display`) use shared `sanitize_db_error_for_ui` → generic msg + ref; `SqlSafetyError`/`ValueError` stay verbatim; +1 test (182 total) |
 | P6-6 | Tests (sanitization/no-leak, error-id + header, log JSON shape, metrics, regression) | 📋 Planned | no chokepoint/safety regression |
 | P6-7 | Governed-doc updates (D3/D5/D6/D7, ADR-012, CHANGELOG, traceability, registers) + **close ITM-015** | 📋 Planned | code + docs in lockstep |
-| P6-G | (Optional, D-G) CI Python matrix 3.11 + 3.13 — **closes ITM-016** | 📋 Planned | gated on D-G |
+| P6-G | (D-G) CI Python matrix 3.11 + 3.13 — **closes ITM-016** | ✅ Completed | **B5**; `ci.yml` `strategy.matrix.python-version: ["3.11","3.13"]` (`fail-fast: false`); **ITM-016 CLOSED** |
 | R6.1–.7 | Phase-6 independent adversarial review + QA gate | 📋 Planned | owner-supplied reviewer; iterate to PASS |
 
 ## Standing per-phase review gate (applies to EVERY phase)
@@ -161,3 +161,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.12 | 2026-06-10 | Delivery | Phase 6 B2 done: P6-2/P6-3 Completed; request-id middleware + exception handlers + `core/errors` sanitizer; **ITM-015 CLOSED**; 176 tests; D5 updated. |
 | 1.13 | 2026-06-10 | Delivery | Phase 6 B3 done: P6-4 Completed; `core/metrics` + `GET /metrics`, counters wired into chokepoint; 181 tests; D3/D5 updated. |
 | 1.14 | 2026-06-10 | Delivery | Phase 6 B4 done: P6-5 Completed; UI driver-error surfaces sanitized (shared helper) + ref id; safety/validation messages verbatim; 182 tests. |
+| 1.15 | 2026-06-10 | Delivery | Phase 6 B5 done: P6-G Completed; CI 3.11+3.13 matrix; **ITM-016 CLOSED**. |
