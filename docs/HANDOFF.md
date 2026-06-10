@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 1.8 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Session Handoff · **Version:** 1.9 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -43,9 +43,8 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 - **r1/r2 remediation:** F-1 fixed (POST /schemas normalizes → metadata-only enforced);
   F-2 200-path `warnings[]` generic / 400-path → ITM-015 (Phase 7); F-3/F-4/F-5/N-1 fixed.
   Dependency pins reconciled to the validated set (`sqlglot==30.10.0` etc.).
-- **160 automated tests green** (130 + 30). Commits local and **unpushed** (owner controls push).
-- **Note:** `openpyxl` (declared) was missing from the local `.venv` and was installed; CI
-  installs it from requirements.
+- *(At Phase-5 close: 160 tests; superseded by Phase 6 below — now **185 tests** and all
+  **pushed**, `main` == `origin/main`.)*
 - **Phase 6 (Observability & Error Handling): CLOSED** — exit gate PASSED (**r1
   PASS-WITH-FIXES → r2 PASS**; [r1](reviews/phase-6-review-r1.md)/[r2](reviews/phase-6-review-r2.md)).
   Build B1…B6: structured JSON logging + `request_id`/`error_id`, uniform DB-error
@@ -67,9 +66,18 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 ## 6. Phase-exit review gate (every phase)
 A phase is not "closed" until an **independent adversarial code review + QA** returns `PASS` / `PASS-WITH-FIXES` (no open blocking). **Reviewer ≠ author** — the **owner supplies a fresh reviewer agent**, briefed with [process/adversarial-reviewer-prompt.md](process/adversarial-reviewer-prompt.md) + the phase's change range. Loop: prepare package → review → triage to issue log → remediate blocking → re-review until PASS → record sign-off (tracker + CHANGELOG). Outputs live in `docs/reviews/phase-<N>-review-r<n>.md`.
 
-## 7. Carried preconditions / open items
-- **Gate Phase 7 (networked/multi-tenant), not blocking now:** ITM-009 (CORS `*`+credentials+`0.0.0.0` bind → restrict origins + add auth / RISK-12) and F7/ITM-010 (`base_url` host normalization — reject integer/hex/octal IP encodings).
-- **Pre-GA:** manual UI + live-Oracle pass (RISK-04). See [issue-log.md](issue-log.md) / [risk-register.md](risk-register.md) for the full list.
+## 7. Carried preconditions / open items (none blocking; all gate Phase 7 / pre-GA)
+- **Phase-7 (networked/multi-tenant) preconditions:** ITM-009 (CORS `*`+credentials+`0.0.0.0`
+  bind, **plus** unauthenticated `/health`+`/metrics` → restrict origins + add auth / RISK-12);
+  F7/ITM-010 (`base_url` host normalization — reject integer/hex/octal IP encodings); ITM-013/014
+  (file-store atomic writes + corrupt-record robustness / RISK-16); **ITM-017** (non-DB `str(exc)`
+  surfaces — config 500 / NL→SQL 400 / a UI config path — route through the generic+`error_id`
+  treatment, Phase-6 r1 F-7).
+- **Pre-GA:** manual UI + **live-Oracle pass** (RISK-04 — introspection/templates/reports not yet
+  validated against a real instance); legacy `connection.json` → encrypted-profile migration
+  (ITM-006/RISK-09); `use_container_width` Streamlit deprecation (ITM-007); optional NL-question
+  PII scrubbing (ITM-008). See [issue-log.md](issue-log.md) / [risk-register.md](risk-register.md)
+  for the full list (all S3/S4, none blocking).
 
 ## 8. Next action
 **Phase 6 — "Observability & Error Handling" — CLOSED** (exit gate passed 2026-06-10). The
@@ -84,21 +92,20 @@ re-pinned to a **clean-install-proven 3.13-capable** configuration (verified by 
 run #7 is green on both `test (3.11)` and `test (3.13)`** → **ITM-016 CLOSED**. Phase 6 is
 fully closed with nothing pending.
 
-**Next feature work = Phase 7 (optional)** — but its hard preconditions gate any
-networked/multi-tenant deploy: CORS/auth (ITM-009), `base_url` normalization (ITM-010),
-file-store durability (ITM-013/14), non-DB error sanitization (ITM-017), plus the pre-GA
-manual/live-Oracle pass (RISK-04).
+**No open work item.** Phases 1–6 are all CLOSED; the tree is clean and fully pushed
+(`main` == `origin/main`, HEAD `92a6fb3`; CI runs #7 **and** #8 green on 3.11 + 3.13).
 
-**Sync state:** all Phase 6 work is **pushed**; `main` == `origin/main` after the
-ITM-016-closure doc commit is pushed (one local doc commit may remain — push as usual).
+**Next feature work = Phase 7 (optional, not yet opened)** — vector search / 23ai + EBS
+metadata packs. Its hard preconditions gate any networked/multi-tenant deploy and should be
+resolved first: CORS/auth (ITM-009/RISK-12), `base_url` normalization (ITM-010), file-store
+durability/atomicity (ITM-013/014/RISK-16), non-DB `str(exc)` sanitization (ITM-017), plus the
+**pre-GA manual + live-Oracle pass** (RISK-04 — introspection/templates/reports never validated
+against a real instance). If Phase 7 opens, run the lifecycle: Discovery charter → owner
+decisions → design → build → independent exit-gate review (reviewer ≠ author) → PASS → close.
 
-**Unpushed:** all Phase-4 + Phase-5 commits are local; **push when the owner asks**. Carried
-items: pre-GA manual/live-Oracle pass (RISK-04); Phase-7 preconditions (CORS/auth ITM-009,
-base_url ITM-010, driver-error sanitization ITM-015, file-store durability ITM-013/014);
-minor CI Python matrix (ITM-016).
-
-First steps on resume: confirm the working tree is clean and **160 tests pass**
-(`pytest tests -q`), then draft the Phase 6 Discovery charter.
+**First steps on resume:** confirm the working tree is clean and **185 tests pass**
+(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then either open
+Phase 7 Discovery (with owner approval) or take the owner's direction. Nothing is pending.
 
 ## Revision history
 | Version | Date | Author | Change |
@@ -112,3 +119,4 @@ First steps on resume: confirm the working tree is clean and **160 tests pass**
 | 1.6 | 2026-06-10 | Delivery | Phase 6 decisions resolved + design approved + **build B1…B6 complete** (182 tests; ITM-015 + ITM-016 CLOSED); review package ready. Next = owner runs the exit-gate reviewer (R6.2). |
 | 1.7 | 2026-06-10 | Delivery | Phase 6 **CLOSED** — exit gate r1 PASS-WITH-FIXES (F-1/F-2 S2 dependency/CI hygiene) → re-pinned to a clean-install-proven 3.13-capable set + F-3/F-4/F-5 fixed → r2 PASS; **185 tests**. Residual: push to demonstrate CI matrix (ITM-016). |
 | 1.8 | 2026-06-10 | Delivery | Pushed `d059295..2a88a04`; **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed, no open residual. |
+| 1.9 | 2026-06-10 | Delivery | Resume-readiness pass: removed stale §8 leftovers ("draft Phase 6 charter"/"160 tests"/"unpushed"); §4/§7 reconciled (185 tests, all pushed, carried items incl. ITM-017); next = Phase 7 (optional) or owner direction. |
