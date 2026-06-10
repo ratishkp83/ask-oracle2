@@ -83,7 +83,8 @@ schema persistence + API, browser depth, business glossary, UI placement).
 | P5-API | `/schemas` CRUD + `/schemas/introspect` API | ✅ Completed | `733ca59`; 7 tests |
 | P5-1 | Data-dictionary browser UI + Schema Sources (introspect/save/load) | ✅ Completed | `2067ec7`; renamed nav; +1 smoke |
 | P5-6 | Governed-doc updates (D2/D3/D4/D5/D6, ADR-010/011, CHANGELOG, traceability, registers) | ✅ Completed | code + docs in lockstep |
-| **R5.x** | **Phase-5 independent adversarial review + QA gate** | ⏳ **Next — awaiting owner** | reviewer ≠ author; **owner supplies a fresh reviewer agent** ([prompt](process/adversarial-reviewer-prompt.md)) over range `6a299f8..HEAD`; iterate to PASS |
+| R5.1 | Prepare review package | ✅ Completed | self-contained brief w/ filled Context + Phase-5 invariants: [reviews/phase-5-review-package.md](reviews/phase-5-review-package.md) |
+| **R5.2–.7** | **Phase-5 independent adversarial review + QA gate** | ⏳ **Next — awaiting owner** | reviewer ≠ author; **owner supplies a fresh reviewer agent** ([prompt](process/adversarial-reviewer-prompt.md) + [package](reviews/phase-5-review-package.md)) over range `5335876..HEAD`; iterate to PASS |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
