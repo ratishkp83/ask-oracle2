@@ -1,6 +1,6 @@
 # D4 — Data Models
 
-> **Document:** Data Models · **Version:** 1.0 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
+> **Document:** Data Models · **Version:** 1.1 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
 
 All models are in-process (no relational DB yet). Persistence is JSON under `STORAGE_DIR` (git-ignored).
 
@@ -42,12 +42,29 @@ All models are in-process (no relational DB yet). Persistence is JSON under `STO
 
 **Upload formats:** schema CSV columns = `table_name, column_name, data_type, is_primary_key, is_foreign_key, references_table, references_column`; relationships CSV = `from_table, from_column, to_table, to_column, relationship_type`.
 
-## 5. Persistence formats (`STORAGE_DIR`)
+## 5. Saved reports & templates (`src/core/reports.py`, `src/core/templates.py`) — Phase 4
+
+| Model | Fields | Notes |
+|-------|--------|-------|
+| `ReportParam` (pydantic) | name, label, type∈{string,number,date}, required=True, default? | `name` validated `^[A-Za-z_][A-Za-z0-9_]*$`, ≤30 chars (bind-safe); `label` defaults to `name`. |
+| `ReportCreate` (input) | name, description="", sql="", parameters[], default_profile_id?, template_id? | No id/timestamps; server assigns. |
+| `Report` (at rest / output) | id, name, description, sql, parameters[], default_profile_id?, template_id?, created_at, updated_at | Persisted in `reports.json` keyed by `id`. No credentials. |
+| `Template` (in-code, read-only) | id, module∈{GL,AP,AR,PO,OM}, name, description, sql, parameters[] | Curated EBS starter SQL; never persisted; see `src/core/templates.py`. |
+
+- **Bind safety:** report parameters are passed to Oracle as **bind variables** at run
+  time via `coerce_report_binds(parameters, raw_values)` → `src.db.validate_binds` →
+  `cur.execute(sql, binds)`. Values are **never** interpolated into SQL (ADR-007).
+  Scalar binds only in v1 (string/number/date). `coerce_report_binds` applies defaults,
+  enforces `required`, coerces by type, and rejects unknown keys.
+- **Store:** `ReportStore` ABC with `JsonFileReportStore` (default) and `InMemoryReportStore`
+  (tests), mirroring `ProfileStore`.
+
+## 6. Persistence formats (`STORAGE_DIR`)
 
 | File | Shape | Sensitivity |
 |------|-------|-------------|
 | `profiles.json` | `{ profile_id: StoredProfile }` | Password **encrypted**; file git-ignored. |
-| `reports.json` | `{ report_name: { sql } }` | SQL text (no creds). |
+| `reports.json` | `{ report_id: Report }` (v2) — legacy `{ report_name: { sql } }` auto-migrated on load | SQL text + parameter metadata (no creds). |
 | `connection.json` | single manual connection (legacy) | **Contains plaintext password** — git-ignored; candidate for migration to profiles (see [issue-log](issue-log.md)). |
 
 ## Revision history
@@ -55,3 +72,4 @@ All models are in-process (no relational DB yet). Persistence is JSON under `STO
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Engineering | Baseline catalogue of Phase-2 models. |
+| 1.1 | 2026-06-10 | Engineering | Phase 4: Report/ReportParam/Template models, bind-safety note, reports.json v2 shape + legacy migration. |
