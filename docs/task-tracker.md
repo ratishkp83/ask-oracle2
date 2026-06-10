@@ -66,6 +66,24 @@ F6 + R1/R2 deferred/backlogged with rationale; **130 tests green**.
 | R4.1–.7 | Phase-4 independent adversarial review + QA gate | ✅ Completed | r1 = **PASS-WITH-FIXES** ([phase-4-review-r1.md](reviews/phase-4-review-r1.md)); no S1/S2; F2/F3/F4/F5 fixed + F1 documented (ADR-009); F6/R1/R2 deferred-or-backlogged; owner closed F1 (account is the control) + F5 (don't persist password) 2026-06-10 |
 | P4-CLOSE | Phase-4 closure sign-off | ✅ Completed | **gate PASSED 2026-06-10**: r1 PASS-WITH-FIXES (no open blocking), 130 tests green, governed docs current, all findings fixed-or-formally-disposed |
 
+## Phase 5 — Data Dictionary Browser & Schema Tools (🔄 Discovery — decisions pending)
+
+Charter: [phase-5-charter.md](charters/phase-5-charter.md). Opened 2026-06-10. **No code
+until the owner approves the charter and resolves decisions D-A…D-E** (live introspection,
+schema persistence + API, browser depth, business glossary, UI placement).
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| P5-0 | Open Phase 5 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-E |
+| P5-D | Owner approval + decision resolution (D-A…D-E) | ⏳ Awaiting owner | scope envelope: introspection? persistence+API? browser depth? glossary? |
+| P5-1 | Data-dictionary browser UI (search/filter, column detail, relationship nav, export) | 📋 Planned | depends on D-C/D-E |
+| P5-2 | Core schema-tool helpers (find/where-used) + tests | 📋 Planned | `schema.py`/`core/dictionary.py` |
+| P5-3 | Live SELECT-only introspection (`core/introspection.py`) | 📋 Planned | conditional on D-A; **through the chokepoint** |
+| P5-4 | Schema persistence (`SchemaStore`) + `/schema` API | 📋 Planned | conditional on D-B |
+| P5-5 | Tests (helpers, introspection mapping w/ mock DB, UI smoke, store/API) | 📋 Planned | — |
+| P5-6 | Governed-doc updates (D2/D3/D4/D5/D6, ADR(s), CHANGELOG, traceability, registers) | 📋 Planned | code + docs same change set |
+| R5.x | Phase-5 independent adversarial review + QA gate | 📋 Planned | reviewer ≠ author; owner supplies reviewer |
+
 ## Standing per-phase review gate (applies to EVERY phase)
 
 Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](process/external-review-gate.md)):
@@ -89,7 +107,8 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 
 - **Phase-2 closure gate: PASSED (2026-06-10).** Phase 3 Discovery may open.
 - **Phase-3 closure gate: PASSED (2026-06-10)** — r2 PASS-WITH-FIXES, no open blocking. Phase 4 may open.
-- **Phase 4: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES, no open blocking; 130 tests). Phase 5 (Data dictionary browser & schema tools) may open next.
+- **Phase 4: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES, no open blocking; 130 tests).
+- **Phase 5 Discovery: OPEN (2026-06-10)** — charter awaiting owner approval + decisions (P5-D). Build (P5-1…P5-6) is gated on those decisions.
 - Pre-GA (not gating Phase 3): manual UI/live-DB pass (RISK-04), `/v1` API prefix (T-18), legacy `connection.json` migration (T-19).
 - **Hard precondition for any networked/multi-tenant deployment (Phase 7):** CORS/auth hardening (ITM-009/RISK-12) + `base_url` host-normalization (F7/ITM-010).
 
@@ -102,3 +121,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.2 | 2026-06-10 | Delivery | Phase 4 Discovery opened (P4-0); P4-1…P4-7 + R4.x seeded as Planned; build gated on owner decisions (P4-D). |
 | 1.3 | 2026-06-10 | Delivery | Phase 4 decisions resolved + built: P4-DES…P4-7 Completed (118 tests); R4.x exit-gate review is the next action (owner-supplied reviewer). |
 | 1.4 | 2026-06-10 | Delivery | Phase 4 exit gate PASSED (r1 PASS-WITH-FIXES); F2/F3/F4/F5 fixed, F1 documented (ADR-009), F6/R1/R2 deferred; 130 tests; Phase 4 CLOSED. |
+| 1.5 | 2026-06-10 | Delivery | Phase 5 Discovery opened (P5-0); P5-1…P5-6 + R5.x seeded as Planned; build gated on owner decisions (P5-D). |
