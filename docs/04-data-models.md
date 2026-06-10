@@ -26,7 +26,10 @@ All models are in-process (no relational DB yet). Persistence is JSON under `STO
 |-------|--------|--------|
 | `SafetyLimits` (pydantic) | max_rows=1000, max_execution_seconds=30.0, max_result_bytes=5_000_000 | `core/config.py` (env-overridable) |
 | `SafetyResult` (pydantic) | allowed: bool, reason?, normalized_sql? | `core/sql_safety.py` |
-| `LLMConfig` (dataclass) | provider?, model?, api_key?, base_url? | `nl2sql.py`; None fields → env fallback |
+| `LLMConfig` (dataclass) | provider?, model?, api_key?, base_url? | `core/llm/base.py`; None fields → env fallback |
+| `NLSQLResult` (dataclass) | sql, explanation?, confidence? | `core/llm/base.py` — output of `generate_sql_from_nl` |
+| `Confidence` (dataclass) | level ("High"/"Medium"/"Low"), reasons[] | `core/llm/base.py` (heuristic) |
+| `LLMProvider` (Protocol) | name; is_available(); resolve_model(); complete() | `core/llm/base.py`; impls `ExternalLLMProvider`, `LocalLLMProvider` (stub) |
 
 ## 4. Schema metadata (`src/schema.py`)
 

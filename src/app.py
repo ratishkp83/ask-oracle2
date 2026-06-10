@@ -49,6 +49,10 @@ if "last_results" not in st.session_state:
     st.session_state.last_results = None  # type: Optional[pd.DataFrame]
 if "generated_sql" not in st.session_state:
     st.session_state.generated_sql = ""
+if "nl_explanation" not in st.session_state:
+    st.session_state.nl_explanation = None
+if "nl_confidence" not in st.session_state:
+    st.session_state.nl_confidence = None
 if "llm_config" not in st.session_state:
     st.session_state.llm_config = None  # type: Optional[LLMConfig]
 
@@ -408,8 +412,13 @@ def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optio
                     st.error("Upload schema first.")
                 else:
                     try:
-                        st.session_state.generated_sql = generate_sql_from_nl(
-                            prompt, schema, llm=st.session_state.llm_config
+                        result = generate_sql_from_nl(prompt, schema, llm=st.session_state.llm_config)
+                        st.session_state.generated_sql = result.sql
+                        st.session_state.nl_explanation = result.explanation
+                        st.session_state.nl_confidence = (
+                            {"level": result.confidence.level, "reasons": result.confidence.reasons}
+                            if result.confidence
+                            else None
                         )
                         st.success("SQL generated. Review it below before running.")
                     except Exception as e:  # noqa: BLE001
@@ -419,6 +428,15 @@ def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optio
 
         sql_box_val = st.text_area("Generated SQL (editable)", value=st.session_state.generated_sql, height=200)
         st.session_state.generated_sql = sql_box_val
+
+        conf = st.session_state.nl_confidence
+        if conf:
+            badge = {"High": "🟢", "Medium": "🟡", "Low": "🔴"}.get(conf["level"], "⚪")
+            reasons = f" — {'; '.join(conf['reasons'])}" if conf.get("reasons") else ""
+            st.caption(f"Confidence: {badge} {conf['level']}{reasons}")
+        if st.session_state.nl_explanation:
+            with st.expander("Explanation", expanded=True):
+                st.write(st.session_state.nl_explanation)
 
         if run_clicked and client and sql_box_val.strip():
             _run_and_display(client, sql_box_val)

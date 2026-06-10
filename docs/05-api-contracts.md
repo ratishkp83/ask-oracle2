@@ -37,7 +37,11 @@ Body: `ConnectionConfig { host, port?=1521, service_name?, sid?, username, passw
 ### POST /nl2sql
 Body: `{ natural_language, schema_csv?, relationships_csv?, model?, llm? }`
 `llm = { provider?, model?, api_key?, base_url? }` (omitted fields fall back to server env; `api_key` used transiently, never logged/persisted)
-→ `200 { sql }` · `400` (no schema, LLM/key error, or unsafe generation)
+→ `200 { sql, explanation, confidence: { level, reasons[] } }`
+  - `explanation`: short rationale (may be `null` if the model omitted it).
+  - `confidence.level`: `"High" | "Medium" | "Low"` — deterministic heuristic (schema coverage + parse + identifier resolution); **not** a correctness guarantee.
+→ `400` (no schema, unsafe generation, LLM/key error, or `LLM_POLICY` disallows the only available provider)
+- Provider/redaction governed by `LLM_POLICY` (`local_only` | `local_external` | `external_disabled`); external prompts carry **schema names only**.
 
 ### POST /execute  *(single safety chokepoint)*
 Body: `{ sql, profile_id?, connection?, max_rows? }` — provide **exactly one** of `profile_id` / `connection`

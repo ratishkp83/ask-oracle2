@@ -205,8 +205,13 @@ def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
             schema = attach_relationships(schema, rels)
 
         llm_cfg = LLMConfig(**req.llm.model_dump()) if req.llm else None
-        sql = generate_sql_from_nl(req.natural_language, schema, model=req.model, llm=llm_cfg)
-        return {"sql": sql}
+        result = generate_sql_from_nl(req.natural_language, schema, model=req.model, llm=llm_cfg)
+        confidence = (
+            {"level": result.confidence.level, "reasons": result.confidence.reasons}
+            if result.confidence
+            else None
+        )
+        return {"sql": result.sql, "explanation": result.explanation, "confidence": confidence}
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(exc))
 

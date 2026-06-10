@@ -29,6 +29,19 @@ Status: Planned · In Progress · Blocked · Completed.
 | T-07 | Rotate leaked Groq/OpenAI keys | ✅ Completed | user-confirmed 2026-06-10 (RISK-01 Closed) |
 | T-17 | Phase-2 closure sign-off | ✅ Completed | **gate PASSED 2026-06-10**: secrets rotated, 51 tests green, docs current, ADRs ratified, tree clean |
 
+## Phase 3 — NL→SQL 2.0 & LLM Abstraction (Development complete; awaiting exit gate)
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| P3-1 | LLM provider abstraction (`src/core/llm/`) | ✅ Completed | External (Groq/OpenAI) + Local stub |
+| P3-2 | Strict redaction + tripwire | ✅ Completed | external prompts = schema names only |
+| P3-3 | `LLM_POLICY` toggle | ✅ Completed | local_only / local_external / external_disabled |
+| P3-4 | Heuristic confidence | ✅ Completed | High/Med/Low + reasons |
+| P3-5 | `/nl2sql` → SQL+explanation+confidence; UI display | ✅ Completed | D5/D4/D3 updated |
+| P3-6 | Tests (20 new; **65 total** green) | ✅ Completed | mocked provider, no network |
+| R3.x | Independent adversarial review + QA | ⛔ Pending | **owner-supplied reviewer**; Phase-3 exit gate |
+| P3-7 | Phase-3 closure sign-off | ⛔ Blocked | gated by R3.x |
+
 ## Standing per-phase review gate (applies to EVERY phase)
 
 Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](process/external-review-gate.md)):

@@ -17,12 +17,12 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 
 ## 3. Current coverage (baseline)
 
-**51 automated tests pass locally:**
+**65 automated tests pass locally:**
 - `test_sql_safety.py` (24): accept/reject matrix incl. literal/identifier false-positive guards, stacked statements, `FOR UPDATE`, PL/SQL, MERGE/GRANT/DDL/DML.
 - `test_profiles.py` (6): encryption-at-rest, decrypt round-trip, no password leakage, duplicate-name & service/sid validation.
 - `test_execute_endpoint.py` (12): unsafe-SQL rejection, target validation (422), unknown profile (404), success inline + via profile, `/profiles` CRUD without password.
-- `test_nl2sql_config.py` (6): per-user LLM resolution + env fallback (no network).
-- `test_app_smoke.py` (3): headless AppTest — all six screens render without exception; Settings LLM override; Connections create → on-disk encryption. (Caught + validated the fix for BUG-005, a duplicate-widget-ID crash.)
+- `test_app_smoke.py` (3): headless AppTest — all six screens render without exception; Settings LLM override; Connections create → on-disk encryption. (Caught + validated the fix for BUG-005.)
+- **LLM (Phase 3)** — `test_llm_redaction.py` (2), `test_llm_providers.py` (5), `test_llm_policy.py` (5), `test_llm_confidence.py` (4), `test_nl2sql.py` (4): strict redaction, provider/credential resolution, `LLM_POLICY` selection + graceful errors, heuristic confidence, NL→SQL parse/safety (mocked provider, no network).
 
 ## 4. Coverage targets
 

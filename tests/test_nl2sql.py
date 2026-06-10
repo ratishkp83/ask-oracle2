@@ -1,0 +1,68 @@
+"""NL→SQL orchestration tests with a mocked provider (no network)."""
+
+import pytest
+
+from src import nl2sql
+from src.core.llm.base import LLMError, NLSQLResult
+from src.schema import ColumnDefinition, Schema, TableDefinition
+
+
+class FakeProvider:
+    name = "external"
+
+    def __init__(self, text: str):
+        self._text = text
+
+    def is_available(self) -> bool:
+        return True
+
+    def resolve_model(self, requested=None) -> str:
+        return "fake-model"
+
+    def complete(self, system, user, model=None) -> str:
+        return self._text
+
+
+def _schema() -> Schema:
+    s = Schema()
+    s.tables["EMP"] = TableDefinition(
+        name="EMP",
+        columns=[
+            ColumnDefinition(table_name="EMP", column_name="EMP_ID"),
+            ColumnDefinition(table_name="EMP", column_name="SALARY"),
+        ],
+    )
+    return s
+
+
+def _patch_provider(monkeypatch, text: str):
+    monkeypatch.setattr(nl2sql, "select_provider", lambda cfg=None, policy=None: FakeProvider(text))
+
+
+def test_parses_sql_and_explanation_and_confidence(monkeypatch):
+    _patch_provider(monkeypatch, "```sql\nSELECT emp_id, salary FROM emp\n```\nExplanation: Returns employee pay.")
+    result = nl2sql.generate_sql_from_nl("show salaries", _schema())
+    assert isinstance(result, NLSQLResult)
+    assert result.sql.lower().startswith("select")
+    assert "employee pay" in (result.explanation or "").lower()
+    assert result.confidence.level == "High"
+
+
+def test_rejects_non_select(monkeypatch):
+    _patch_provider(monkeypatch, "```sql\nDELETE FROM emp\n```\nExplanation: nope.")
+    with pytest.raises(ValueError):
+        nl2sql.generate_sql_from_nl("delete everything", _schema())
+
+
+def test_graceful_when_no_provider(monkeypatch):
+    def boom(cfg=None, policy=None):
+        raise LLMError("no provider configured")
+
+    monkeypatch.setattr(nl2sql, "select_provider", boom)
+    with pytest.raises(LLMError):
+        nl2sql.generate_sql_from_nl("anything", _schema())
+
+
+def test_requires_non_empty_schema():
+    with pytest.raises(ValueError):
+        nl2sql.generate_sql_from_nl("anything", Schema())
