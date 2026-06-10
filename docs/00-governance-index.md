@@ -26,6 +26,16 @@ as the code, before the work is considered complete.
 | — | Delivery Roadmap (7 phases) | [roadmap.md](roadmap.md) | Living |
 | — | Phase-2 Review & QA | [ask-oracle-review-phase-2.md](ask-oracle-review-phase-2.md) | Closed |
 
+## Process & gates
+
+| Doc | Purpose | Path |
+|-----|---------|------|
+| External Review & QA Gate | Mandatory independent review + QA at every phase exit; iterate-until-PASS loop | [process/external-review-gate.md](process/external-review-gate.md) |
+| Adversarial Review & QA Prompt | Reusable red-team prompt handed to the independent reviewer each phase | [process/adversarial-reviewer-prompt.md](process/adversarial-reviewer-prompt.md) |
+| Review outputs | One file per review iteration: `docs/reviews/phase-<N>-review-r<n>.md` | `reviews/` (created at first review) |
+
+> **Phase exit gate:** a phase is not "closed" until it passes an **independent adversarial code review + QA** (reviewer ≠ author). See the gate doc for the full Definition of Done.
+
 ## Document control conventions
 
 - **Every doc** carries a control header (version, status, owner, last updated) and a **Revision history** table at the bottom.

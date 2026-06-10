@@ -9,6 +9,7 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 - Git version control initialized for the repository.
 - GitHub Actions CI running the test suite (`.github/workflows/ci.yml`).
 - Headless Streamlit UI smoke tests (`tests/test_app_smoke.py`, AppTest) — total suite now 51 tests.
+- **Process:** mandatory **External Review & QA Gate** at every phase exit (independent adversarial review + QA, iterate-until-PASS), plus a reusable **Adversarial Review & QA Prompt** (`docs/process/`).
 
 ### Fixed
 - **BUG-005:** app crashed with `StreamlitDuplicateElementId` once a connection profile existed (duplicate `Delete selected` button across the Connections and Saved Reports tabs). Added unique widget keys to the affected buttons/selectboxes.

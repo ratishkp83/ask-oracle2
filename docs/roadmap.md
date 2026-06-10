@@ -3,7 +3,7 @@
 > **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
 > Authoritative phase definitions live in `ask-oracle-implementation-plan.md` (origin); this is the governed status view.
 
-Each feature phase runs through the lifecycle micro-cycle (Discovery → Design → Development → Testing → Deployment → Iteration) and closes at a gate.
+Each feature phase runs through the lifecycle micro-cycle (Discovery → Design → Development → Testing → Deployment → Iteration) and closes at a gate. **Every phase exit now requires an independent adversarial code review + QA** that iterates until it returns PASS — see the [External Review & QA Gate](process/external-review-gate.md) and [Adversarial Review & QA Prompt](process/adversarial-reviewer-prompt.md).
 
 | Phase | Theme | Status | Gate / notes |
 |-------|-------|--------|--------------|

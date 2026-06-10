@@ -29,6 +29,16 @@ Status: Planned · In Progress · Blocked · Completed.
 | T-07 | Rotate leaked Groq/OpenAI keys | ✅ Completed | user-confirmed 2026-06-10 (RISK-01 Closed) |
 | T-17 | Phase-2 closure sign-off | ✅ Completed | **gate PASSED 2026-06-10**: secrets rotated, 51 tests green, docs current, ADRs ratified, tree clean |
 
+## Standing per-phase review gate (applies to EVERY phase)
+
+Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](process/external-review-gate.md)):
+`.1` prepare package · `.2` independent adversarial code review · `.3` adversarial QA · `.4` triage → issue log · `.5` remediate blocking + re-validate · `.6` re-review until PASS · `.7` record verdict + sign-off.
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| R2.x | Phase-2 independent adversarial review + QA | 📋 Pending decision | Gate introduced *after* Phase-2 closure — retro-apply vs apply-from-Phase-3 (awaiting direction) |
+| R3.x | Phase-3 independent adversarial review + QA | 📋 Planned | Runs at Phase-3 exit |
+
 ## Backlog (next phases)
 
 | ID | Task | Phase | Status |
