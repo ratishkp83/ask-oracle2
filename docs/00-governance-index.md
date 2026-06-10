@@ -30,6 +30,7 @@ as the code, before the work is considered complete.
 | — | Phase-2 Review & QA | [ask-oracle-review-phase-2.md](ask-oracle-review-phase-2.md) | Closed |
 | — | LLM Design (Phase 3) | [oracle-llm-design.md](oracle-llm-design.md) | Proposed |
 | — | Reports/Templates/UX Design (Phase 4) | [reports-templates-ux-design.md](reports-templates-ux-design.md) | Baseline |
+| — | Data Dictionary Design (Phase 5) | [data-dictionary-design.md](data-dictionary-design.md) | Proposed |
 
 ## Process & gates
 
