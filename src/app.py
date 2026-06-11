@@ -133,7 +133,7 @@ def _draw_manual_connection() -> Optional[OracleConnectionConfig]:
 
     col1, col2 = st.sidebar.columns(2)
     with col1:
-        if st.button("Save", use_container_width=True):
+        if st.button("Save", width="stretch"):
             st.session_state.conn_config = {
                 "host": host,
                 "port": int(port),
@@ -148,7 +148,7 @@ def _draw_manual_connection() -> Optional[OracleConnectionConfig]:
                 "disk). Use a saved profile to store credentials encrypted at rest."
             )
     with col2:
-        test_clicked = st.button("Test", use_container_width=True)
+        test_clicked = st.button("Test", width="stretch")
 
     cfg_obj: Optional[OracleConnectionConfig] = None
     if host and username and password and (service_name or sid):
@@ -201,7 +201,7 @@ def draw_sidebar_connection() -> Optional[OracleConnectionConfig]:
         return None
 
     cfg_obj = _resolved_to_cfg(resolved)
-    if st.sidebar.button("Test connection", use_container_width=True):
+    if st.sidebar.button("Test connection", width="stretch"):
         ok, msg = _try_connect(cfg_obj)
         (st.sidebar.success if ok else st.sidebar.error)(msg)
     return cfg_obj
@@ -269,7 +269,7 @@ def draw_connections(store: JsonFileProfileStore):
                 for p in profiles
             ]
         ),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -277,7 +277,7 @@ def draw_connections(store: JsonFileProfileStore):
     selected = labels[st.selectbox("Select a profile", list(labels.keys()), key="conn_select_profile")]
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Test selected", use_container_width=True, key="conn_test_selected"):
+        if st.button("Test selected", width="stretch", key="conn_test_selected"):
             try:
                 resolved = store.resolve(selected.id)
                 ok, msg = _try_connect(_resolved_to_cfg(resolved))
@@ -285,7 +285,7 @@ def draw_connections(store: JsonFileProfileStore):
             except SecretConfigError as e:
                 st.error(f"{e} (ref: {log_error_for_ui(e, context='ui.secret_config')})")
     with col2:
-        if st.button("Delete selected", use_container_width=True, key="conn_delete_selected"):
+        if st.button("Delete selected", width="stretch", key="conn_delete_selected"):
             store.delete(selected.id)
             st.success(f"Deleted '{selected.name}'.")
             st.rerun()
@@ -446,7 +446,7 @@ def draw_schema_sources(conn_cfg: Optional[OracleConnectionConfig]):
         with c1:
             save_name = st.text_input("Save current schema as", key="schema_save_name")
         with c2:
-            if st.button("Save to library", key="schema_save_btn", use_container_width=True):
+            if st.button("Save to library", key="schema_save_btn", width="stretch"):
                 if not st.session_state.schema:
                     st.warning("No active schema to save.")
                 elif not save_name.strip():
@@ -468,7 +468,7 @@ def draw_schema_sources(conn_cfg: Optional[OracleConnectionConfig]):
             chosen = st.selectbox("Saved schemas", list(labels.keys()), key="schema_load_select")
             lc1, lc2 = st.columns(2)
             with lc1:
-                if st.button("Load", key="schema_load_btn", use_container_width=True):
+                if st.button("Load", key="schema_load_btn", width="stretch"):
                     record = store.get(labels[chosen].id)
                     if record:
                         try:
@@ -479,7 +479,7 @@ def draw_schema_sources(conn_cfg: Optional[OracleConnectionConfig]):
                         except Exception as e:  # noqa: BLE001 - never crash on a bad stored blob
                             st.error(f"Could not load schema: {e}")
             with lc2:
-                if st.button("Delete", key="schema_delete_btn", use_container_width=True):
+                if st.button("Delete", key="schema_delete_btn", width="stretch"):
                     store.delete(labels[chosen].id)
                     st.success("Deleted.")
                     st.rerun()
@@ -514,13 +514,13 @@ def draw_data_dictionary(schema: Schema):
     )
     st.caption(f"{len(matches)} column(s) match.")
     if matches:
-        st.dataframe(_columns_df(matches), use_container_width=True, hide_index=True)
+        st.dataframe(_columns_df(matches), width="stretch", hide_index=True)
 
     # --- Table detail + relationship navigation ------------------------ #
     st.subheader("Table detail")
     table = st.selectbox("Select a table", options=schema.list_tables(), key="dict_table")
     if table:
-        st.dataframe(_columns_df(table_detail(schema, table)), use_container_width=True, hide_index=True)
+        st.dataframe(_columns_df(table_detail(schema, table)), width="stretch", hide_index=True)
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("**References out** (this table's foreign keys)")
@@ -528,7 +528,7 @@ def draw_data_dictionary(schema: Schema):
             if out:
                 st.dataframe(
                     pd.DataFrame(out, columns=["column", "to_table", "to_column"]),
-                    use_container_width=True, hide_index=True,
+                    width="stretch", hide_index=True,
                 )
             else:
                 st.caption("None.")
@@ -538,7 +538,7 @@ def draw_data_dictionary(schema: Schema):
             if inbound:
                 st.dataframe(
                     pd.DataFrame(inbound, columns=["from_table", "from_column", "to_column"]),
-                    use_container_width=True, hide_index=True,
+                    width="stretch", hide_index=True,
                 )
             else:
                 st.caption("None.")
@@ -576,7 +576,7 @@ def _run_and_display(client: OracleClient, sql: str, binds: Optional[Dict[str, o
             st.warning(msg + " — result truncated by safety limits.")
         else:
             st.success(msg)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
         e1, e2 = st.columns(2)
         with e1:
             st.download_button("Download CSV", data=dataframe_to_csv_bytes(df), file_name="results.csv", mime="text/csv")

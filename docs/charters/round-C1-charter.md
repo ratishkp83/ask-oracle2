@@ -1,6 +1,6 @@
 # Round C1 Charter — Pre-GA Consolidation & Testing
 
-> **Document:** Round Charter · **Version:** 1.0 · **Status:** 🔄 Discovery — OPEN (scope + decisions pending owner approval; **no code until approved**) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
+> **Document:** Round Charter · **Version:** 1.1 · **Status:** 🔄 Design (decisions resolved 2026-06-11; design + build next) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
 
 ## Lifecycle stage
 **Discovery OPENED 2026-06-11.** With Phases 1–6 and the Phase-6.5 hardening mini-phase all
@@ -82,7 +82,19 @@ product can be declared GA-ready (or have a precise, owned list of what's left).
   the existing rationale (the question is the user's own intent; `LLM_POLICY=external_disabled`
   is the current mitigation).
 
+## Decisions (resolved 2026-06-11)
+Owner approved the round and resolved all three decisions:
+- **D-A — RISK-04 instance:** ✅ **Owner has Oracle XE locally** → the live pass (C1-2) runs this
+  round against XE (least-privilege read-only account per ADR-009; setup runbook in the C1
+  design). *Caveat:* XE validates the connection/introspection/report/export/observability path;
+  the **EBS-specific templates** (GL/AP/AR/PO/OM) still need a real EBS instance (ITM-012) and are
+  not validated by XE.
+- **D-B — Round scope:** ✅ **Full scope** — C1-1…C1-6.
+- **D-C — ITM-008:** ✅ **Build** the NL-question PII scrubbing behind a **default-off flag**
+  (opt-in redaction before external LLM send).
+
 ## Revision history
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-11 | Product/Eng | Discovery charter opened after Phase 6.5 closure; bundles CI confirmation, RISK-04 live pass, and ITM-006/007/008; objectives/scope/risks/success criteria + open decisions D-A…D-C; **pending owner approval before any code.** |
+| 1.1 | 2026-06-11 | Product/Eng | Owner resolved D-A (Oracle XE available → live pass runs this round; EBS-template validation still ITM-012), D-B (full scope), D-C (build ITM-008 behind a default-off flag). Discovery → Design. |

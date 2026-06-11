@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 2.4 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
+> **Document:** Session Handoff · **Version:** 2.5 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -109,19 +109,26 @@ R3 blank-`ALLOWED_ORIGINS` fallback, R4 D7 doc) → **closed on r1 by owner dire
 on that push; **green confirmation is carried into Round C1** (no `gh` on the dev box — confirm
 in the Actions tab).
 
-**Active work = Round C1 — Pre-GA Consolidation & Testing — Discovery OPENED 2026-06-11**
-([charters/round-C1-charter.md](charters/round-C1-charter.md)). Verification + pre-GA cleanups,
-**no new features**: C1-1 confirm CI green on `9209e3a`; C1-2 **RISK-04 live-Oracle + manual UI
-pass** (owner provides a read-only instance, ADR-009); C1-3 ITM-006 (legacy `connection.json`→
-encrypted profiles); C1-4 ITM-007 (`use_container_width`→`width='stretch'`); C1-5 ITM-008
-(optional NL PII scrubbing). **The gate now is C1-D: owner resolves decisions D-A (provision an
-Oracle instance?), D-B (round scope), D-C (ITM-008 build-vs-defer) — no code until approved.**
+**Active work = Round C1 — Pre-GA Consolidation & Testing — building 2026-06-11**
+([charter](charters/round-C1-charter.md) · [design](round-C1-design.md)). Decisions resolved
+(D-A **owner has Oracle XE** → live pass runs this round, EBS templates still ITM-012; D-B full
+scope; D-C build ITM-008 behind a default-off flag). Build order B1…B6:
+- **B1 — ITM-007 DONE:** 14 `use_container_width=True` → `width="stretch"` in `app.py`; **ITM-007
+  CLOSED**; 242 tests.
+- **B2 — ITM-006 (next):** legacy `connection.json` → encrypted-profile migration; retire the
+  plaintext manual-save path.
+- **B3 — ITM-008:** NL-question PII scrubbing behind default-off env flag `SCRUB_PII` (external
+  send only; complements the existing schema redaction).
+- **B4 — CI confirm** green on `9209e3a` (no `gh` here → confirm in the Actions tab).
+- **B5 — RISK-04 live pass:** **owner runs the XE setup in [round-C1-design.md](round-C1-design.md) §6**
+  (read-only `aor_readonly` account + tiny `aor_demo` sample schema SQL), then the connect→
+  introspect→report→export→observability pass against `XEPDB1`.
+- **B6 — doc sweep + GA-readiness verdict.** Code-touching items (B1–B3) get an exit-gate review (RC1.x).
 
 **First steps on resume:** confirm the working tree is clean and **242 tests pass**
-(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
-[task-tracker.md](task-tracker.md) C1-D — if decisions are pending, get them resolved; the
-autonomous code items (ITM-007 quick, ITM-006) can start once the round is approved, while C1-2
-(RISK-04) waits on an instance.
+(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then continue at
+[task-tracker.md](task-tracker.md) **B2 (ITM-006)**. The B5 live pass is unblocked once the owner
+runs the §6 XE setup. *(Local `main` is ahead of `origin` — C1 build commits are unpushed; push on owner request.)*
 
 **First steps on resume:** confirm the working tree is clean and **242 tests pass**
 (`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
@@ -145,3 +152,4 @@ autonomous code items (ITM-007 quick, ITM-006) can start once the round is appro
 | 2.2 | 2026-06-11 | Delivery | P6.5 design approved + build B1…B6 complete (236 tests; ITM-009/010/013/014/017 CLOSED; RISK-12 Closed/RISK-16 Mitigating; ADR-013/014). Next action = R6.5.x exit-gate review (owner-supplied reviewer). |
 | 2.3 | 2026-06-11 | Delivery | P6.5 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); all four findings remediated (R1 Unicode SSRF NFKC-fold, R2 fd-close, R3 blank-CORS fallback, R4 doc) → 242 tests. Gate cleared; closure (R6.5.4) pending optional r2 spot-check + push. |
 | 2.4 | 2026-06-11 | Delivery | **Phase 6.5 CLOSED** (on r1, no r2, per owner) + pushed `2ba0a56..9209e3a`. **Round C1 (Pre-GA Consolidation & Testing) opened** — carries CI-green confirmation, RISK-04 live pass, ITM-006/007/008; decisions D-A…D-C pending owner. |
+| 2.5 | 2026-06-11 | Delivery | Round C1 decisions resolved (XE / full scope / build ITM-008); design + XE runbook done; **B1 ITM-007 CLOSED** (242 tests). Next = B2 ITM-006, B3 ITM-008; B5 live pass awaits owner XE setup (design §6). |

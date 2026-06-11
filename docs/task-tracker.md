@@ -155,11 +155,12 @@ new features. **Scope + decisions D-A…D-C pending owner; no code until approve
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | C1-0 | Open Round C1 Discovery charter | ✅ Completed | objectives/scope/risks + decisions D-A…D-C |
-| C1-D | Owner approval + decisions (D-A instance / D-B scope / D-C ITM-008) | 📋 Planned | gates all code |
+| C1-D | Owner approval + decisions (D-A instance / D-B scope / D-C ITM-008) | ✅ Completed | resolved 2026-06-11: **Oracle XE available** → live pass runs this round (EBS templates still ITM-012); **full scope**; **build ITM-008** behind default-off flag |
+| C1-DES | Design + build sequence + XE live-pass runbook | ✅ Completed | `docs/round-C1-design.md` (B1…B6 + read-only-account/sample-schema SQL) |
 | C1-1 | Confirm CI 3.11+3.13 green on `9209e3a` | 📋 Planned | needs Actions access (`gh` absent) — owner confirms or provides run URL |
 | C1-2 | RISK-04 live-Oracle + manual UI/observability pass | 📋 Planned | **owner provides read-only instance (ADR-009)**; record results, file defects |
 | C1-3 | ITM-006 — legacy `connection.json` → encrypted profiles | 📋 Planned | RISK-09 |
-| C1-4 | ITM-007 — `use_container_width` → `width='stretch'` | 📋 Planned | Streamlit deprecation |
+| C1-4 | ITM-007 — `use_container_width` → `width='stretch'` | ✅ Completed | **B1**; 14 sites in `app.py` migrated (verified `streamlit==1.58.0`); smoke green; ITM-007 CLOSED |
 | C1-5 | ITM-008 — NL PII scrubbing (per D-C) | 📋 Planned | build behind default-off flag, or formally defer |
 | C1-6 | Governed-doc updates + GA-readiness verdict | 📋 Planned | RISK-04 disposition; CHANGELOG/registers |
 | RC1.x | Independent exit-gate review for code-touching items (reviewer ≠ author) | 📋 Planned | where applicable (C1-3/4/5) |
@@ -230,3 +231,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.29 | 2026-06-11 | Delivery | R6.5.1 Completed — review package prepared (`2ba0a56..d34658c`). Next: owner runs the independent adversarial exit-gate reviewer (R6.5.2). |
 | 1.30 | 2026-06-11 | Delivery | R6.5.2 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); R6.5.3 remediated all four findings (R1 Unicode SSRF NFKC fold, R2 fd-close, R3 blank-CORS fallback, R4 doc) → 242 tests. Gate cleared; closure (R6.5.4) pending optional r2 spot-check + push. |
 | 1.31 | 2026-06-11 | Delivery | **Phase 6.5 CLOSED** (R6.5.4) — gate passed on r1 by owner direction (no r2); pushed `2ba0a56..9209e3a`. Next = **Round C1** (pre-GA consolidation & testing; charter opened); CI-matrix green confirmation + RISK-04 + ITM-006/007/008 carried there. |
+| 1.32 | 2026-06-11 | Delivery | Round C1 decisions resolved (XE available / full scope / build ITM-008); design + XE runbook done (`round-C1-design.md`); **B1 done — ITM-007 CLOSED** (242 tests). Next: B2 ITM-006, B3 ITM-008; B5 live pass awaits owner XE setup. |

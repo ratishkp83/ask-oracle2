@@ -4,6 +4,12 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Changed (Round C1 — Pre-GA Consolidation & Testing)
+- **ITM-007 closed:** replaced the deprecated Streamlit `use_container_width=True` with
+  `width="stretch"` across all 14 `st.button`/`st.dataframe`/`st.download_button` calls in
+  `src/app.py` (verified supported on `streamlit==1.58.0`). No behaviour change; the 7-section
+  headless smoke (`tests/test_app_smoke.py`) stays green.
+
 ### Added (Phase 6.5 — Pre-Deployment Hardening)
 - **Opt-in API-key auth + explicit CORS** ([ADR-013](adr/ADR-013-network-edge-hardening.md),
   closes the code portion of ITM-009/RISK-12): `src/core/auth.py` — app-level dependency
