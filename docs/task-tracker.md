@@ -1,6 +1,6 @@
 # D11 — Task Tracker
 
-> **Document:** Task Tracker · **Version:** 1.0 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Task Tracker · **Version:** 1.0 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
 
 Status: Planned · In Progress · Blocked · Completed.
 
@@ -122,6 +122,28 @@ green**; chokepoint unchanged. **Pushed (`d059295..2a88a04`); CI run #7 green on
 | R6.4 | Re-review (r2) on the fixes | ✅ Done | verdict **PASS** ([phase-6-review-r2.md](reviews/phase-6-review-r2.md)); F-1/F-2 clean-install re-verified, F-3/F-4/F-5 confirmed; ITM-016 Mitigating (CI demo pending push) |
 | R6.5 | Phase-6 closure sign-off | ✅ Completed | **gate PASSED**: r1 PASS-WITH-FIXES → r2 PASS; 185 tests; governed docs current. **Pushed `d059295..2a88a04`; CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed; no open residual. |
 
+## Phase 6.5 — Pre-Deployment Hardening (🔄 Discovery OPENED 2026-06-11)
+
+Charter: [phase-6.5-charter.md](charters/phase-6.5-charter.md). Bundles the carried code
+preconditions gating any networked/multi-tenant deployment — ITM-009 (CORS/auth, RISK-12),
+ITM-010 (base_url IP encodings), ITM-013/014 (file-store durability, RISK-16), ITM-017
+(non-DB `str(exc)` surfaces) — into one charter → design → build → exit-gate cycle.
+**Build gated on owner decisions D-A…D-F (P6.5-D); no code until approved.** RISK-04
+(live-Oracle pass) stays out of scope (owner-scheduled).
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| P6.5-0 | Open Phase 6.5 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-F; grounding facts verified against HEAD `2ba0a56` |
+| P6.5-D | Owner approval + decision resolution (D-A…D-F) | 🔄 In Progress | auth mechanism / health+metrics posture / CORS / store approach / corrupt-record policy / ITM-017 classification |
+| P6.5-DES | Design + build sequence (owner-approved) | 📋 Planned | after P6.5-D |
+| P6.5-1 | Network edge: opt-in API-key auth + env-driven CORS (ITM-009/RISK-12) | 📋 Planned | per D-A/D-B/D-C |
+| P6.5-2 | `validate_base_url` numeric-encoding hardening (ITM-010) | 📋 Planned | integer/hex/octal/dotted forms |
+| P6.5-3 | Shared atomic-write helper across the 4 JSON stores (ITM-013/RISK-16) | 📋 Planned | per D-D; temp + fsync + `os.replace` |
+| P6.5-4 | Corrupt-record robustness in the report store (ITM-014) | 📋 Planned | per D-E; verify profiles/schema stores too |
+| P6.5-5 | Non-DB error-surface sanitization (ITM-017) | 📋 Planned | per D-F; config 500 / nl2sql 400 / UI config paths |
+| P6.5-6 | Tests + governed-doc updates (D3/D5/D7, ADRs, CHANGELOG, registers) + close ITM-009/010/013/014/017 | 📋 Planned | lockstep |
+| R6.5.x | Independent adversarial exit-gate review + QA (reviewer ≠ author) | 📋 Planned | iterate to PASS |
+
 ## Standing per-phase review gate (applies to EVERY phase)
 
 Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](process/external-review-gate.md)):
@@ -148,8 +170,9 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 - **Phase 4: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES, no open blocking; 130 tests).
 - **Phase 5: CLOSED (2026-06-10)** — exit gate PASSED (r1 FAIL → r2 PASS-WITH-FIXES, no open blocking; 160 tests). Phase 6 may open next.
 - **Phase 6: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES → r2 PASS; 185 tests). ITM-015 + ITM-016 closed (pushed; CI run #7 green on both 3.11 + 3.13). Phase 7 (optional) may open next.
+- **Phase 6.5: Discovery OPENED (2026-06-11)** — bundles the Phase-7 preconditions (ITM-009/010/013/014/017); build gated on owner decisions D-A…D-F. **Phase 7 remains gated on P6.5 closure + RISK-04.**
 - Pre-GA (not gating Phase 3): manual UI/live-DB pass (RISK-04), `/v1` API prefix (T-18), legacy `connection.json` migration (T-19).
-- **Hard precondition for any networked/multi-tenant deployment (Phase 7):** CORS/auth hardening (ITM-009/RISK-12) + `base_url` host-normalization (F7/ITM-010).
+- **Hard precondition for any networked/multi-tenant deployment (Phase 7):** CORS/auth hardening (ITM-009/RISK-12) + `base_url` host-normalization (F7/ITM-010) — **in remediation under Phase 6.5.**
 
 ## Revision history
 
@@ -175,3 +198,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.17 | 2026-06-10 | Delivery | Phase 6 R6.1 Completed — review package prepared (`d059295..HEAD`). Next: owner runs the independent adversarial exit-gate reviewer (R6.2). |
 | 1.18 | 2026-06-10 | Delivery | Phase 6 exit gate: r1 = PASS-WITH-FIXES (F-1/F-2 S2 = dependency/CI hygiene) → remediated (3.13-capable repin, clean-install-proven, 185 green; F-3/F-4/F-5 fixed) → r2 = PASS. **Phase 6 CLOSED.** Residual ITM-016 (CI demo pending push). |
 | 1.19 | 2026-06-10 | Delivery | Pushed `d059295..2a88a04`; **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed, no open residual. |
+| 1.20 | 2026-06-11 | Delivery | Phase 6.5 Discovery opened (P6.5-0); bundles ITM-009/010/013/014/017 as a pre-deployment hardening mini-phase; P6.5-1…P6.5-6 + R6.5.x seeded as Planned; build gated on owner decisions D-A…D-F (P6.5-D). |

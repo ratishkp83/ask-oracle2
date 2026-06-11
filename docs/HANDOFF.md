@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 1.9 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Session Handoff · **Version:** 2.0 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -28,7 +28,7 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 4. [process/external-review-gate.md](process/external-review-gate.md) + [process/adversarial-reviewer-prompt.md](process/adversarial-reviewer-prompt.md) — the mandatory end-of-phase review.
 5. Active charter under [charters/](charters/), plus [oracle-llm-design.md](oracle-llm-design.md), [issue-log.md](issue-log.md), [risk-register.md](risk-register.md), [adr/](adr/), [CHANGELOG.md](CHANGELOG.md).
 
-## 4. Current state (2026-06-10)
+## 4. Current state (2026-06-11)
 - **Phases 1–4 complete.** Phase 4 CLOSED — exit gate r1 = PASS-WITH-FIXES; F1 → read-only
   account precondition ([ADR-009](adr/ADR-009-readonly-db-account-precondition.md)). Earlier
   Phase-4 pieces: Report v2 + bind-through-chokepoint ([ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)),
@@ -56,7 +56,14 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
   configuration** (numpy 2.2.6 / pandas 2.2.3 / streamlit 1.58.0 / fastapi 0.136.3 / Pillow
   11.0.0; `httpx<0.28` keeps openai 1.43.0); F-3/F-4/F-5 fixed. **185 tests.** Pushed
   (`d059295..2a88a04`); **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED**; no open
-  residual. See §8.
+  residual.
+- **Phase 6.5 (Pre-Deployment Hardening): Discovery OPENED 2026-06-11** — bundles the carried
+  Phase-7 preconditions ITM-009 (CORS/auth, RISK-12), ITM-010 (base_url IP encodings),
+  ITM-013/014 (file-store durability, RISK-16), ITM-017 (non-DB `str(exc)` surfaces) into one
+  charter → design → build → exit-gate cycle
+  ([charters/phase-6.5-charter.md](charters/phase-6.5-charter.md)). **Decisions D-A…D-F pending
+  owner approval; no code until approved.** RISK-04 (live-Oracle pass) stays out of scope
+  (owner-scheduled). See §8.
 
 ## 5. Non-negotiables (must never regress)
 - **SELECT/CTE only.** All DML/DDL/PL-SQL/stacked/`FOR UPDATE` rejected, fail-closed, via the single `/execute` chokepoint (`src/core/sql_safety.py`); both UI and API route through it. Verify with `tests/test_sql_safety.py` + `test_execute_endpoint.py`.
@@ -67,7 +74,8 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 A phase is not "closed" until an **independent adversarial code review + QA** returns `PASS` / `PASS-WITH-FIXES` (no open blocking). **Reviewer ≠ author** — the **owner supplies a fresh reviewer agent**, briefed with [process/adversarial-reviewer-prompt.md](process/adversarial-reviewer-prompt.md) + the phase's change range. Loop: prepare package → review → triage to issue log → remediate blocking → re-review until PASS → record sign-off (tracker + CHANGELOG). Outputs live in `docs/reviews/phase-<N>-review-r<n>.md`.
 
 ## 7. Carried preconditions / open items (none blocking; all gate Phase 7 / pre-GA)
-- **Phase-7 (networked/multi-tenant) preconditions:** ITM-009 (CORS `*`+credentials+`0.0.0.0`
+- **Phase-7 (networked/multi-tenant) preconditions — now IN REMEDIATION under Phase 6.5**
+  ([charter](charters/phase-6.5-charter.md)): ITM-009 (CORS `*`+credentials+`0.0.0.0`
   bind, **plus** unauthenticated `/health`+`/metrics` → restrict origins + add auth / RISK-12);
   F7/ITM-010 (`base_url` host normalization — reject integer/hex/octal IP encodings); ITM-013/014
   (file-store atomic writes + corrupt-record robustness / RISK-16); **ITM-017** (non-DB `str(exc)`
@@ -80,32 +88,25 @@ A phase is not "closed" until an **independent adversarial code review + QA** re
   for the full list (all S3/S4, none blocking).
 
 ## 8. Next action
-**Phase 6 — "Observability & Error Handling" — CLOSED** (exit gate passed 2026-06-10). The
-independent review ran **r1 = PASS-WITH-FIXES → r2 = PASS**
-([r1](reviews/phase-6-review-r1.md) · [r2](reviews/phase-6-review-r2.md)). r1's two blocking
-S2s (F-1/F-2) were dependency/CI hygiene, not Phase-6 code: the pins didn't install on 3.13
-and `httpx` floated past `openai==1.43.0`'s compat. **Remediated:** the validated set is
-re-pinned to a **clean-install-proven 3.13-capable** configuration (verified by a fresh-venv
-`pip install` + `pytest` → **185 passed** on 3.13); F-3/F-4/F-5 fixed.
+**Phase 6.5 — "Pre-Deployment Hardening" — Discovery OPENED 2026-06-11** (owner chose the
+bundled hardening mini-phase over opening Phase 7 first). The charter
+([charters/phase-6.5-charter.md](charters/phase-6.5-charter.md)) bundles the four carried code
+preconditions — ITM-009 (opt-in API-key auth + env-driven CORS, incl. the `/health`+`/metrics`
+posture), ITM-010 (`validate_base_url` numeric-encoding bypass), ITM-013/014 (atomic writes
+across the 4 JSON stores + corrupt-record robustness), ITM-017 (non-DB `str(exc)` surfaces) —
+into one charter → design → build → independent exit-gate review. RISK-04 (live-Oracle pass)
+stays a separate, owner-scheduled pre-GA activity.
 
-**Pushed + CI-green; no open residual.** The branch was pushed (`d059295..2a88a04`) and **CI
-run #7 is green on both `test (3.11)` and `test (3.13)`** → **ITM-016 CLOSED**. Phase 6 is
-fully closed with nothing pending.
-
-**No open work item.** Phases 1–6 are all CLOSED; the tree is clean and fully pushed
-(`main` == `origin/main`, HEAD `92a6fb3`; CI runs #7 **and** #8 green on 3.11 + 3.13).
-
-**Next feature work = Phase 7 (optional, not yet opened)** — vector search / 23ai + EBS
-metadata packs. Its hard preconditions gate any networked/multi-tenant deploy and should be
-resolved first: CORS/auth (ITM-009/RISK-12), `base_url` normalization (ITM-010), file-store
-durability/atomicity (ITM-013/014/RISK-16), non-DB `str(exc)` sanitization (ITM-017), plus the
-**pre-GA manual + live-Oracle pass** (RISK-04 — introspection/templates/reports never validated
-against a real instance). If Phase 7 opens, run the lifecycle: Discovery charter → owner
-decisions → design → build → independent exit-gate review (reviewer ≠ author) → PASS → close.
+**The gate right now is P6.5-D: owner resolution of decisions D-A…D-F** (auth mechanism;
+`/health`+`/metrics` posture; CORS policy; store-durability approach; corrupt-record policy;
+ITM-017 message classification — recommendations are in the charter). **No code until the
+owner approves.** After approval: design doc (owner-approved) → build P6.5-1…P6.5-6 → R6.5.x
+exit-gate review (reviewer ≠ author) → PASS → close; then Phase 7 (optional) may open.
 
 **First steps on resume:** confirm the working tree is clean and **185 tests pass**
-(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then either open
-Phase 7 Discovery (with owner approval) or take the owner's direction. Nothing is pending.
+(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
+[task-tracker.md](task-tracker.md) P6.5-D — if decisions are still pending, get them resolved
+before any code; if resolved, proceed to the design doc.
 
 ## Revision history
 | Version | Date | Author | Change |
@@ -120,3 +121,4 @@ Phase 7 Discovery (with owner approval) or take the owner's direction. Nothing i
 | 1.7 | 2026-06-10 | Delivery | Phase 6 **CLOSED** — exit gate r1 PASS-WITH-FIXES (F-1/F-2 S2 dependency/CI hygiene) → re-pinned to a clean-install-proven 3.13-capable set + F-3/F-4/F-5 fixed → r2 PASS; **185 tests**. Residual: push to demonstrate CI matrix (ITM-016). |
 | 1.8 | 2026-06-10 | Delivery | Pushed `d059295..2a88a04`; **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed, no open residual. |
 | 1.9 | 2026-06-10 | Delivery | Resume-readiness pass: removed stale §8 leftovers ("draft Phase 6 charter"/"160 tests"/"unpushed"); §4/§7 reconciled (185 tests, all pushed, carried items incl. ITM-017); next = Phase 7 (optional) or owner direction. |
+| 2.0 | 2026-06-11 | Delivery | Phase 6.5 (Pre-Deployment Hardening) Discovery OPENED — bundles ITM-009/010/013/014/017 (RISK-12/16) into one gated mini-phase; charter drafted; next action = owner resolves decisions D-A…D-F before any code. |
