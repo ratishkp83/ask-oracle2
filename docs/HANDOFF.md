@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 2.3 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
+> **Document:** Session Handoff · **Version:** 2.4 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -69,7 +69,15 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
   PASS-WITH-FIXES** ([phase-6.5-review-r1.md](reviews/phase-6.5-review-r1.md); no S1/S2) →
   **all four findings remediated** (R1 Unicode fullwidth-digit SSRF NFKC-fold, R2 fd-close on
   error path, R3 blank-`ALLOWED_ORIGINS` fallback, R4 D7 doc) → **242 tests**. RISK-04
-  (live-Oracle pass) stays out of scope (owner-scheduled). **Closure pending** — see §8.
+  (live-Oracle pass) stays out of scope (owner-scheduled). **CLOSED on r1 by owner direction (no
+  r2) 2026-06-11; pushed `2ba0a56..9209e3a`.** CI-matrix green confirmation on the pushed commit
+  is deferred to Round C1.
+- **Round C1 (Pre-GA Consolidation & Testing): Discovery OPENED 2026-06-11** ([charter](charters/round-C1-charter.md)).
+  Verification + pre-GA cleanups, **no new features**: confirm CI 3.11+3.13 green on `9209e3a`;
+  **RISK-04** live-Oracle + manual UI pass (owner provides a read-only instance, ADR-009);
+  ITM-006 (legacy `connection.json`→encrypted profiles), ITM-007 (`use_container_width`
+  deprecation), ITM-008 (optional NL PII scrubbing). **Scope + decisions D-A…D-C pending owner;
+  no code until approved.** See §8.
 
 ## 5. Non-negotiables (must never regress)
 - **SELECT/CTE only.** All DML/DDL/PL-SQL/stacked/`FOR UPDATE` rejected, fail-closed, via the single `/execute` chokepoint (`src/core/sql_safety.py`); both UI and API route through it. Verify with `tests/test_sql_safety.py` + `test_execute_endpoint.py`.
@@ -79,43 +87,41 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 ## 6. Phase-exit review gate (every phase)
 A phase is not "closed" until an **independent adversarial code review + QA** returns `PASS` / `PASS-WITH-FIXES` (no open blocking). **Reviewer ≠ author** — the **owner supplies a fresh reviewer agent**, briefed with [process/adversarial-reviewer-prompt.md](process/adversarial-reviewer-prompt.md) + the phase's change range. Loop: prepare package → review → triage to issue log → remediate blocking → re-review until PASS → record sign-off (tracker + CHANGELOG). Outputs live in `docs/reviews/phase-<N>-review-r<n>.md`.
 
-## 7. Carried preconditions / open items (none blocking; all gate Phase 7 / pre-GA)
-- **Phase-7 (networked/multi-tenant) preconditions — now IN REMEDIATION under Phase 6.5**
-  ([charter](charters/phase-6.5-charter.md)): ITM-009 (CORS `*`+credentials+`0.0.0.0`
-  bind, **plus** unauthenticated `/health`+`/metrics` → restrict origins + add auth / RISK-12);
-  F7/ITM-010 (`base_url` host normalization — reject integer/hex/octal IP encodings); ITM-013/014
-  (file-store atomic writes + corrupt-record robustness / RISK-16); **ITM-017** (non-DB `str(exc)`
-  surfaces — config 500 / NL→SQL 400 / a UI config path — route through the generic+`error_id`
-  treatment, Phase-6 r1 F-7).
-- **Pre-GA:** manual UI + **live-Oracle pass** (RISK-04 — introspection/templates/reports not yet
-  validated against a real instance); legacy `connection.json` → encrypted-profile migration
-  (ITM-006/RISK-09); `use_container_width` Streamlit deprecation (ITM-007); optional NL-question
-  PII scrubbing (ITM-008). See [issue-log.md](issue-log.md) / [risk-register.md](risk-register.md)
-  for the full list (all S3/S4, none blocking).
+## 7. Carried preconditions / open items (none blocking)
+- **Phase-7 (networked/multi-tenant) code preconditions — ALL CLEARED under Phase 6.5**
+  ([charter](charters/phase-6.5-charter.md)): ITM-009 (auth + CORS / RISK-12), ITM-010 (`base_url`
+  encodings incl. the r1/R1 Unicode fold), ITM-013/014 (atomic writes + quarantine / RISK-16),
+  ITM-017 (non-DB error surfaces) — **all closed**. The only remaining gate for a networked
+  deploy is **RISK-04** (live-Oracle pass).
+- **Pre-GA — now carried into Round C1** ([charter](charters/round-C1-charter.md)): the CI-matrix
+  green confirmation on `9209e3a`; manual UI + **live-Oracle pass** (RISK-04 — owner provides a
+  read-only instance); legacy `connection.json` → encrypted-profile migration (ITM-006/RISK-09);
+  `use_container_width` Streamlit deprecation (ITM-007); optional NL-question PII scrubbing
+  (ITM-008). See [issue-log.md](issue-log.md) / [risk-register.md](risk-register.md) (all S3/S4).
 
 ## 8. Next action
-**Phase 6.5 — "Pre-Deployment Hardening" — Discovery OPENED 2026-06-11** (owner chose the
-bundled hardening mini-phase over opening Phase 7 first). The charter
-([charters/phase-6.5-charter.md](charters/phase-6.5-charter.md)) bundles the four carried code
-preconditions — ITM-009 (opt-in API-key auth + env-driven CORS, incl. the `/health`+`/metrics`
-posture), ITM-010 (`validate_base_url` numeric-encoding bypass), ITM-013/014 (atomic writes
-across the 4 JSON stores + corrupt-record robustness), ITM-017 (non-DB `str(exc)` surfaces) —
-into one charter → design → build → independent exit-gate review. RISK-04 (live-Oracle pass)
-stays a separate, owner-scheduled pre-GA activity.
+**Phase 6.5 — "Pre-Deployment Hardening" — CLOSED 2026-06-11.** Full lifecycle in one day:
+Discovery → decisions D-A…D-F → design → build B1…B6 → independent exit-gate review
+**r1 = PASS-WITH-FIXES** (no S1/S2; [phase-6.5-review-r1.md](reviews/phase-6.5-review-r1.md),
+reviewer ≠ author) → all four findings remediated (R1 Unicode-digit SSRF NFKC-fold, R2 fd-close,
+R3 blank-`ALLOWED_ORIGINS` fallback, R4 D7 doc) → **closed on r1 by owner direction (no r2)**.
+**242 tests; pushed `2ba0a56..9209e3a`** (`main` == `origin/main`). The CI 3.11+3.13 matrix runs
+on that push; **green confirmation is carried into Round C1** (no `gh` on the dev box — confirm
+in the Actions tab).
 
-**Build B1…B6 COMPLETE and the exit-gate review r1 = PASS-WITH-FIXES with all four findings
-already remediated (2026-06-11; 242 tests green).** The independent reviewer
-([phase-6.5-review-r1.md](reviews/phase-6.5-review-r1.md), reviewer ≠ author) found **no
-S1/S2** — the gate is cleared by the verdict — plus two S3 + two S4, all fixed the same day:
-R1 (Unicode fullwidth-digit SSRF first-line bypass → NFKC-fold the host before the checks),
-R2 (fd leak in `atomic_write_json` → `os.close(fd)` on the error path), R3 (blank
-`ALLOWED_ORIGINS` → localhost fallback), R4 (CORS-restart-vs-key-per-request → documented in D7).
+**Active work = Round C1 — Pre-GA Consolidation & Testing — Discovery OPENED 2026-06-11**
+([charters/round-C1-charter.md](charters/round-C1-charter.md)). Verification + pre-GA cleanups,
+**no new features**: C1-1 confirm CI green on `9209e3a`; C1-2 **RISK-04 live-Oracle + manual UI
+pass** (owner provides a read-only instance, ADR-009); C1-3 ITM-006 (legacy `connection.json`→
+encrypted profiles); C1-4 ITM-007 (`use_container_width`→`width='stretch'`); C1-5 ITM-008
+(optional NL PII scrubbing). **The gate now is C1-D: owner resolves decisions D-A (provision an
+Oracle instance?), D-B (round scope), D-C (ITM-008 build-vs-defer) — no code until approved.**
 
-**The gate is cleared; what remains to CLOSE Phase 6.5 (R6.5.4):** (a) *optional* — owner has the
-reviewer spot-check the R1 security fix (an r2; not gate-required since R1 was non-blocking and
-is now fixed + regression-tested); (b) **push** (`main` is ahead of origin — owner pushes on
-request; the push also demonstrates the CI 3.11+3.13 matrix per the ITM-016 precedent); (c) mark
-R6.5.4 done. Then Phase 7 (optional) may open; RISK-04 (owner-scheduled live-Oracle pass) stands pre-GA.
+**First steps on resume:** confirm the working tree is clean and **242 tests pass**
+(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
+[task-tracker.md](task-tracker.md) C1-D — if decisions are pending, get them resolved; the
+autonomous code items (ITM-007 quick, ITM-006) can start once the round is approved, while C1-2
+(RISK-04) waits on an instance.
 
 **First steps on resume:** confirm the working tree is clean and **242 tests pass**
 (`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
@@ -138,3 +144,4 @@ R6.5.4 done. Then Phase 7 (optional) may open; RISK-04 (owner-scheduled live-Ora
 | 2.1 | 2026-06-11 | Delivery | P6.5 decisions D-A…D-F resolved (all as recommended); design + build sequence B1…B6 drafted (`pre-deployment-hardening-design.md`); next action = owner approves the design before any code. |
 | 2.2 | 2026-06-11 | Delivery | P6.5 design approved + build B1…B6 complete (236 tests; ITM-009/010/013/014/017 CLOSED; RISK-12 Closed/RISK-16 Mitigating; ADR-013/014). Next action = R6.5.x exit-gate review (owner-supplied reviewer). |
 | 2.3 | 2026-06-11 | Delivery | P6.5 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); all four findings remediated (R1 Unicode SSRF NFKC-fold, R2 fd-close, R3 blank-CORS fallback, R4 doc) → 242 tests. Gate cleared; closure (R6.5.4) pending optional r2 spot-check + push. |
+| 2.4 | 2026-06-11 | Delivery | **Phase 6.5 CLOSED** (on r1, no r2, per owner) + pushed `2ba0a56..9209e3a`. **Round C1 (Pre-GA Consolidation & Testing) opened** — carries CI-green confirmation, RISK-04 live pass, ITM-006/007/008; decisions D-A…D-C pending owner. |

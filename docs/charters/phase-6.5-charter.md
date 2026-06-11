@@ -1,10 +1,15 @@
 # Phase 6.5 Charter — Pre-Deployment Hardening (carried preconditions)
 
-> **Document:** Phase Charter · **Version:** 1.4 · **Status:** 🔄 Closing (exit-gate review r1 = PASS-WITH-FIXES, all findings remediated; 242 tests; closure pending optional r2 spot-check + push) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
+> **Document:** Phase Charter · **Version:** 1.5 · **Status:** ✅ CLOSED (exit gate passed) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
 
 ## Lifecycle stage
-**Discovery OPENED 2026-06-11; owner approved and resolved decisions D-A…D-F (all as
-recommended) the same day → Design.** This mini-phase bundles the four carried **code** preconditions
+**CLOSED — 2026-06-11.** Full lifecycle in one day: Discovery → decisions D-A…D-F (all as
+recommended) → design → build B1…B6 → independent exit-gate review **r1 = PASS-WITH-FIXES**
+(no S1/S2) → all four findings (R1–R4) remediated → **gate cleared on r1 by owner direction
+(no r2)**; pushed (`2ba0a56..9209e3a`). **242 tests**; chokepoint untouched. CI-matrix
+(3.11+3.13) green confirmation on the pushed commit is deferred to **Round C1** (pre-GA
+consolidation & testing) per owner direction. This mini-phase bundled the four carried
+**code** preconditions
 that gate any networked/multi-tenant deployment (and therefore Phase 7) into one charter → one
 design → one build → one independent exit-gate review:
 
@@ -228,3 +233,4 @@ Owner approved the charter and resolved **all six decisions as recommended**.
 | 1.2 | 2026-06-11 | Product/Eng | Design + build sequence approved by owner ([pre-deployment-hardening-design.md](../pre-deployment-hardening-design.md)) → Build; executing B1…B6. |
 | 1.3 | 2026-06-11 | Product/Eng | Build B1…B6 complete (**236 tests**; ITM-009/010/013/014/017 CLOSED; RISK-12 Closed, RISK-16 Mitigating). Next: R6.5.x exit-gate review (reviewer ≠ author, owner-supplied). |
 | 1.4 | 2026-06-11 | Product/Eng | Exit-gate review r1 = **PASS-WITH-FIXES** (no S1/S2); R1–R4 all remediated (R1 Unicode SSRF NFKC fold, R2 fd-close, R3 blank-CORS fallback, R4 doc) → **242 tests**. Gate cleared; closure pending optional r2 spot-check + push. |
+| 1.5 | 2026-06-11 | Product/Eng | **Phase 6.5 CLOSED** — gate cleared on r1 by owner direction (no r2); pushed `2ba0a56..9209e3a`. CI-matrix green confirmation deferred to Round C1. |

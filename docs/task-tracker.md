@@ -122,7 +122,7 @@ green**; chokepoint unchanged. **Pushed (`d059295..2a88a04`); CI run #7 green on
 | R6.4 | Re-review (r2) on the fixes | ✅ Done | verdict **PASS** ([phase-6-review-r2.md](reviews/phase-6-review-r2.md)); F-1/F-2 clean-install re-verified, F-3/F-4/F-5 confirmed; ITM-016 Mitigating (CI demo pending push) |
 | R6.5 | Phase-6 closure sign-off | ✅ Completed | **gate PASSED**: r1 PASS-WITH-FIXES → r2 PASS; 185 tests; governed docs current. **Pushed `d059295..2a88a04`; CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed; no open residual. |
 
-## Phase 6.5 — Pre-Deployment Hardening (🔄 Discovery OPENED 2026-06-11)
+## Phase 6.5 — Pre-Deployment Hardening (✅ CLOSED — exit gate passed 2026-06-11)
 
 Charter: [phase-6.5-charter.md](charters/phase-6.5-charter.md). Bundles the carried code
 preconditions gating any networked/multi-tenant deployment — ITM-009 (CORS/auth, RISK-12),
@@ -145,7 +145,24 @@ ITM-010 (base_url IP encodings), ITM-013/014 (file-store durability, RISK-16), I
 | R6.5.1 | Prepare exit-gate review package | ✅ Completed | [reviews/phase-6.5-review-package.md](reviews/phase-6.5-review-package.md); range `2ba0a56..d34658c`, 9 phase invariants to attack |
 | R6.5.2 | Independent adversarial exit-gate review + QA (r1) | ✅ Done | verdict **PASS-WITH-FIXES** ([phase-6.5-review-r1.md](reviews/phase-6.5-review-r1.md)); **no S1/S2** — all 9 invariants + suite verified green; 2 S3 (R1 Unicode SSRF first-line bypass, R2 fd-leak) + 2 S4 (R3 blank-CORS, R4 doc) |
 | R6.5.3 | Remediate r1 findings + regression | ✅ Done | R1 NFKC host-fold (Unicode fullwidth-digit IP encodings rejected at the guard; genuine IDN preserved); R2 `os.close(fd)` on error path; R3 blank `ALLOWED_ORIGINS` → localhost fallback; R4 documented (D7); **+6 → 242 tests** |
-| R6.5.4 | Phase-6.5 closure sign-off | 🔄 In Progress | gate cleared by r1 verdict (no blocking); all four findings remediated. Optional: owner spot-check the R1 security fix (r2). Then push (demonstrates CI matrix) → close. |
+| R6.5.4 | Phase-6.5 closure sign-off | ✅ Completed | **gate PASSED 2026-06-11**: r1 = PASS-WITH-FIXES (no blocking), R1–R4 all remediated, 242 tests, governed docs current. Closed on r1 by owner direction (no r2). Pushed `2ba0a56..9209e3a`. CI-matrix green confirmation deferred to **Round C1**. |
+
+## Round C1 — Pre-GA Consolidation & Testing (🔄 Discovery OPENED 2026-06-11)
+
+Charter: [round-C1-charter.md](charters/round-C1-charter.md). Verification + pre-GA cleanups, no
+new features. **Scope + decisions D-A…D-C pending owner; no code until approved.**
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| C1-0 | Open Round C1 Discovery charter | ✅ Completed | objectives/scope/risks + decisions D-A…D-C |
+| C1-D | Owner approval + decisions (D-A instance / D-B scope / D-C ITM-008) | 📋 Planned | gates all code |
+| C1-1 | Confirm CI 3.11+3.13 green on `9209e3a` | 📋 Planned | needs Actions access (`gh` absent) — owner confirms or provides run URL |
+| C1-2 | RISK-04 live-Oracle + manual UI/observability pass | 📋 Planned | **owner provides read-only instance (ADR-009)**; record results, file defects |
+| C1-3 | ITM-006 — legacy `connection.json` → encrypted profiles | 📋 Planned | RISK-09 |
+| C1-4 | ITM-007 — `use_container_width` → `width='stretch'` | 📋 Planned | Streamlit deprecation |
+| C1-5 | ITM-008 — NL PII scrubbing (per D-C) | 📋 Planned | build behind default-off flag, or formally defer |
+| C1-6 | Governed-doc updates + GA-readiness verdict | 📋 Planned | RISK-04 disposition; CHANGELOG/registers |
+| RC1.x | Independent exit-gate review for code-touching items (reviewer ≠ author) | 📋 Planned | where applicable (C1-3/4/5) |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -173,9 +190,9 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 - **Phase 4: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES, no open blocking; 130 tests).
 - **Phase 5: CLOSED (2026-06-10)** — exit gate PASSED (r1 FAIL → r2 PASS-WITH-FIXES, no open blocking; 160 tests). Phase 6 may open next.
 - **Phase 6: CLOSED (2026-06-10)** — exit gate PASSED (r1 PASS-WITH-FIXES → r2 PASS; 185 tests). ITM-015 + ITM-016 closed (pushed; CI run #7 green on both 3.11 + 3.13). Phase 7 (optional) may open next.
-- **Phase 6.5: Discovery OPENED (2026-06-11)** — bundles the Phase-7 preconditions (ITM-009/010/013/014/017); build gated on owner decisions D-A…D-F. **Phase 7 remains gated on P6.5 closure + RISK-04.**
+- **Phase 6.5: CLOSED (2026-06-11)** — exit gate PASSED (r1 PASS-WITH-FIXES → R1–R4 remediated → closed on r1, no r2; 242 tests; pushed). ITM-009/010/013/014/017 closed; RISK-12 Closed, RISK-16 Mitigating. **Phase 7 (optional) now gated only on RISK-04 (pre-GA live-Oracle pass).** Next: **Round C1** (pre-GA consolidation & testing) — carries CI-matrix green confirmation, RISK-04, and ITM-006/007/008.
 - Pre-GA (not gating Phase 3): manual UI/live-DB pass (RISK-04), `/v1` API prefix (T-18), legacy `connection.json` migration (T-19).
-- **Hard precondition for any networked/multi-tenant deployment (Phase 7):** CORS/auth hardening (ITM-009/RISK-12) + `base_url` host-normalization (F7/ITM-010) — **in remediation under Phase 6.5.**
+- **Hard preconditions for any networked/multi-tenant deployment (Phase 7): CLEARED** — CORS/auth (ITM-009/RISK-12), `base_url` host-normalization (ITM-010), file-store durability (ITM-013/014/RISK-16) and non-DB error surfaces (ITM-017) all closed under Phase 6.5. Remaining pre-GA gate = RISK-04 (live-Oracle pass), carried into Round C1.
 
 ## Revision history
 
@@ -212,3 +229,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.28 | 2026-06-11 | Delivery | P6.5 B6 done: P6.5-6 Completed — governed-doc sweep; ITM-009/010/013/014/017 formally CLOSED; RISK-12 Closed / RISK-16 Mitigating; NFR-8 traced. Build B1…B6 complete (236 tests); R6.5.1 review-package prep is next. |
 | 1.29 | 2026-06-11 | Delivery | R6.5.1 Completed — review package prepared (`2ba0a56..d34658c`). Next: owner runs the independent adversarial exit-gate reviewer (R6.5.2). |
 | 1.30 | 2026-06-11 | Delivery | R6.5.2 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); R6.5.3 remediated all four findings (R1 Unicode SSRF NFKC fold, R2 fd-close, R3 blank-CORS fallback, R4 doc) → 242 tests. Gate cleared; closure (R6.5.4) pending optional r2 spot-check + push. |
+| 1.31 | 2026-06-11 | Delivery | **Phase 6.5 CLOSED** (R6.5.4) — gate passed on r1 by owner direction (no r2); pushed `2ba0a56..9209e3a`. Next = **Round C1** (pre-GA consolidation & testing; charter opened); CI-matrix green confirmation + RISK-04 + ITM-006/007/008 carried there. |
