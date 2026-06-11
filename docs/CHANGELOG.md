@@ -13,6 +13,13 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   `http://localhost:8501,http://localhost:3000`); a literal `*` forfeits credentials, making
   the wildcard+credentials combination unrepresentable. API v2.2.0. Tests:
   `tests/test_auth.py` (**+16 → 201**); D5/D7 updated; ADR index backfilled (ADR-012/013).
+- **SSRF encoding bypass closed** (ITM-010, Phase-3 r2 F7): `validate_base_url` now decodes
+  `inet_aton`-style numeric hosts (decimal/hex/octal, 1–4 dot-groups; ASCII-strict so Unicode
+  digits/underscores can't slip past `int()`) **before** the private/loopback checks —
+  `https://2130706433/`, `0x7f000001`, `0177.0.0.1`, `127.1` are rejected like `127.0.0.1`.
+  All-numeric hosts that don't form a valid IPv4 are rejected **fail-closed** (a public TLD
+  never starts with a digit); real hostnames (`1password.com`) unaffected. DNS-rebinding stays
+  the documented residual. Tests **+17 → 218**.
 
 ### Added (Phase 6 — Observability & Error Handling)
 - **Structured logging** ([ADR-012](adr/ADR-012-observability-and-error-handling.md)):

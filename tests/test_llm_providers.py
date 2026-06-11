@@ -67,6 +67,61 @@ def test_base_url_public_https_ok():
     assert p.is_available()
 
 
+# ITM-010 (Phase 6.5 B2) — inet_aton-style numeric encodings of internal
+# addresses must be rejected like their dotted-quad forms.
+@pytest.mark.parametrize(
+    "host",
+    [
+        "2130706433",      # decimal integer 127.0.0.1
+        "0x7f000001",      # hex integer 127.0.0.1
+        "017700000001",    # octal integer 127.0.0.1
+        "0x7f.0.0.1",      # dotted hex
+        "0177.0.0.1",      # dotted octal
+        "127.1",           # two-group short form of 127.0.0.1
+        "167772161",       # decimal integer 10.0.0.1
+        "0xa9.0xfe.0xa9.0xfe",  # hex 169.254.169.254 (metadata)
+    ],
+)
+def test_base_url_numeric_encodings_of_internal_rejected(host):
+    with pytest.raises(LLMError):
+        ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url=f"https://{host}/v1"))
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "4294967296",       # > 2**32-1: not a valid IPv4
+        "1.2.3.4.5",        # five groups
+        "09.0.0.1",         # leading-zero non-octal group
+        "0x.1.2.3",         # empty hex group
+        "256.256.256.256",  # byte groups out of range
+    ],
+)
+def test_base_url_all_numeric_but_invalid_rejected(host):
+    """An all-numeric host that isn't a valid IPv4 is never a legitimate
+    public hostname — rejected fail-closed rather than passed to DNS."""
+    with pytest.raises(LLMError):
+        ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url=f"https://{host}/v1"))
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "api.example.com",
+        "1password.com",          # digit-leading label, alphabetic TLD
+        "365.api.example.com",    # fully numeric label, alphabetic TLD
+    ],
+)
+def test_base_url_real_hostnames_still_pass(host):
+    p = ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url=f"https://{host}/v1"))
+    assert p.is_available()
+
+
+def test_base_url_ipv6_loopback_still_rejected():
+    with pytest.raises(LLMError):
+        ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url="https://[::1]/v1"))
+
+
 # F6 — api_key must not appear in repr.
 def test_llmconfig_repr_hides_key():
     assert "sk-SECRET" not in repr(LLMConfig(api_key="sk-SECRET"))

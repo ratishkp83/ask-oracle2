@@ -137,7 +137,7 @@ ITM-010 (base_url IP encodings), ITM-013/014 (file-store durability, RISK-16), I
 | P6.5-D | Owner approval + decision resolution (D-A…D-F) | ✅ Completed | resolved 2026-06-11, all as recommended: opt-in static API key via `X-API-Key`/`APP_API_KEY` (D-A); `/health` open + minimal, `/metrics` gated (D-B); `ALLOWED_ORIGINS` env, localhost default (D-C); atomic-write helper, keep JSON (D-D); corrupt records skip+log (D-E); intentional messages verbatim + `error_id`, rest generic (D-F) |
 | P6.5-DES | Design + build sequence (owner-approved) | ✅ Completed | `docs/pre-deployment-hardening-design.md`; owner approved as-is 2026-06-11 → build |
 | P6.5-1 | Network edge: opt-in API-key auth + env-driven CORS (ITM-009/RISK-12) | ✅ Completed | **B1**; `core/auth.py` (`X-API-Key` vs `APP_API_KEY`, `/health` exempt, `/metrics` gated) + `ALLOWED_ORIGINS` CORS with no-`*`-with-credentials invariant; 16 tests (**201 total**); D5/D7 + ADR-013; formal ITM-009 closure at B6 |
-| P6.5-2 | `validate_base_url` numeric-encoding hardening (ITM-010) | 📋 Planned | integer/hex/octal/dotted forms |
+| P6.5-2 | `validate_base_url` numeric-encoding hardening (ITM-010) | ✅ Completed | **B2**; pure-Python `inet_aton`-style decode (`_numeric_host_to_ipv4`, ASCII-strict) before the IP checks; all-numeric-but-invalid hosts rejected fail-closed; 17 tests (**218 total**); formal ITM-010 closure at B6 |
 | P6.5-3 | Shared atomic-write helper across the 4 JSON stores (ITM-013/RISK-16) | 📋 Planned | per D-D; temp + fsync + `os.replace` |
 | P6.5-4 | Corrupt-record robustness in the report store (ITM-014) | 📋 Planned | per D-E; verify profiles/schema stores too |
 | P6.5-5 | Non-DB error-surface sanitization (ITM-017) | 📋 Planned | per D-F; config 500 / nl2sql 400 / UI config paths |
@@ -202,3 +202,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.21 | 2026-06-11 | Delivery | Phase 6.5 decisions D-A…D-F resolved (all as recommended); P6.5-D Completed; P6.5-DES (design) In Progress — design doc pending owner approval before code. |
 | 1.22 | 2026-06-11 | Delivery | P6.5 design + build sequence drafted (`pre-deployment-hardening-design.md`, B1…B6); awaiting owner approval (P6.5-DES) before any code. |
 | 1.23 | 2026-06-11 | Delivery | P6.5 design approved (P6.5-DES Completed); Build started — B1 (network edge) done: P6.5-1 Completed, 201 tests, ADR-013, D5/D7 updated, ADR index backfilled (ADR-012/013). |
+| 1.24 | 2026-06-11 | Delivery | P6.5 B2 done: P6.5-2 Completed — `validate_base_url` rejects integer/hex/octal/dotted IP encodings (fail-closed on all-numeric invalid hosts); 218 tests. |

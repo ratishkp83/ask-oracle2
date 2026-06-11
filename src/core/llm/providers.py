@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import string
 from typing import Optional, Tuple
 from urllib.parse import urlparse
 
@@ -17,12 +18,69 @@ DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 _BLOCKED_HOSTS = {"localhost", "metadata.google.internal", "metadata"}
 
 
+def _parse_inet_component(text: str) -> Optional[int]:
+    """Parse one dot-group per C ``inet_aton`` rules: ``0x…`` hex, ``0…`` octal,
+    else decimal. ASCII-only on purpose — ``int()`` would accept Unicode digits
+    and underscores, which would reopen the encoding bypass. ``None`` = not a
+    well-formed numeric group.
+    """
+    if text[:2].lower() == "0x":
+        digits = text[2:]
+        if digits and all(c in string.hexdigits for c in digits):
+            return int(digits, 16)
+        return None
+    if len(text) > 1 and text[0] == "0":
+        if all(c in "01234567" for c in text):
+            return int(text, 8)
+        return None
+    if text and all(c in string.digits for c in text):
+        return int(text)
+    return None
+
+
+def _numeric_host_to_ipv4(host: str) -> Optional[str]:
+    """Decode ``inet_aton``-style numeric hosts (ITM-010): decimal/hex/octal in
+    1–4 dot-groups (e.g. ``2130706433``, ``0x7f000001``, ``0177.0.0.1``) to the
+    canonical dotted-quad.
+
+    Returns ``None`` for a real hostname (any group not ASCII-digit-leading,
+    e.g. ``1password.com``). Raises ``ValueError`` for a host that *looks*
+    numeric (every group digit-leading) but is not a valid IPv4 — public TLDs
+    never start with a digit, so an all-numeric host is never a legitimate
+    hostname and is rejected fail-closed.
+    """
+    groups = host.split(".")
+    if not all(g and g[0] in string.digits for g in groups):
+        return None  # a hostname, not a numeric address
+    if len(groups) > 4:
+        raise ValueError("more than four address groups")
+    values = []
+    for g in groups:
+        v = _parse_inet_component(g)
+        if v is None:
+            raise ValueError("malformed numeric group")
+        values.append(v)
+    *head, last = values
+    # inet_aton: leading groups are single bytes; the last fills the rest.
+    if any(v > 0xFF for v in head):
+        raise ValueError("address group out of range")
+    last_bits = 8 * (5 - len(values))
+    if last > (1 << last_bits) - 1:
+        raise ValueError("address out of range")
+    n = 0
+    for v in head:
+        n = (n << 8) | v
+    n = (n << last_bits) | last
+    return str(ipaddress.ip_address(n))
+
+
 def validate_base_url(base_url: str) -> None:
     """Reject a user-supplied external base_url that could enable SSRF (F4).
 
-    Requires https and blocks loopback/private/link-local/reserved IP literals and
-    known metadata hostnames. (Hostnames that resolve to private IPs via DNS are a
-    residual risk — see issue log ITM.)
+    Requires https and blocks loopback/private/link-local/reserved IP literals
+    and known metadata hostnames — in **any** encoding: dotted-quad, IPv6, and
+    the integer/hex/octal forms ``inet_aton`` accepts (ITM-010). (Hostnames
+    that resolve to private IPs via DNS are a residual risk — see issue log.)
     """
     parsed = urlparse(base_url)
     if parsed.scheme != "https":
@@ -31,7 +89,11 @@ def validate_base_url(base_url: str) -> None:
     if not host or host in _BLOCKED_HOSTS:
         raise LLMError("Custom LLM base_url host is not allowed.")
     try:
-        ip = ipaddress.ip_address(host)
+        numeric = _numeric_host_to_ipv4(host)
+    except ValueError:
+        raise LLMError("Custom LLM base_url host is not allowed.")
+    try:
+        ip = ipaddress.ip_address(numeric or host)
     except ValueError:
         return  # a hostname, not an IP literal
     if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
