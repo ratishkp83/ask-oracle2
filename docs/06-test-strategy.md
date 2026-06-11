@@ -1,6 +1,6 @@
 # D6 — Test Strategy
 
-> **Document:** Test Strategy · **Version:** 1.6 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-11
+> **Document:** Test Strategy · **Version:** 1.7 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-11
 
 ## 1. Objectives
 
@@ -17,7 +17,7 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 
 ## 3. Current coverage (baseline)
 
-**236 automated tests pass locally** (160 through Phase 5 + 25 in Phase 6 + 51 in Phase 6.5):
+**242 automated tests pass locally** (160 through Phase 5 + 25 in Phase 6 + 57 in Phase 6.5 incl. review-r1 remediation):
 
 - **Pre-deployment hardening (Phase 6.5)** — `test_auth.py` (16): auth is a no-op with
   `APP_API_KEY` unset (default posture pinned); with it set, a 401 matrix across endpoints
@@ -27,7 +27,9 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
   ITM-010 encoding matrix (decimal/hex/octal/dotted/short-form rejected), all-numeric-invalid
   hosts fail closed, digit-leading real hostnames pass, IPv6 regression.
   `test_fileio.py` (7): atomic-write round-trip, overwrite, parent dirs, `default=`,
-  **failed write keeps old content**, no temp residue. `test_store_robustness.py` (6):
+  **failed write keeps old content**, no temp residue. Review r1: `validate_base_url` also
+  rejects **Unicode fullwidth-digit** IP encodings via NFKC fold (R1) and `_cors_config`
+  falls back on blank `ALLOWED_ORIGINS` (R3). `test_store_robustness.py` (6):
   corrupt v2/legacy records quarantined (skip, not 500), **preserved verbatim across saves**
   incl. the migration save, profile + schema stores, log-once-per-instance.
   `test_error_handling.py` (+5): ITM-017 — unexpected `/nl2sql` failure returns generic +
@@ -105,3 +107,4 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 | 1.4 | 2026-06-10 | QA/Eng | Phase 6: +22 tests (logging config/JSON, error sanitization + correlation incl. ITM-015 leak proof, metrics) → 182 total; CI 3.11+3.13 matrix; observability manual-check added. |
 | 1.5 | 2026-06-10 | QA/Eng | Phase 6 r1 remediation: +3 tests (introspect leak, inbound-id sanitization, sanitize unit) → 185; re-pinned to a clean-install-proven 3.13-capable set (F-1/F-2); leak tests now assert headers + cover `/schemas/introspect`. |
 | 1.6 | 2026-06-11 | QA/Eng | Phase 6.5: +51 tests (auth on/off + CORS invariant, ITM-010 encoding matrix, atomic-write contract, corrupt-record quarantine, ITM-017 surfaces) → **236 total**. |
+| 1.7 | 2026-06-11 | QA/Eng | Phase 6.5 review r1 remediation: +6 tests (Unicode fullwidth-digit SSRF fold + genuine-IDN pass, blank-`ALLOWED_ORIGINS` fallback) → **242 total**. |

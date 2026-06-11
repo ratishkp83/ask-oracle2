@@ -1,6 +1,6 @@
 # D7 — Deployment Plan
 
-> **Document:** Deployment Plan · **Version:** 1.3 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-11
+> **Document:** Deployment Plan · **Version:** 1.4 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-11
 
 ## 0. Required database account (read-only) — **non-negotiable precondition**
 
@@ -49,7 +49,7 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 | `LOG_LEVEL` | Logging level (`DEBUG`/`INFO`/`WARNING`/…) | No (default `INFO`) |
 | `LOG_FORMAT` | `json` (stdout, 12-factor) or `text` (human-readable, local dev) | No (default `json`) |
 | `APP_API_KEY` | Enables API auth: every endpoint except `/health` then requires `X-API-Key` ([ADR-013](adr/ADR-013-network-edge-hardening.md)) | **Yes for any networked exposure**; unset = open (localhost only) |
-| `ALLOWED_ORIGINS` | CORS origins, comma-separated explicit list (a literal `*` forfeits credentials) | No (default `http://localhost:8501,http://localhost:3000`) |
+| `ALLOWED_ORIGINS` | CORS origins, comma-separated explicit list (a literal `*` forfeits credentials; blank/whitespace falls back to the default). **Read once at startup — changing it requires a process restart** (unlike `APP_API_KEY`, which is read per-request) | No (default `http://localhost:8501,http://localhost:3000`) |
 
 > **No secrets in source or `docker-compose.yml`.** All come from env. `.env` is git-ignored.
 
@@ -105,3 +105,4 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 | 1.1 | 2026-06-10 | Eng/Ops | Phase 4 r1/F1: §0 required least-privilege read-only DB account (ADR-009) + release-checklist gate. |
 | 1.2 | 2026-06-10 | Eng/Ops | Phase 6: `LOG_LEVEL`/`LOG_FORMAT` env vars; §6 rewritten for structured JSON logs, error reference IDs, and `/metrics` (ADR-012); Prometheus/APM deferred to Phase 7. |
 | 1.3 | 2026-06-11 | Eng/Ops | Phase 6.5 (B1): `APP_API_KEY`/`ALLOWED_ORIGINS` env vars + network-exposure rule (ADR-013); `/metrics` auth-gated when enabled. |
+| 1.4 | 2026-06-11 | Eng/Ops | Phase 6.5 review r1/R4: documented `ALLOWED_ORIGINS` is read once at startup (restart to change) vs `APP_API_KEY` per-request; blank-value fallback noted. |

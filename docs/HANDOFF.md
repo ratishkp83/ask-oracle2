@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 2.0 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
+> **Document:** Session Handoff · **Version:** 2.3 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -65,8 +65,11 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
   corrupt-record quarantine (skip-and-log, preserve-on-save) in report/profile/schema stores;
   **B5** ITM-017 surfaces routed (nl2sql split; SecretConfigError verbatim + breadcrumb/refs);
   **B6** governed-doc sweep — **ITM-009/010/013/014/017 CLOSED; RISK-12 Closed, RISK-16
-  Mitigating (single-worker D7 constraint)**. **236 tests**; chokepoint untouched. RISK-04
-  (live-Oracle pass) stays out of scope (owner-scheduled). **Exit-gate review pending** — see §8.
+  Mitigating (single-worker D7 constraint)**. Chokepoint untouched. **Exit-gate review r1 =
+  PASS-WITH-FIXES** ([phase-6.5-review-r1.md](reviews/phase-6.5-review-r1.md); no S1/S2) →
+  **all four findings remediated** (R1 Unicode fullwidth-digit SSRF NFKC-fold, R2 fd-close on
+  error path, R3 blank-`ALLOWED_ORIGINS` fallback, R4 D7 doc) → **242 tests**. RISK-04
+  (live-Oracle pass) stays out of scope (owner-scheduled). **Closure pending** — see §8.
 
 ## 5. Non-negotiables (must never regress)
 - **SELECT/CTE only.** All DML/DDL/PL-SQL/stacked/`FOR UPDATE` rejected, fail-closed, via the single `/execute` chokepoint (`src/core/sql_safety.py`); both UI and API route through it. Verify with `tests/test_sql_safety.py` + `test_execute_endpoint.py`.
@@ -100,18 +103,23 @@ across the 4 JSON stores + corrupt-record robustness), ITM-017 (non-DB `str(exc)
 into one charter → design → build → independent exit-gate review. RISK-04 (live-Oracle pass)
 stays a separate, owner-scheduled pre-GA activity.
 
-**Build B1…B6 is COMPLETE (2026-06-11; 236 tests green; all five carried ITMs closed).**
-**The gate right now is the R6.5.x independent exit-gate review** ([gate](process/external-review-gate.md)):
-prepare the review package (R6.5.1), then the **owner supplies a fresh reviewer agent**
-(reviewer ≠ author, briefed with [process/adversarial-reviewer-prompt.md](process/adversarial-reviewer-prompt.md)
-+ the phase change range) → triage findings → remediate blocking → re-review until
-PASS / PASS-WITH-FIXES → record sign-off. After the gate: Phase 6.5 closes and Phase 7
-(optional) may open, with RISK-04 (owner-scheduled live-Oracle pass) still standing pre-GA.
+**Build B1…B6 COMPLETE and the exit-gate review r1 = PASS-WITH-FIXES with all four findings
+already remediated (2026-06-11; 242 tests green).** The independent reviewer
+([phase-6.5-review-r1.md](reviews/phase-6.5-review-r1.md), reviewer ≠ author) found **no
+S1/S2** — the gate is cleared by the verdict — plus two S3 + two S4, all fixed the same day:
+R1 (Unicode fullwidth-digit SSRF first-line bypass → NFKC-fold the host before the checks),
+R2 (fd leak in `atomic_write_json` → `os.close(fd)` on the error path), R3 (blank
+`ALLOWED_ORIGINS` → localhost fallback), R4 (CORS-restart-vs-key-per-request → documented in D7).
 
-**First steps on resume:** confirm the working tree is clean and **236 tests pass**
+**The gate is cleared; what remains to CLOSE Phase 6.5 (R6.5.4):** (a) *optional* — owner has the
+reviewer spot-check the R1 security fix (an r2; not gate-required since R1 was non-blocking and
+is now fixed + regression-tested); (b) **push** (`main` is ahead of origin — owner pushes on
+request; the push also demonstrates the CI 3.11+3.13 matrix per the ITM-016 precedent); (c) mark
+R6.5.4 done. Then Phase 7 (optional) may open; RISK-04 (owner-scheduled live-Oracle pass) stands pre-GA.
+
+**First steps on resume:** confirm the working tree is clean and **242 tests pass**
 (`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
-[task-tracker.md](task-tracker.md) R6.5.x — if the review hasn't run, the owner runs the
-reviewer against the package; if findings are open, remediate and re-review.
+[task-tracker.md](task-tracker.md) R6.5.4 for the remaining closure steps.
 
 ## Revision history
 | Version | Date | Author | Change |
@@ -129,3 +137,4 @@ reviewer against the package; if findings are open, remediate and re-review.
 | 2.0 | 2026-06-11 | Delivery | Phase 6.5 (Pre-Deployment Hardening) Discovery OPENED — bundles ITM-009/010/013/014/017 (RISK-12/16) into one gated mini-phase; charter drafted; next action = owner resolves decisions D-A…D-F before any code. |
 | 2.1 | 2026-06-11 | Delivery | P6.5 decisions D-A…D-F resolved (all as recommended); design + build sequence B1…B6 drafted (`pre-deployment-hardening-design.md`); next action = owner approves the design before any code. |
 | 2.2 | 2026-06-11 | Delivery | P6.5 design approved + build B1…B6 complete (236 tests; ITM-009/010/013/014/017 CLOSED; RISK-12 Closed/RISK-16 Mitigating; ADR-013/014). Next action = R6.5.x exit-gate review (owner-supplied reviewer). |
+| 2.3 | 2026-06-11 | Delivery | P6.5 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); all four findings remediated (R1 Unicode SSRF NFKC-fold, R2 fd-close, R3 blank-CORS fallback, R4 doc) → 242 tests. Gate cleared; closure (R6.5.4) pending optional r2 spot-check + push. |

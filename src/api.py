@@ -77,9 +77,13 @@ def _cors_config() -> "tuple[List[str], bool]":
     """Explicit origins from ``ALLOWED_ORIGINS`` (comma-separated; ADR-013).
 
     A literal ``"*"`` forfeits credentials, so the wildcard+credentials
-    combination (the ITM-009 finding) is unrepresentable.
+    combination (the ITM-009 finding) is unrepresentable. A blank/whitespace
+    value falls back to the localhost default rather than denying all origins
+    (review r1/R3). Evaluated once at import — changing ``ALLOWED_ORIGINS``
+    requires a process restart (unlike ``APP_API_KEY``, which is read
+    per-request); documented in D7.
     """
-    raw = os.environ.get("ALLOWED_ORIGINS") or "http://localhost:8501,http://localhost:3000"
+    raw = (os.environ.get("ALLOWED_ORIGINS") or "").strip() or "http://localhost:8501,http://localhost:3000"
     origins = [o.strip() for o in raw.split(",") if o.strip()]
     return origins, "*" not in origins
 

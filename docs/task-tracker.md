@@ -143,7 +143,9 @@ ITM-010 (base_url IP encodings), ITM-013/014 (file-store durability, RISK-16), I
 | P6.5-5 | Non-DB error-surface sanitization (ITM-017) | ✅ Completed | **B5**; nl2sql catch-all split (ValueError/LLMError verbatim per ADR-012 rule, rest generic + `error_id`); profiles `SecretConfigError` 500 verbatim + server-side breadcrumb; 4 UI `SecretConfigError` arms show `(ref: …)` via `log_error_for_ui`; 5 tests (**236 total**); formal ITM-017 closure at B6 |
 | P6.5-6 | Tests + governed-doc updates (D3/D5/D7, ADRs, CHANGELOG, registers) + close ITM-009/010/013/014/017 | ✅ Completed | **B6**; **ITM-009/010/013/014/017 CLOSED** (issue log v1.8); RISK-12 Closed, RISK-16 → Mitigating (concurrency residual = D7 constraint), RISK-11 residual narrowed; D3/D5/D6/D7, ADR-013/014 + index, traceability NFR-8, CHANGELOG — all in lockstep; **236 tests** |
 | R6.5.1 | Prepare exit-gate review package | ✅ Completed | [reviews/phase-6.5-review-package.md](reviews/phase-6.5-review-package.md); range `2ba0a56..d34658c`, 9 phase invariants to attack |
-| R6.5.2+ | Independent adversarial exit-gate review + QA (reviewer ≠ author, owner-supplied) | 📋 Planned | iterate to PASS |
+| R6.5.2 | Independent adversarial exit-gate review + QA (r1) | ✅ Done | verdict **PASS-WITH-FIXES** ([phase-6.5-review-r1.md](reviews/phase-6.5-review-r1.md)); **no S1/S2** — all 9 invariants + suite verified green; 2 S3 (R1 Unicode SSRF first-line bypass, R2 fd-leak) + 2 S4 (R3 blank-CORS, R4 doc) |
+| R6.5.3 | Remediate r1 findings + regression | ✅ Done | R1 NFKC host-fold (Unicode fullwidth-digit IP encodings rejected at the guard; genuine IDN preserved); R2 `os.close(fd)` on error path; R3 blank `ALLOWED_ORIGINS` → localhost fallback; R4 documented (D7); **+6 → 242 tests** |
+| R6.5.4 | Phase-6.5 closure sign-off | 🔄 In Progress | gate cleared by r1 verdict (no blocking); all four findings remediated. Optional: owner spot-check the R1 security fix (r2). Then push (demonstrates CI matrix) → close. |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -209,3 +211,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.27 | 2026-06-11 | Delivery | P6.5 B5 done: P6.5-5 Completed — ITM-017 surfaces routed (nl2sql generic-on-unexpected; SecretConfigError verbatim + breadcrumb/refs); 236 tests; design v1.2 refinement recorded. |
 | 1.28 | 2026-06-11 | Delivery | P6.5 B6 done: P6.5-6 Completed — governed-doc sweep; ITM-009/010/013/014/017 formally CLOSED; RISK-12 Closed / RISK-16 Mitigating; NFR-8 traced. Build B1…B6 complete (236 tests); R6.5.1 review-package prep is next. |
 | 1.29 | 2026-06-11 | Delivery | R6.5.1 Completed — review package prepared (`2ba0a56..d34658c`). Next: owner runs the independent adversarial exit-gate reviewer (R6.5.2). |
+| 1.30 | 2026-06-11 | Delivery | R6.5.2 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); R6.5.3 remediated all four findings (R1 Unicode SSRF NFKC fold, R2 fd-close, R3 blank-CORS fallback, R4 doc) → 242 tests. Gate cleared; closure (R6.5.4) pending optional r2 spot-check + push. |

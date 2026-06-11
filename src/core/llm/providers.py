@@ -3,6 +3,7 @@ from __future__ import annotations
 import ipaddress
 import os
 import string
+import unicodedata
 from typing import Optional, Tuple
 from urllib.parse import urlparse
 
@@ -85,7 +86,13 @@ def validate_base_url(base_url: str) -> None:
     parsed = urlparse(base_url)
     if parsed.scheme != "https":
         raise LLMError("Custom LLM base_url must use https.")
-    host = (parsed.hostname or "").lower()
+    # NFKC-fold before any check so Unicode compatibility forms (e.g. fullwidth
+    # digits U+FF11… in ``１２７.0.0.1``) collapse to their ASCII equivalents and
+    # cannot slip an internal IP past the numeric detection below (review r1/R1).
+    # This is the same normalization an IDNA resolver applies, so a *genuine*
+    # internationalized hostname still survives as a hostname — we fold the
+    # encoding, we do not reject non-ASCII outright.
+    host = unicodedata.normalize("NFKC", parsed.hostname or "").lower()
     if not host or host in _BLOCKED_HOSTS:
         raise LLMError("Custom LLM base_url host is not allowed.")
     try:

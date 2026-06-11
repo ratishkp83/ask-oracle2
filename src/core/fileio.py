@@ -43,6 +43,13 @@ def atomic_write_json(
             os.fsync(fh.fileno())
         os.replace(tmp_path, path)
     except BaseException:
+        # If os.fdopen itself raised, the raw descriptor was never adopted by a
+        # file object — close it so it can't leak (review r1/R2). On the normal
+        # path the `with` already closed it, so this is a no-op (bad-fd OSError).
+        try:
+            os.close(fd)
+        except OSError:
+            pass
         try:
             os.unlink(tmp_path)
         except OSError:

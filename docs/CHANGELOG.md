@@ -41,6 +41,18 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   server-side breadcrumb keyed to the response's `error_id`; the four UI `SecretConfigError`
   arms now show `(ref: <id>)` via the new `core.errors.log_error_for_ui`. Tests **+5 → 236**.
 
+### Fixed (Phase 6.5 exit-gate review r1 — PASS-WITH-FIXES, all findings remediated)
+- **R1 (S3) — Unicode SSRF first-line bypass:** `validate_base_url` now **NFKC-folds** the host
+  before the block-list and numeric/IP checks, so fullwidth/compatibility digit encodings of
+  internal addresses (e.g. `https://１２７.0.0.1/`) are rejected at the guard rather than relying
+  on httpx's downstream IDNA check; genuine internationalized hostnames still pass.
+- **R2 (S3) — fd leak:** `atomic_write_json` closes the descriptor in its error path if
+  `os.fdopen` ever raises after `mkstemp`.
+- **R3 (S4) — blank `ALLOWED_ORIGINS`:** whitespace-only now falls back to the localhost default
+  instead of silently denying all origins.
+- **R4 (S4) — doc:** the CORS-needs-restart vs API-key-per-request asymmetry is documented (D7 +
+  `_cors_config` docstring). Tests **+6 → 242**. Review: [phase-6.5-review-r1.md](reviews/phase-6.5-review-r1.md).
+
 ### Added (Phase 6 — Observability & Error Handling)
 - **Structured logging** ([ADR-012](adr/ADR-012-observability-and-error-handling.md)):
   `src/core/logging_config.py` — idempotent `configure_logging()`, **JSON to stdout**

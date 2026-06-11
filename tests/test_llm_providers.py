@@ -122,6 +122,36 @@ def test_base_url_ipv6_loopback_still_rejected():
         ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url="https://[::1]/v1"))
 
 
+# Review r1/R1 — Unicode compatibility-digit encodings of internal addresses
+# must NFKC-fold to ASCII and be rejected at the first-line guard, not slip
+# through to a downstream HTTP-client check.
+@pytest.mark.parametrize(
+    "host",
+    [
+        "１２７.0.0.1",            # fullwidth first octet, ASCII rest = 127.0.0.1
+        "１２７.０.０.１",          # fully fullwidth dotted-quad = 127.0.0.1
+        "２１３０７０６４３３",  # fullwidth decimal integer = 2130706433 = 127.0.0.1
+    ],
+)
+def test_base_url_unicode_digit_encodings_rejected(host):
+    with pytest.raises(LLMError):
+        ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url=f"https://{host}/v1"))
+
+
+def test_base_url_fullwidth_localhost_rejected():
+    # Fullwidth "localhost" folds to the blocked host.
+    host = "ｌｏｃａｌｈｏｓｔ"
+    with pytest.raises(LLMError):
+        ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url=f"https://{host}/v1"))
+
+
+def test_base_url_genuine_idn_hostname_still_passes():
+    # A real internationalized hostname (non-numeric) survives NFKC as a
+    # hostname — we fold the encoding, we do not reject non-ASCII outright.
+    p = ExternalLLMProvider(LLMConfig(provider="openai", api_key="x", base_url="https://münchen.example.com/v1"))
+    assert p.is_available()
+
+
 # F6 — api_key must not appear in repr.
 def test_llmconfig_repr_hides_key():
     assert "sk-SECRET" not in repr(LLMConfig(api_key="sk-SECRET"))

@@ -131,6 +131,15 @@ def test_cors_wildcard_forfeits_credentials(monkeypatch):
     assert allow_credentials is False  # the ITM-009 combination cannot be configured
 
 
+def test_cors_whitespace_falls_back_to_default(monkeypatch):
+    # Review r1/R3: a blank/whitespace value must fall back to the localhost
+    # default, not silently deny all origins.
+    monkeypatch.setenv("ALLOWED_ORIGINS", "   ")
+    origins, allow_credentials = _cors_config()
+    assert origins == ["http://localhost:8501", "http://localhost:3000"]
+    assert allow_credentials is True
+
+
 def test_cors_preflight_not_blocked_by_auth(auth_enabled):
     """CORSMiddleware answers preflights before routing, so OPTIONS needs no key."""
     resp = client.options(

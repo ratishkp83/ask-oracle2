@@ -1,6 +1,6 @@
 # Phase 6.5 Charter — Pre-Deployment Hardening (carried preconditions)
 
-> **Document:** Phase Charter · **Version:** 1.3 · **Status:** 🔄 Review (build B1…B6 complete 2026-06-11, 236 tests; exit-gate review pending) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
+> **Document:** Phase Charter · **Version:** 1.4 · **Status:** 🔄 Closing (exit-gate review r1 = PASS-WITH-FIXES, all findings remediated; 242 tests; closure pending optional r2 spot-check + push) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
 
 ## Lifecycle stage
 **Discovery OPENED 2026-06-11; owner approved and resolved decisions D-A…D-F (all as
@@ -227,3 +227,4 @@ Owner approved the charter and resolved **all six decisions as recommended**.
 | 1.1 | 2026-06-11 | Product/Eng | Owner approved; decisions D-A…D-F resolved (all as recommended). Discovery complete → Design (design + build sequence pending owner approval before code). |
 | 1.2 | 2026-06-11 | Product/Eng | Design + build sequence approved by owner ([pre-deployment-hardening-design.md](../pre-deployment-hardening-design.md)) → Build; executing B1…B6. |
 | 1.3 | 2026-06-11 | Product/Eng | Build B1…B6 complete (**236 tests**; ITM-009/010/013/014/017 CLOSED; RISK-12 Closed, RISK-16 Mitigating). Next: R6.5.x exit-gate review (reviewer ≠ author, owner-supplied). |
+| 1.4 | 2026-06-11 | Product/Eng | Exit-gate review r1 = **PASS-WITH-FIXES** (no S1/S2); R1–R4 all remediated (R1 Unicode SSRF NFKC fold, R2 fd-close, R3 blank-CORS fallback, R4 doc) → **242 tests**. Gate cleared; closure pending optional r2 spot-check + push. |
