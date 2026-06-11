@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 2.5 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
+> **Document:** Session Handoff · **Version:** 2.6 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -115,8 +115,9 @@ in the Actions tab).
 scope; D-C build ITM-008 behind a default-off flag). Build order B1…B6:
 - **B1 — ITM-007 DONE:** 14 `use_container_width=True` → `width="stretch"` in `app.py`; **ITM-007
   CLOSED**; 242 tests.
-- **B2 — ITM-006 (next):** legacy `connection.json` → encrypted-profile migration; retire the
-  plaintext manual-save path.
+- **B2 — ITM-006 DONE:** `connection.json` write path retired (`save_connection_config` removed,
+  Save button gone); `migrate_legacy_connection()` reads-and-deletes any legacy file at startup
+  (also clears any pre-F5 plaintext file). **ITM-006 CLOSED, RISK-09 Closed**; 245 tests.
 - **B3 — ITM-008:** NL-question PII scrubbing behind default-off env flag `SCRUB_PII` (external
   send only; complements the existing schema redaction).
 - **B4 — CI confirm** green on `9209e3a` (no `gh` here → confirm in the Actions tab).
@@ -127,7 +128,7 @@ scope; D-C build ITM-008 behind a default-off flag). Build order B1…B6:
 
 **First steps on resume:** confirm the working tree is clean and **242 tests pass**
 (`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then continue at
-[task-tracker.md](task-tracker.md) **B2 (ITM-006)**. The B5 live pass is unblocked once the owner
+[task-tracker.md](task-tracker.md) **B3 (ITM-008)**. The B5 live pass is unblocked once the owner
 runs the §6 XE setup. *(Local `main` is ahead of `origin` — C1 build commits are unpushed; push on owner request.)*
 
 **First steps on resume:** confirm the working tree is clean and **242 tests pass**
@@ -153,3 +154,4 @@ runs the §6 XE setup. *(Local `main` is ahead of `origin` — C1 build commits 
 | 2.3 | 2026-06-11 | Delivery | P6.5 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); all four findings remediated (R1 Unicode SSRF NFKC-fold, R2 fd-close, R3 blank-CORS fallback, R4 doc) → 242 tests. Gate cleared; closure (R6.5.4) pending optional r2 spot-check + push. |
 | 2.4 | 2026-06-11 | Delivery | **Phase 6.5 CLOSED** (on r1, no r2, per owner) + pushed `2ba0a56..9209e3a`. **Round C1 (Pre-GA Consolidation & Testing) opened** — carries CI-green confirmation, RISK-04 live pass, ITM-006/007/008; decisions D-A…D-C pending owner. |
 | 2.5 | 2026-06-11 | Delivery | Round C1 decisions resolved (XE / full scope / build ITM-008); design + XE runbook done; **B1 ITM-007 CLOSED** (242 tests). Next = B2 ITM-006, B3 ITM-008; B5 live pass awaits owner XE setup (design §6). |
+| 2.6 | 2026-06-11 | Delivery | **B2 ITM-006 CLOSED** (RISK-09 Closed): `connection.json` write path retired, read-and-delete migration; 245 tests. Next = B3 ITM-008. |

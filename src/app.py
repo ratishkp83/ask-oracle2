@@ -37,7 +37,7 @@ from src.nl2sql import (
     generate_sql_from_nl,
 )
 from src.utils import read_tabular_file, dataframe_to_csv_bytes, dataframe_to_excel_bytes
-from src.storage import load_connection_config, save_connection_config
+from src.storage import migrate_legacy_connection
 from src.core.reports import (
     JsonFileReportStore,
     ReportCreate,
@@ -62,7 +62,8 @@ if "schema" not in st.session_state:
 if "schema_source" not in st.session_state:
     st.session_state.schema_source = "upload"
 if "conn_config" not in st.session_state:
-    st.session_state.conn_config = load_connection_config() or {}
+    # One-time import of any legacy connection.json, then it is deleted (ITM-006).
+    st.session_state.conn_config = migrate_legacy_connection() or {}
 if "last_results" not in st.session_state:
     st.session_state.last_results = None  # type: Optional[pd.DataFrame]
 if "generated_sql" not in st.session_state:
@@ -131,24 +132,11 @@ def _draw_manual_connection() -> Optional[OracleConnectionConfig]:
     username = st.sidebar.text_input("Username", value=str(cfg.get("username", "")))
     password = st.sidebar.text_input("Password", value=str(cfg.get("password", "")), type="password")
 
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        if st.button("Save", width="stretch"):
-            st.session_state.conn_config = {
-                "host": host,
-                "port": int(port),
-                "service_name": service_name or None,
-                "sid": sid or None,
-                "username": username,
-                "password": password,
-            }
-            save_connection_config(st.session_state.conn_config)
-            st.sidebar.success(
-                "Saved connection (password kept for this session only — not written to "
-                "disk). Use a saved profile to store credentials encrypted at rest."
-            )
-    with col2:
-        test_clicked = st.button("Test", width="stretch")
+    test_clicked = st.sidebar.button("Test", width="stretch")
+    st.sidebar.caption(
+        "Manual entry is for this session only. To store a connection, add a "
+        "**profile** in Connections (encrypted at rest)."
+    )
 
     cfg_obj: Optional[OracleConnectionConfig] = None
     if host and username and password and (service_name or sid):

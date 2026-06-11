@@ -9,6 +9,12 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   `width="stretch"` across all 14 `st.button`/`st.dataframe`/`st.download_button` calls in
   `src/app.py` (verified supported on `streamlit==1.58.0`). No behaviour change; the 7-section
   headless smoke (`tests/test_app_smoke.py`) stays green.
+- **ITM-006 closed (RISK-09):** retired the legacy `connection.json` path — the encrypted
+  `ProfileStore` is now the single persistence path. `save_connection_config` is **removed** (the
+  manual connection no longer writes to disk); new `storage.migrate_legacy_connection()` imports
+  any existing file once (session-only) and **deletes it** at startup, which also removes any
+  pre-Phase-4 file that still held a plaintext password. The manual-entry "Save" button is gone
+  (it nudges to create an encrypted profile instead). Tests **+3 → 245** (`tests/test_storage.py`).
 
 ### Added (Phase 6.5 — Pre-Deployment Hardening)
 - **Opt-in API-key auth + explicit CORS** ([ADR-013](adr/ADR-013-network-edge-hardening.md),

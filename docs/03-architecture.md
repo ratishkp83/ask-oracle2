@@ -1,6 +1,6 @@
 # D3 — Architecture
 
-> **Document:** Architecture · **Version:** 1.4 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-11
+> **Document:** Architecture · **Version:** 1.5 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-11
 
 ## 1. Container view
 
@@ -50,7 +50,7 @@ Both the UI and the API converge on `src/core/`. The React/Vite scaffold exists 
 | `nl2sql.py` | NL→SQL orchestration → `NLSQLResult` (sql + explanation + confidence); selects a provider via policy. |
 | `core/llm/` | Provider abstraction: `base` (LLMProvider/LLMConfig/NLSQLResult), `providers` (External/Local), `policy` (`LLM_POLICY` toggle + selection), `redaction` (strict external context + tripwire), `confidence` (heuristic). |
 | `schema.py` | Metadata model + CSV/Excel parsers + prompt context; data-dictionary helpers (`find_columns`/`references_out`/`referenced_by`) + serialization. |
-| `storage.py` | JSON persistence for manual connection config + storage dir resolution. |
+| `storage.py` | Storage-dir resolution + one-time legacy `connection.json` migration (`migrate_legacy_connection`, read-and-delete; the write path was retired in Round C1/ITM-006). |
 | `api.py` / `app.py` | FastAPI routes / Streamlit UI. |
 
 ## 3. Key flows
@@ -101,4 +101,5 @@ See [ADR index](adr/). Ratified: ADR-001…012.
 | 1.1 | 2026-06-10 | Engineering | Phase 4: `core/reports` + `core/templates`, bind-through-chokepoint flow, `/reports` + `/templates` endpoints, left-nav UI. |
 | 1.2 | 2026-06-10 | Engineering | Phase 5: `core/schema_store` + `core/introspection`, schema-introspection flow (via chokepoint), dictionary helpers; ADR-010/011. |
 | 1.4 | 2026-06-11 | Engineering | Phase 6.5: `core/auth.py` (opt-in API-key edge, ADR-013) + `core/fileio.py` (atomic store writes, ADR-014) added to the module table. |
+| 1.5 | 2026-06-11 | Engineering | Round C1/B2 (ITM-006): `storage.py` row updated — `connection.json` write path retired; read-and-delete migration only. |
 | 1.3 | 2026-06-10 | Engineering | Phase 6 (B1): `core/logging_config` (structured JSON logging, `request_id`); audit emits JSON; Observability cross-cutting concern; ADR-012. |

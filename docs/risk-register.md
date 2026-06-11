@@ -1,6 +1,6 @@
 # D10 — Risk Register
 
-> **Document:** Risk Register · **Version:** 1.6 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
+> **Document:** Risk Register · **Version:** 1.7 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
 
 Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted / Closed.
 
@@ -14,7 +14,7 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | RISK-06 | sqlglot fail-closed rejects exotic valid SELECTs | Low | Occasional false rejection | Low | Documented tradeoff; add cases as found | Eng | **Accepted** |
 | RISK-07 | "Per-user" LLM is per-session (no auth) | Low | Not true multi-tenant isolation | n/a | Revisit when identity layer added | Product | **Accepted** |
 | RISK-08 | `APP_SECRET_KEY` rotation invalidates stored passwords | Low | Profiles need re-entry | Low | Documented in crypto + deployment runbook | Eng | Accepted |
-| RISK-09 | `connection.json` (manual) stores plaintext password | Medium | Local-file credential exposure | Low | **Password no longer persisted** — `save_connection_config` strips it (Phase 4 r1/F5, `test_storage.py`); git-ignored; full manual→profile migration remains ([ITM-006](issue-log.md)) | Eng | **Mitigating** |
+| RISK-09 | `connection.json` (manual) stores plaintext password | Medium | Local-file credential exposure | Low | **Write path removed** (Round C1/B2, ITM-006): `save_connection_config` deleted; `migrate_legacy_connection()` imports any legacy file once (session-only) and **deletes it** at startup — removing any pre-F5 plaintext file too. Encrypted profiles are the single persistence path (`test_storage.py`) | Eng | **Closed** |
 | RISK-10 | Phase 2 received author-only review (gate introduced post-closure) | Low | Possible undetected defect in Phase-2 scope | Low | Strong automated coverage (51 tests); gate applies Phase 3+ ([ADR-006](adr/ADR-006-external-review-gate.md)) | Delivery | **Accepted** |
 | RISK-11 | Per-request `base_url` SSRF (F4) | Medium | Server egress to internal/metadata endpoints | Low | `validate_base_url` blocks non-https + private/loopback/link-local/metadata **in any encoding** — integer/hex/octal forms decoded pre-check, all-numeric invalid hosts rejected fail-closed (Phase 6.5/B2, **ITM-010 closed**); host is **NFKC-folded** first so Unicode compatibility digit forms can't bypass (review r1/R1). **Residual:** hostname → private-IP via DNS rebinding (documented) | Eng | **Mitigating** |
 | RISK-12 | Permissive CORS `*` + credentials + `0.0.0.0` bind (pre-existing); unauthenticated `/health` + `/metrics` | Medium | Cross-origin/SSRF amplification once exposed/multi-tenant; `/metrics` exposes aggregate counts only (no data/secrets) | Low | **Closed at the app layer** (Phase 6.5/B1, [ADR-013](adr/ADR-013-network-edge-hardening.md), **ITM-009 closed**): opt-in `X-API-Key` auth (`/health` exempt, `/metrics` gated) + explicit `ALLOWED_ORIGINS` (no `*`+credentials possible); D7 §2 network-exposure rule covers the bind. Residual: operator must set `APP_API_KEY` before exposure (deployment discipline, not code) | Eng | **Closed** |
@@ -37,3 +37,4 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | 1.4 | 2026-06-10 | Delivery | Phase 6: RISK-19 (driver-error info disclosure / ITM-015) added + **Closed** (ADR-012); RISK-12 extended to note unauthenticated `/metrics`/`/health` (Phase-7 auth gate). |
 | 1.5 | 2026-06-11 | Delivery | Phase 6.5: **RISK-12 Closed** (ADR-013 edge auth/CORS); RISK-16 → Mitigating (durability closed via ADR-014; concurrency residual accepted as the D7 single-worker constraint); RISK-11 residual narrowed to DNS rebinding (ITM-010 closed). |
 | 1.6 | 2026-06-11 | Delivery | Phase 6.5 review r1/R1: RISK-11 mitigation extended — host NFKC-folded so Unicode compatibility digit encodings can't bypass the SSRF guard. |
+| 1.7 | 2026-06-11 | Delivery | Round C1/B2: **RISK-09 Closed** — `connection.json` write path removed; legacy files imported once + deleted (ITM-006). |
