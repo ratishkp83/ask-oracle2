@@ -1,6 +1,6 @@
 # D7 — Deployment Plan
 
-> **Document:** Deployment Plan · **Version:** 1.2 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-10
+> **Document:** Deployment Plan · **Version:** 1.3 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-11
 
 ## 0. Required database account (read-only) — **non-negotiable precondition**
 
@@ -48,8 +48,15 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 | `STORAGE_DIR` | Location of profiles/reports JSON | No (sensible default) |
 | `LOG_LEVEL` | Logging level (`DEBUG`/`INFO`/`WARNING`/…) | No (default `INFO`) |
 | `LOG_FORMAT` | `json` (stdout, 12-factor) or `text` (human-readable, local dev) | No (default `json`) |
+| `APP_API_KEY` | Enables API auth: every endpoint except `/health` then requires `X-API-Key` ([ADR-013](adr/ADR-013-network-edge-hardening.md)) | **Yes for any networked exposure**; unset = open (localhost only) |
+| `ALLOWED_ORIGINS` | CORS origins, comma-separated explicit list (a literal `*` forfeits credentials) | No (default `http://localhost:8501,http://localhost:3000`) |
 
 > **No secrets in source or `docker-compose.yml`.** All come from env. `.env` is git-ignored.
+
+> **Network exposure rule (ADR-013):** binding beyond localhost (e.g. `--host 0.0.0.0`, which
+> Docker requires *inside* the container) is only acceptable when **either** the port is not
+> published beyond a trusted network **or** `APP_API_KEY` is set and `ALLOWED_ORIGINS` lists
+> the real origins. Never publish the API with auth unset.
 
 ## 3. Secrets management & rotation runbook
 
@@ -85,8 +92,8 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
   correlation id) that keys the matching server-side log line — quote it in support tickets.
   DB-driver detail is logged server-side only, never returned to clients (ITM-015 closed).
 - **`GET /metrics`** (Phase 6): in-process query counts (executed/rejected/errored) + latency
-  (in-memory; resets on restart; counts only). **Unauthenticated** like `/health` — gate
-  behind auth before any multi-tenant/networked exposure (Phase 7, [ITM-009](issue-log.md)).
+  (in-memory; resets on restart; counts only). **Auth-gated when `APP_API_KEY` is set**
+  (Phase 6.5, ADR-013); `/health` alone stays open for liveness probes.
 - **Deferred to Phase 7:** Prometheus/scrape exposition + an APM/error-tracking vendor —
   tracked in [roadmap](roadmap.md).
 
@@ -97,3 +104,4 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 | 1.0 | 2026-06-10 | Eng/Ops | Baseline; env config, rotation runbook, rollback. |
 | 1.1 | 2026-06-10 | Eng/Ops | Phase 4 r1/F1: §0 required least-privilege read-only DB account (ADR-009) + release-checklist gate. |
 | 1.2 | 2026-06-10 | Eng/Ops | Phase 6: `LOG_LEVEL`/`LOG_FORMAT` env vars; §6 rewritten for structured JSON logs, error reference IDs, and `/metrics` (ADR-012); Prometheus/APM deferred to Phase 7. |
+| 1.3 | 2026-06-11 | Eng/Ops | Phase 6.5 (B1): `APP_API_KEY`/`ALLOWED_ORIGINS` env vars + network-exposure rule (ADR-013); `/metrics` auth-gated when enabled. |

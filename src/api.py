@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +13,7 @@ from pydantic import BaseModel, Field, model_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.core import audit, metrics
+from src.core.auth import require_api_key
 from src.core.config import load_safety_limits
 from src.core.errors import (
     GENERIC_SERVER_DETAIL,
@@ -60,12 +62,31 @@ load_dotenv()
 # Structured logging to stdout (JSON by default; LOG_LEVEL/LOG_FORMAT via env).
 configure_logging()
 
-app = FastAPI(title="Ask Oracle Reports API", version="2.1.0")
+# Opt-in API-key auth (ADR-013, ITM-009): enforced app-wide only when
+# APP_API_KEY is set; /health stays exempt for liveness probes.
+app = FastAPI(
+    title="Ask Oracle Reports API",
+    version="2.2.0",
+    dependencies=[Depends(require_api_key)],
+)
 
+
+def _cors_config() -> "tuple[List[str], bool]":
+    """Explicit origins from ``ALLOWED_ORIGINS`` (comma-separated; ADR-013).
+
+    A literal ``"*"`` forfeits credentials, so the wildcard+credentials
+    combination (the ITM-009 finding) is unrepresentable.
+    """
+    raw = os.environ.get("ALLOWED_ORIGINS") or "http://localhost:8501,http://localhost:3000"
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    return origins, "*" not in origins
+
+
+_allowed_origins, _allow_credentials = _cors_config()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_allowed_origins,
+    allow_credentials=_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -260,8 +281,8 @@ def health() -> Dict[str, str]:
 def get_metrics() -> Dict[str, Any]:
     """Read-only in-process metrics: query counts + latency (no data/secrets).
 
-    In-memory; resets on restart. Unauthenticated in the current single-user
-    posture — gate behind auth at Phase 7 (ITM-009), like /health.
+    In-memory; resets on restart. Requires the API key when auth is enabled
+    (ADR-013); only /health stays open for liveness probes.
     """
     return metrics.snapshot()
 
@@ -662,3 +683,5 @@ def introspect(req: IntrospectRequest) -> Dict[str, Any]:
 
 
 # Run: uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
+# Bind/auth/CORS guidance for networked deployments: docs/07-deployment-plan.md
+# (APP_API_KEY enables auth; ALLOWED_ORIGINS restricts CORS).

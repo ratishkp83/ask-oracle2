@@ -4,6 +4,16 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 6.5 — Pre-Deployment Hardening)
+- **Opt-in API-key auth + explicit CORS** ([ADR-013](adr/ADR-013-network-edge-hardening.md),
+  closes the code portion of ITM-009/RISK-12): `src/core/auth.py` — app-level dependency
+  enforcing `X-API-Key` against env `APP_API_KEY` (constant-time compare), **enabled only when
+  the env var is set**; `/health` exempt (liveness), `/metrics` gated; 401 uses the uniform
+  Phase-6 envelope. CORS origins now come from `ALLOWED_ORIGINS` (default
+  `http://localhost:8501,http://localhost:3000`); a literal `*` forfeits credentials, making
+  the wildcard+credentials combination unrepresentable. API v2.2.0. Tests:
+  `tests/test_auth.py` (**+16 → 201**); D5/D7 updated; ADR index backfilled (ADR-012/013).
+
 ### Added (Phase 6 — Observability & Error Handling)
 - **Structured logging** ([ADR-012](adr/ADR-012-observability-and-error-handling.md)):
   `src/core/logging_config.py` — idempotent `configure_logging()`, **JSON to stdout**

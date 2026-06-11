@@ -1,6 +1,6 @@
 # Pre-Deployment Hardening — Design + Build Sequence (Phase 6.5)
 
-> **Document:** Design · **Version:** 1.0 · **Status:** 🔄 Pending owner approval (no code until approved) · **Owner:** Engineering · **Last updated:** 2026-06-11
+> **Document:** Design · **Version:** 1.1 · **Status:** Baseline (owner-approved 2026-06-11) · **Owner:** Engineering · **Last updated:** 2026-06-11
 > Charter: [charters/phase-6.5-charter.md](charters/phase-6.5-charter.md) (decisions D-A…D-F resolved 2026-06-11, all as recommended).
 
 ## 1. Purpose & scope recap
@@ -197,3 +197,4 @@ llm    ──► validate_base_url: numeric-host normalization first    [B2]
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-11 | Engineering | Initial design + build sequence B1…B6 per resolved decisions D-A…D-F; pending owner approval before any code. |
+| 1.1 | 2026-06-11 | Engineering | Owner approved as-is → Baseline; build started at B1. |

@@ -1,10 +1,17 @@
 # D5 — API Contracts
 
-> **Document:** API Contracts · **Version:** 1.4 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
-> Service: `Ask Oracle Reports API` v2.1.0 · Swagger: `/docs` · OpenAPI: `/openapi.json`
+> **Document:** API Contracts · **Version:** 1.6 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-11
+> Service: `Ask Oracle Reports API` v2.2.0 · Swagger: `/docs` · OpenAPI: `/openapi.json`
 
 ## Conventions
 
+- **Authentication** *(Phase 6.5, opt-in — [ADR-013](adr/ADR-013-network-edge-hardening.md))*:
+  when env `APP_API_KEY` is set, every endpoint **except `GET /health`** requires the request
+  header `X-API-Key: <key>`; missing/wrong key → `401 { "detail": "Not authenticated.",
+  "error_id": … }`. With the env var unset (the default), no endpoint requires a key — the
+  historical single-user posture is unchanged. CORS origins come from env `ALLOWED_ORIGINS`
+  (comma-separated; default `http://localhost:8501,http://localhost:3000`); a literal `*`
+  forfeits credentials.
 - **Error envelope** *(Phase 6)*: every error body is `{ "detail": <string | list>, "error_id": <hex> }`.
   `detail` is unchanged from before — business errors are a `string`, request-validation
   errors are a `list` (HTTP 422). `error_id` is **additive** and equals the request's
@@ -23,11 +30,11 @@
 ## Endpoints
 
 ### GET /health
-→ `200 { "status": "ok" }`
+→ `200 { "status": "ok" }` — minimal body; **always exempt from auth** (liveness probes).
 
 ### GET /metrics  *(Phase 6, read-only)*
 In-process operational metrics — query counts + latency only (no data, SQL, or secrets);
-**in-memory**, resets on restart. Unauthenticated like `/health` (gate at Phase 7 / ITM-009).
+**in-memory**, resets on restart. **Requires `X-API-Key` when auth is enabled** (ADR-013).
 → `200 { "counters": { "queries_executed", "queries_rejected", "queries_errored" }, "latency_seconds": { "count", "avg", "max" } }`
 
 ### POST /profiles
@@ -147,3 +154,4 @@ if constraint views aren't visible.
 | 1.3 | 2026-06-10 | Engineering | Phase 5: `/schemas` CRUD + `/schemas/introspect` (SELECT-only dictionary introspection via the chokepoint). |
 | 1.4 | 2026-06-10 | Engineering | Phase 6 (B2): additive `error_id` on every error body; `X-Request-ID` correlation header; DB/driver errors sanitized to a generic message (ITM-015); ADR-012. |
 | 1.5 | 2026-06-10 | Engineering | Phase 6 (B3): read-only `GET /metrics` (in-process query counts + latency). |
+| 1.6 | 2026-06-11 | Engineering | Phase 6.5 (B1): opt-in `X-API-Key` auth (`APP_API_KEY`; `/health` exempt, `/metrics` gated) + env-driven CORS (`ALLOWED_ORIGINS`); service v2.2.0; ADR-013 (closes ITM-009). |

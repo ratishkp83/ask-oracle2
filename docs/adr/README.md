@@ -1,6 +1,6 @@
 # D9 — Architecture Decision Records (ADR)
 
-> **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-10
+> **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-11
 
 Each significant decision is recorded as an immutable ADR: context, the decision,
 consequences, and alternatives considered. Superseding a decision means adding a
@@ -19,5 +19,7 @@ new ADR that references the old one (don't rewrite history).
 | [ADR-009](ADR-009-readonly-db-account-precondition.md) | Least-privilege read-only DB account is a required deployment precondition | Accepted |
 | [ADR-010](ADR-010-schema-introspection-via-chokepoint.md) | Live schema introspection via the SELECT-only chokepoint | Accepted |
 | [ADR-011](ADR-011-schema-persistence-store.md) | Schema persistence store (metadata only) | Accepted |
+| [ADR-012](ADR-012-observability-and-error-handling.md) | Observability & error handling (structured logs, error IDs, sanitized DB errors, metrics) | Accepted |
+| [ADR-013](ADR-013-network-edge-hardening.md) | Network-edge hardening (opt-in API-key auth + explicit env-driven CORS) | Accepted |
 
 Template: [ADR-template.md](ADR-template.md).
