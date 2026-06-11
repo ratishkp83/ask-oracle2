@@ -16,6 +16,13 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   pre-Phase-4 file that still held a plaintext password. The manual-entry "Save" button is gone
   (it nudges to create an encrypted profile instead). Tests **+3 → 245** (`tests/test_storage.py`).
 
+### Added (Round C1 — Pre-GA Consolidation & Testing)
+- **ITM-008 closed:** optional NL-question **PII scrubbing** behind a default-off `SCRUB_PII` env
+  flag (`src/core/llm/pii.py`). When enabled, the question is masked (email/SSN/card/phone →
+  typed placeholders) **on the external-provider path only** (local generation stays verbatim),
+  complementing the existing schema-name redaction. Patterns are conservative (opt-in, because
+  over-masking can degrade a query). Tests **+15 → 260** (`tests/test_pii.py`).
+
 ### Added (Phase 6.5 — Pre-Deployment Hardening)
 - **Opt-in API-key auth + explicit CORS** ([ADR-013](adr/ADR-013-network-edge-hardening.md),
   closes the code portion of ITM-009/RISK-12): `src/core/auth.py` — app-level dependency

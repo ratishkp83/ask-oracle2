@@ -161,7 +161,7 @@ new features. **Scope + decisions D-A…D-C pending owner; no code until approve
 | C1-2 | RISK-04 live-Oracle + manual UI/observability pass | 📋 Planned | **owner provides read-only instance (ADR-009)**; record results, file defects |
 | C1-3 | ITM-006 — legacy `connection.json` → encrypted profiles | ✅ Completed | **B2**; write path removed (`save_connection_config` deleted; Save button retired); `migrate_legacy_connection()` imports-once + deletes (also any pre-F5 plaintext file); 245 tests; ITM-006 CLOSED, RISK-09 Closed |
 | C1-4 | ITM-007 — `use_container_width` → `width='stretch'` | ✅ Completed | **B1**; 14 sites in `app.py` migrated (verified `streamlit==1.58.0`); smoke green; ITM-007 CLOSED |
-| C1-5 | ITM-008 — NL PII scrubbing (per D-C) | 📋 Planned | build behind default-off flag, or formally defer |
+| C1-5 | ITM-008 — NL PII scrubbing (per D-C) | ✅ Completed | **B3**; `core/llm/pii.py` behind default-off `SCRUB_PII`; external path only, local verbatim; email/SSN/card/phone masked; 15 tests (260 total); ITM-008 CLOSED |
 | C1-6 | Governed-doc updates + GA-readiness verdict | 📋 Planned | RISK-04 disposition; CHANGELOG/registers |
 | RC1.x | Independent exit-gate review for code-touching items (reviewer ≠ author) | 📋 Planned | where applicable (C1-3/4/5) |
 
@@ -233,3 +233,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.31 | 2026-06-11 | Delivery | **Phase 6.5 CLOSED** (R6.5.4) — gate passed on r1 by owner direction (no r2); pushed `2ba0a56..9209e3a`. Next = **Round C1** (pre-GA consolidation & testing; charter opened); CI-matrix green confirmation + RISK-04 + ITM-006/007/008 carried there. |
 | 1.32 | 2026-06-11 | Delivery | Round C1 decisions resolved (XE available / full scope / build ITM-008); design + XE runbook done (`round-C1-design.md`); **B1 done — ITM-007 CLOSED** (242 tests). Next: B2 ITM-006, B3 ITM-008; B5 live pass awaits owner XE setup. |
 | 1.33 | 2026-06-11 | Delivery | **B2 done — ITM-006 CLOSED, RISK-09 Closed**: `connection.json` write path retired, read-and-delete migration; D3 v1.5; 245 tests. Next: B3 ITM-008. |
+| 1.34 | 2026-06-11 | Delivery | **B3 done — ITM-008 CLOSED**: `core/llm/pii.py` opt-in PII scrubbing (`SCRUB_PII`, external path only); D3/D7 updated; 260 tests. All C1 code items (B1–B3) done. Next: B4 CI confirm, B5 live pass (owner XE setup), RC1 review, B6 verdict. |

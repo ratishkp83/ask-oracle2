@@ -1,6 +1,6 @@
 # D3 — Architecture
 
-> **Document:** Architecture · **Version:** 1.5 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-11
+> **Document:** Architecture · **Version:** 1.6 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-11
 
 ## 1. Container view
 
@@ -48,7 +48,7 @@ Both the UI and the API converge on `src/core/`. The React/Vite scaffold exists 
 | `core/introspection.py` | Live SELECT-only schema introspection from `ALL_*` views via `run_select` (bind-parameterized, scoped/capped, graceful) — [ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md). Phase 5. |
 | `db.py` | `OracleClient` (thin mode); `run_select(sql, limits, binds)` enforces limits, returns `QueryResult`; `validate_binds()` chokepoint backstop (scalar-only, never interpolated — [ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)). |
 | `nl2sql.py` | NL→SQL orchestration → `NLSQLResult` (sql + explanation + confidence); selects a provider via policy. |
-| `core/llm/` | Provider abstraction: `base` (LLMProvider/LLMConfig/NLSQLResult), `providers` (External/Local), `policy` (`LLM_POLICY` toggle + selection), `redaction` (strict external context + tripwire), `confidence` (heuristic). |
+| `core/llm/` | Provider abstraction: `base` (LLMProvider/LLMConfig/NLSQLResult), `providers` (External/Local), `policy` (`LLM_POLICY` toggle + selection), `redaction` (strict external context + tripwire), `confidence` (heuristic), `pii` (optional opt-in NL-question PII scrubbing on external send, `SCRUB_PII`; ITM-008). |
 | `schema.py` | Metadata model + CSV/Excel parsers + prompt context; data-dictionary helpers (`find_columns`/`references_out`/`referenced_by`) + serialization. |
 | `storage.py` | Storage-dir resolution + one-time legacy `connection.json` migration (`migrate_legacy_connection`, read-and-delete; the write path was retired in Round C1/ITM-006). |
 | `api.py` / `app.py` | FastAPI routes / Streamlit UI. |
@@ -102,4 +102,5 @@ See [ADR index](adr/). Ratified: ADR-001…012.
 | 1.2 | 2026-06-10 | Engineering | Phase 5: `core/schema_store` + `core/introspection`, schema-introspection flow (via chokepoint), dictionary helpers; ADR-010/011. |
 | 1.4 | 2026-06-11 | Engineering | Phase 6.5: `core/auth.py` (opt-in API-key edge, ADR-013) + `core/fileio.py` (atomic store writes, ADR-014) added to the module table. |
 | 1.5 | 2026-06-11 | Engineering | Round C1/B2 (ITM-006): `storage.py` row updated — `connection.json` write path retired; read-and-delete migration only. |
+| 1.6 | 2026-06-11 | Engineering | Round C1/B3 (ITM-008): `core/llm/pii.py` added to the `core/llm/` row (optional NL-question PII scrubbing). |
 | 1.3 | 2026-06-10 | Engineering | Phase 6 (B1): `core/logging_config` (structured JSON logging, `request_id`); audit emits JSON; Observability cross-cutting concern; ADR-012. |

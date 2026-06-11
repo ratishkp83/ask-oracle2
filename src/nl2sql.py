@@ -14,6 +14,7 @@ from .core.llm.providers import DEFAULT_GROQ_MODEL, DEFAULT_OPENAI_MODEL, GROQ_B
 from .core.llm.policy import select_provider
 from .core.llm.redaction import assert_no_values, build_external_context
 from .core.llm.confidence import assess_confidence
+from .core.llm.pii import pii_scrub_enabled, scrub_pii
 
 # Backward-compatible public surface.
 __all__ = [
@@ -86,15 +87,20 @@ def generate_sql_from_nl(
 
     provider = select_provider(llm, policy)  # raises LLMError (clean) if unavailable/disabled
 
+    question = natural_language.strip()
     if provider.name == "local":
         context = schema.to_compact_markdown()
     else:
         context = build_external_context(schema)
         assert_no_values(context)  # defense-in-depth before any external send
+        # Optional, opt-in PII scrubbing of the question on the external path
+        # only (ITM-008, default off). Local generation stays verbatim.
+        if pii_scrub_enabled():
+            question, _ = scrub_pii(question)
 
     user = (
         "Schema:\n" + context + "\n\n"
-        "User request:\n" + natural_language.strip() + "\n\n"
+        "User request:\n" + question + "\n\n"
         "Return the Oracle SQL in a ```sql fence, then an 'Explanation:' line."
     )
 
