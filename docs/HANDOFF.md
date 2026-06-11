@@ -97,16 +97,18 @@ across the 4 JSON stores + corrupt-record robustness), ITM-017 (non-DB `str(exc)
 into one charter → design → build → independent exit-gate review. RISK-04 (live-Oracle pass)
 stays a separate, owner-scheduled pre-GA activity.
 
-**The gate right now is P6.5-D: owner resolution of decisions D-A…D-F** (auth mechanism;
-`/health`+`/metrics` posture; CORS policy; store-durability approach; corrupt-record policy;
-ITM-017 message classification — recommendations are in the charter). **No code until the
-owner approves.** After approval: design doc (owner-approved) → build P6.5-1…P6.5-6 → R6.5.x
-exit-gate review (reviewer ≠ author) → PASS → close; then Phase 7 (optional) may open.
+**Decisions D-A…D-F are RESOLVED (2026-06-11, all as recommended — see the charter's
+"Decisions" section).** The design + build sequence is drafted at
+[pre-deployment-hardening-design.md](pre-deployment-hardening-design.md) (B1 edge auth/CORS →
+B2 base_url → B3 atomic writes → B4 corrupt-record quarantine → B5 ITM-017 → B6 doc sweep).
+**The gate right now is P6.5-DES: owner approval of the design — no code until approved.**
+After approval: build B1…B6 → R6.5.x exit-gate review (reviewer ≠ author) → PASS → close;
+then Phase 7 (optional) may open.
 
 **First steps on resume:** confirm the working tree is clean and **185 tests pass**
 (`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
-[task-tracker.md](task-tracker.md) P6.5-D — if decisions are still pending, get them resolved
-before any code; if resolved, proceed to the design doc.
+[task-tracker.md](task-tracker.md) P6.5-DES — if the design is still pending approval, get it
+approved before any code; if approved, start the build at B1.
 
 ## Revision history
 | Version | Date | Author | Change |
@@ -122,3 +124,4 @@ before any code; if resolved, proceed to the design doc.
 | 1.8 | 2026-06-10 | Delivery | Pushed `d059295..2a88a04`; **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed, no open residual. |
 | 1.9 | 2026-06-10 | Delivery | Resume-readiness pass: removed stale §8 leftovers ("draft Phase 6 charter"/"160 tests"/"unpushed"); §4/§7 reconciled (185 tests, all pushed, carried items incl. ITM-017); next = Phase 7 (optional) or owner direction. |
 | 2.0 | 2026-06-11 | Delivery | Phase 6.5 (Pre-Deployment Hardening) Discovery OPENED — bundles ITM-009/010/013/014/017 (RISK-12/16) into one gated mini-phase; charter drafted; next action = owner resolves decisions D-A…D-F before any code. |
+| 2.1 | 2026-06-11 | Delivery | P6.5 decisions D-A…D-F resolved (all as recommended); design + build sequence B1…B6 drafted (`pre-deployment-hardening-design.md`); next action = owner approves the design before any code. |

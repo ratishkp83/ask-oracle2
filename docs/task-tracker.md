@@ -200,3 +200,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.19 | 2026-06-10 | Delivery | Pushed `d059295..2a88a04`; **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed, no open residual. |
 | 1.20 | 2026-06-11 | Delivery | Phase 6.5 Discovery opened (P6.5-0); bundles ITM-009/010/013/014/017 as a pre-deployment hardening mini-phase; P6.5-1…P6.5-6 + R6.5.x seeded as Planned; build gated on owner decisions D-A…D-F (P6.5-D). |
 | 1.21 | 2026-06-11 | Delivery | Phase 6.5 decisions D-A…D-F resolved (all as recommended); P6.5-D Completed; P6.5-DES (design) In Progress — design doc pending owner approval before code. |
+| 1.22 | 2026-06-11 | Delivery | P6.5 design + build sequence drafted (`pre-deployment-hardening-design.md`, B1…B6); awaiting owner approval (P6.5-DES) before any code. |
