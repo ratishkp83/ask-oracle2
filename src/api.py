@@ -16,11 +16,13 @@ from src.core import audit, metrics
 from src.core.auth import require_api_key
 from src.core.config import load_safety_limits
 from src.core.errors import (
+    GENERIC_NL2SQL_DETAIL,
     GENERIC_SERVER_DETAIL,
     log_error,
     new_error_id,
     sanitize_correlation_id,
 )
+from src.core.llm.base import LLMError
 from src.core.logging_config import configure_logging, get_request_id, set_request_id
 from src.core.crypto import SecretConfigError
 from src.core.profiles import (
@@ -298,6 +300,12 @@ def create_profile(body: ProfileCreate) -> ProfilePublic:
         # Duplicate name or missing service/sid.
         raise HTTPException(status_code=409, detail=str(exc))
     except SecretConfigError as exc:
+        # Intentional operator guidance (app-generated constants) — verbatim per
+        # charter D-F, but now with a server-side breadcrumb keyed to the same
+        # error_id the handler injects (ITM-017).
+        error_id = get_request_id() or new_error_id()
+        set_request_id(error_id)
+        log_error(exc, context="profiles.secret_config", error_id=error_id)
         raise HTTPException(status_code=500, detail=str(exc))
     audit.audit_profile_usage(profile.id, profile.username, "create")
     return profile
@@ -394,8 +402,16 @@ def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
             else None
         )
         return {"sql": result.sql, "explanation": result.explanation, "confidence": confidence}
-    except Exception as exc:  # noqa: BLE001
+    except (ValueError, LLMError) as exc:
+        # Intentional/clean messages stay verbatim (the ADR-012 rule): our own
+        # validation ValueErrors ("Schema is empty…", unsafe generation) and
+        # LLMError, which nl2sql already maps provider failures into (F2).
         raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001 — unexpected: sanitize (ITM-017)
+        error_id = get_request_id() or new_error_id()
+        set_request_id(error_id)
+        log_error(exc, context="nl2sql", error_id=error_id)
+        raise HTTPException(status_code=400, detail=GENERIC_NL2SQL_DETAIL)
 
 
 # --------------------------------------------------------------------------- #

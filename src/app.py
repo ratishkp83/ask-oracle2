@@ -46,7 +46,7 @@ from src.core.reports import (
 )
 from src.core.templates import get_template, list_templates
 from src.core.logging_config import configure_logging
-from src.core.errors import sanitize_db_error_for_ui
+from src.core.errors import log_error_for_ui, sanitize_db_error_for_ui
 from src.core.sql_safety import SqlSafetyError
 
 load_dotenv()
@@ -193,7 +193,8 @@ def draw_sidebar_connection() -> Optional[OracleConnectionConfig]:
     try:
         resolved = store.resolve(profile.id)
     except SecretConfigError as e:
-        st.sidebar.error(str(e))
+        # Intentional operator guidance — verbatim + a logged reference (ITM-017).
+        st.sidebar.error(f"{e} (ref: {log_error_for_ui(e, context='ui.secret_config')})")
         return None
     if resolved is None:
         st.sidebar.error("Selected profile could not be resolved.")
@@ -244,7 +245,7 @@ def draw_connections(store: JsonFileProfileStore):
             )
             st.success(f"Profile '{created.name}' added.")
         except SecretConfigError as e:
-            st.error(str(e))
+            st.error(f"{e} (ref: {log_error_for_ui(e, context='ui.secret_config')})")
         except Exception as e:  # noqa: BLE001 - validation / duplicate name
             st.error(f"Could not add profile: {e}")
 
@@ -282,7 +283,7 @@ def draw_connections(store: JsonFileProfileStore):
                 ok, msg = _try_connect(_resolved_to_cfg(resolved))
                 (st.success if ok else st.error)(msg)
             except SecretConfigError as e:
-                st.error(str(e))
+                st.error(f"{e} (ref: {log_error_for_ui(e, context='ui.secret_config')})")
     with col2:
         if st.button("Delete selected", use_container_width=True, key="conn_delete_selected"):
             store.delete(selected.id)
@@ -713,7 +714,7 @@ def draw_reports(conn_cfg: Optional[OracleConnectionConfig]):
                         resolved = pstore.resolve(target_profile_id)
                         client = OracleClient(_resolved_to_cfg(resolved)) if resolved else None
                     except SecretConfigError as e:
-                        st.error(str(e))
+                        st.error(f"{e} (ref: {log_error_for_ui(e, context='ui.secret_config')})")
                 elif conn_cfg:
                     client = OracleClient(conn_cfg)
                 if client is None:

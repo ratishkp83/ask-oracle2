@@ -33,6 +33,13 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   a later write can't silently drop it — survives the legacy-migration save too. The profile
   and schema stores had the same uncaught-raise mode and get the same treatment. Tests
   **+6 → 231** (`tests/test_store_robustness.py`).
+- **Non-DB error surfaces routed** (ITM-017, Phase-6 r1 F-7): `/nl2sql`'s catch-all no longer
+  echoes raw exception text — intentional messages stay verbatim (`ValueError` validation
+  texts + `LLMError`, per the ADR-012 rule) while unexpected failures return
+  `"Could not generate SQL — see server logs."` + `error_id` (full detail server-side). The
+  profiles `SecretConfigError` 500 keeps its operator guidance verbatim and gains a
+  server-side breadcrumb keyed to the response's `error_id`; the four UI `SecretConfigError`
+  arms now show `(ref: <id>)` via the new `core.errors.log_error_for_ui`. Tests **+5 → 236**.
 
 ### Added (Phase 6 — Observability & Error Handling)
 - **Structured logging** ([ADR-012](adr/ADR-012-observability-and-error-handling.md)):

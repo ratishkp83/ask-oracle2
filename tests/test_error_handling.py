@@ -217,3 +217,85 @@ def test_sanitize_correlation_id_strips_unsafe_and_bounds_length():
     assert sanitize_correlation_id("") is None
     assert sanitize_correlation_id("!@#$%") is None  # nothing safe → None (caller regenerates)
     assert len(sanitize_correlation_id("x" * 500)) == 128  # length-bounded
+
+
+# --------------------------------------------------------------------------- #
+# ITM-017 (Phase 6.5 B5) — non-DB surfaces: intentional stays verbatim,
+# unexpected raw text never reaches the client
+# --------------------------------------------------------------------------- #
+NL_BODY = {"natural_language": "show all employees"}
+
+
+def test_nl2sql_unexpected_error_is_sanitized(monkeypatch, server_logs):
+    from src.core.errors import GENERIC_NL2SQL_DETAIL
+
+    def boom(*args, **kwargs):
+        raise RuntimeError(LEAKY)
+
+    monkeypatch.setattr(api_module, "generate_sql_from_nl", boom)
+    resp = client.post("/nl2sql", json=NL_BODY)
+
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["detail"] == GENERIC_NL2SQL_DETAIL
+    assert body["error_id"]
+    assert "dbhost.internal" not in resp.text and "SCOTT" not in resp.text
+    joined = "\n".join(server_logs.lines)
+    assert LEAKY in joined  # full detail server-side
+    assert body["error_id"] in joined  # keyed by the returned id
+
+
+def test_nl2sql_llm_error_stays_verbatim(monkeypatch):
+    from src.core.llm.base import LLMError
+
+    def boom(*args, **kwargs):
+        raise LLMError("External LLM call failed (provider request error). Check key/policy.")
+
+    monkeypatch.setattr(api_module, "generate_sql_from_nl", boom)
+    resp = client.post("/nl2sql", json=NL_BODY)
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["detail"].startswith("External LLM call failed")  # our clean text, verbatim
+    assert body["error_id"]
+
+
+def test_nl2sql_validation_error_stays_verbatim():
+    # No schema supplied → the app's own intentional ValueError text.
+    resp = client.post("/nl2sql", json=NL_BODY)
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["detail"] == "Schema is empty; upload schema metadata first."
+    assert body["error_id"]
+
+
+def test_profiles_secret_config_error_verbatim_with_breadcrumb(monkeypatch, server_logs):
+    from src.core.crypto import SecretConfigError
+
+    guidance = "APP_SECRET_KEY is not set. It is required to store encrypted passwords."
+
+    class Boom:
+        def create(self, data):
+            raise SecretConfigError(guidance)
+
+    monkeypatch.setattr(api_module, "_store", Boom())
+    resp = client.post(
+        "/profiles",
+        json={"name": "P", "host": "db", "service_name": "XE", "username": "u", "password": "p"},
+    )
+    assert resp.status_code == 500
+    body = resp.json()
+    assert body["detail"] == guidance  # operator guidance stays verbatim (D-F)
+    assert body["error_id"]
+    joined = "\n".join(server_logs.lines)
+    assert guidance in joined  # server-side breadcrumb…
+    assert body["error_id"] in joined  # …keyed by the same id
+
+
+def test_ui_log_error_for_ui_returns_ref_and_logs(server_logs):
+    from src.core.errors import log_error_for_ui
+
+    error_id = log_error_for_ui(ValueError("APP_SECRET_KEY changed?"), context="ui.secret_config")
+    assert error_id
+    joined = "\n".join(server_logs.lines)
+    assert "APP_SECRET_KEY changed?" in joined
+    assert error_id in joined

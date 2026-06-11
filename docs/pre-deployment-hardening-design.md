@@ -119,11 +119,15 @@ llm    ──► validate_base_url: numeric-host normalization first    [B2]
   add a `core.errors.log_error` call (context `profiles.secret_config`) so the 500 has a
   server-side breadcrumb. `error_id` is already injected by the Phase-6 handlers.
 - `api.py:352-377` (`/nl2sql`): the broad `except Exception → 400 str(exc)` is split:
-  - `except LLMError` → 400, **verbatim** (our own validation text, e.g. base_url rejections);
+  - `except (ValueError, LLMError)` → 400, **verbatim** — *(build refinement, v1.2)*: the
+    endpoint's `ValueError`s are the app's own intentional validation texts ("Schema is
+    empty…", "Generated SQL is not a SELECT/CTE…"), and `nl2sql` already maps provider
+    failures into clean `LLMError`s (Phase-3 F2); keeping `ValueError` verbatim follows the
+    established ADR-012 rule (validation `ValueError` is a verbatim class) rather than
+    over-sanitizing it as originally sketched;
   - `except Exception` → `log_error(context="nl2sql")` → 400 with **generic** detail
-    ("Could not generate SQL — see server logs (ref: <error_id>)" wording finalized in build) —
-    raw pandas/network/provider text never reaches the client. (UX tradeoff accepted at D-F: a
-    malformed-CSV message goes generic; the operator retrieves detail by `error_id`.)
+    (`GENERIC_NL2SQL_DETAIL` = "Could not generate SQL — see server logs.") — raw
+    network/provider/library text never reaches the client.
 - UI (`app.py:196/247/285/716`): `SecretConfigError` text stays verbatim; each arm adds a
   logged reference — `log_error(...)` + `st.error(f"{e} (ref: {error_id})")` — mirroring the
   Phase-6 UI pattern. No new sanitization machinery; reuse `core/errors`.
@@ -198,3 +202,4 @@ llm    ──► validate_base_url: numeric-host normalization first    [B2]
 |---------|------|--------|--------|
 | 1.0 | 2026-06-11 | Engineering | Initial design + build sequence B1…B6 per resolved decisions D-A…D-F; pending owner approval before any code. |
 | 1.1 | 2026-06-11 | Engineering | Owner approved as-is → Baseline; build started at B1. |
+| 1.2 | 2026-06-11 | Engineering | B5 refinement (§4.6): `/nl2sql` keeps `ValueError` in the verbatim class alongside `LLMError` (ADR-012 rule — the endpoint's ValueErrors are app-generated validation texts); only unexpected exception types go generic. |

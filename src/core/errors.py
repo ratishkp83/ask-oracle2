@@ -27,6 +27,7 @@ from src.core.logging_config import get_logger
 
 GENERIC_DB_DETAIL = "Database error — see server logs."
 GENERIC_SERVER_DETAIL = "Internal server error."
+GENERIC_NL2SQL_DETAIL = "Could not generate SQL — see server logs."
 
 logger = get_logger("errors")
 
@@ -90,3 +91,14 @@ def sanitize_db_error_for_ui(exc: BaseException, *, context: str) -> Tuple[str, 
     error_id = new_error_id()
     log_error(exc, context=context, error_id=error_id, event="db_error")
     return error_id, GENERIC_DB_DETAIL
+
+
+def log_error_for_ui(exc: BaseException, *, context: str) -> str:
+    """UI path for **intentional** messages (ITM-017): log server-side, return
+    the reference id. Unlike :func:`sanitize_db_error_for_ui` the message is
+    safe to show verbatim — the caller displays ``f"{exc} (ref: {error_id})"``
+    so the user can still quote a reference back to support.
+    """
+    error_id = new_error_id()
+    log_error(exc, context=context, error_id=error_id)
+    return error_id

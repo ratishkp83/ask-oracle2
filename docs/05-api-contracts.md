@@ -63,7 +63,7 @@ Body: `{ natural_language, schema_csv?, relationships_csv?, model?, llm? }`
 → `200 { sql, explanation, confidence: { level, reasons[] } }`
   - `explanation`: short rationale (may be `null` if the model omitted it).
   - `confidence.level`: `"High" | "Medium" | "Low"` — deterministic heuristic (schema coverage + parse + identifier resolution); **not** a correctness guarantee.
-→ `400` (no schema, unsafe generation, LLM/key error, or `LLM_POLICY` disallows the only available provider)
+→ `400` (no schema, unsafe generation, LLM/key error, or `LLM_POLICY` disallows the only available provider) — these intentional messages stay verbatim; an **unexpected** failure returns the generic `detail = "Could not generate SQL — see server logs."` + `error_id` with full detail logged server-side (Phase 6.5, ITM-017)
 - Provider/redaction governed by `LLM_POLICY` (`local_only` | `local_external` | `external_disabled`); external prompts carry **schema names only**.
 
 ### POST /execute  *(single safety chokepoint)*
@@ -155,3 +155,4 @@ if constraint views aren't visible.
 | 1.4 | 2026-06-10 | Engineering | Phase 6 (B2): additive `error_id` on every error body; `X-Request-ID` correlation header; DB/driver errors sanitized to a generic message (ITM-015); ADR-012. |
 | 1.5 | 2026-06-10 | Engineering | Phase 6 (B3): read-only `GET /metrics` (in-process query counts + latency). |
 | 1.6 | 2026-06-11 | Engineering | Phase 6.5 (B1): opt-in `X-API-Key` auth (`APP_API_KEY`; `/health` exempt, `/metrics` gated) + env-driven CORS (`ALLOWED_ORIGINS`); service v2.2.0; ADR-013 (closes ITM-009). |
+| 1.7 | 2026-06-11 | Engineering | Phase 6.5 (B5): `/nl2sql` unexpected failures return generic detail + `error_id` (ITM-017); intentional `ValueError`/`LLMError` and the profiles `SecretConfigError` 500 stay verbatim (now with a server-side breadcrumb). |
