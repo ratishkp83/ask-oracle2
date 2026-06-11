@@ -4,6 +4,8 @@ import json
 import os
 from typing import Dict, Optional
 
+from src.core.fileio import atomic_write_json
+
 # Render native runtime uses /opt/render/project/src as the working directory.
 # Docker uses /app. STORAGE_DIR env var overrides both.
 _DEFAULT = os.path.join(
@@ -17,10 +19,6 @@ CONFIG_FILE = os.path.join(DEFAULT_STORAGE_DIR, "connection.json")
 # persist to ``reports.json`` under this same STORAGE_DIR.
 
 
-def _ensure_dir(path: str) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-
 def save_connection_config(config: Dict[str, object]) -> None:
     """Persist the manual connection — **never** the password (F5).
 
@@ -28,10 +26,8 @@ def save_connection_config(config: Dict[str, object]) -> None:
     file must not hold a plaintext secret at rest. The password (if supplied) is
     stripped before writing, so it lives only in the running session.
     """
-    _ensure_dir(CONFIG_FILE)
     safe = {k: v for k, v in config.items() if k != "password"}
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(safe, f, indent=2)
+    atomic_write_json(CONFIG_FILE, safe)
 
 
 def load_connection_config() -> Optional[Dict[str, object]]:

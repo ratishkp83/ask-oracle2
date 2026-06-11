@@ -23,6 +23,7 @@ from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, model_validator
 
 from src.core.crypto import decrypt_secret, encrypt_secret
+from src.core.fileio import atomic_write_json
 from src.storage import DEFAULT_STORAGE_DIR
 
 Environment = Literal["DEV", "TEST", "PROD"]
@@ -130,10 +131,8 @@ class JsonFileProfileStore(ProfileStore):
         return {pid: StoredProfile(**rec) for pid, rec in raw.items()}
 
     def _save(self, profiles: Dict[str, StoredProfile]) -> None:
-        os.makedirs(os.path.dirname(self._path), exist_ok=True)
         serializable = {pid: rec.model_dump() for pid, rec in profiles.items()}
-        with open(self._path, "w", encoding="utf-8") as fh:
-            json.dump(serializable, fh, indent=2)
+        atomic_write_json(self._path, serializable)
 
     # --- ProfileStore API ----------------------------------------------------
     def create(self, data: ProfileCreate) -> ProfilePublic:

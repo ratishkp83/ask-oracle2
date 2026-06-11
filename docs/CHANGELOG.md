@@ -20,6 +20,12 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   All-numeric hosts that don't form a valid IPv4 are rejected **fail-closed** (a public TLD
   never starts with a digit); real hostnames (`1password.com`) unaffected. DNS-rebinding stays
   the documented residual. Tests **+17 → 218**.
+- **Atomic file-store writes** ([ADR-014](adr/ADR-014-file-store-durability.md), closes the
+  code portion of ITM-013/RISK-16): new `src/core/fileio.py::atomic_write_json` — same-dir
+  temp + `fsync` + `os.replace` (atomic on POSIX **and** Windows), target untouched + temp
+  removed on failure — adopted by all four JSON stores (`storage.py`, `core/profiles.py`,
+  `core/reports.py`, `core/schema_store.py`); on-disk shape unchanged. Cross-process
+  concurrency remains the documented one-worker-per-store constraint (D7). Tests **+7 → 225**.
 
 ### Added (Phase 6 — Observability & Error Handling)
 - **Structured logging** ([ADR-012](adr/ADR-012-observability-and-error-handling.md)):

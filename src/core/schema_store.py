@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from src.core.fileio import atomic_write_json
 from src.storage import DEFAULT_STORAGE_DIR
 
 SchemaSource = Literal["upload", "introspection"]
@@ -124,10 +125,8 @@ class JsonFileSchemaStore(SchemaStore):
         return {sid: SchemaRecord(**rec) for sid, rec in raw.items()}
 
     def _save(self, records: Dict[str, SchemaRecord]) -> None:
-        os.makedirs(os.path.dirname(self._path), exist_ok=True)
         serializable = {sid: rec.model_dump() for sid, rec in records.items()}
-        with open(self._path, "w", encoding="utf-8") as fh:
-            json.dump(serializable, fh, indent=2)
+        atomic_write_json(self._path, serializable)
 
     def create(
         self,

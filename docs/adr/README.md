@@ -21,5 +21,6 @@ new ADR that references the old one (don't rewrite history).
 | [ADR-011](ADR-011-schema-persistence-store.md) | Schema persistence store (metadata only) | Accepted |
 | [ADR-012](ADR-012-observability-and-error-handling.md) | Observability & error handling (structured logs, error IDs, sanitized DB errors, metrics) | Accepted |
 | [ADR-013](ADR-013-network-edge-hardening.md) | Network-edge hardening (opt-in API-key auth + explicit env-driven CORS) | Accepted |
+| [ADR-014](ADR-014-file-store-durability.md) | File-store durability (atomic JSON writes; corrupt-record quarantine) | Accepted |
 
 Template: [ADR-template.md](ADR-template.md).

@@ -1,6 +1,6 @@
 # D3 — Architecture
 
-> **Document:** Architecture · **Version:** 1.3 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-10
+> **Document:** Architecture · **Version:** 1.4 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-11
 
 ## 1. Container view
 
@@ -40,6 +40,8 @@ Both the UI and the API converge on `src/core/`. The React/Vite scaffold exists 
 | `core/logging_config.py` | `configure_logging()` — idempotent structured logging (JSON to stdout; `LOG_LEVEL`/`LOG_FORMAT`); `request_id` `ContextVar` + accessors; `JsonFormatter`/`TextFormatter` ([ADR-012](adr/ADR-012-observability-and-error-handling.md)). Phase 6. |
 | `core/errors.py` | Shared (API + UI) DB-error sanitization: `log_error()` (secret-free), `sanitize_db_error_for_ui()`, `GENERIC_*` messages — closes ITM-015 ([ADR-012](adr/ADR-012-observability-and-error-handling.md)). Phase 6. |
 | `core/metrics.py` | Thread-safe in-process counters (executed/rejected/errored) + latency; `snapshot()` for `GET /metrics` ([ADR-012](adr/ADR-012-observability-and-error-handling.md)). Phase 6. |
+| `core/auth.py` | Opt-in API-key dependency (`X-API-Key` vs env `APP_API_KEY`, constant-time; `/health` exempt) — [ADR-013](adr/ADR-013-network-edge-hardening.md). Phase 6.5. |
+| `core/fileio.py` | `atomic_write_json()` — temp + fsync + `os.replace`, shared by all four JSON stores ([ADR-014](adr/ADR-014-file-store-durability.md)). Phase 6.5. |
 | `core/reports.py` | Report v2 models + `ReportStore` (JSON/in-memory) + legacy migration; `coerce_report_binds()` (defaults/required/typing, rejects unknown keys). Phase 4. |
 | `core/templates.py` | Curated read-only EBS template catalog (GL/AP/AR/PO/OM); parameterized `:bind` SQL, review-before-run. Phase 4. |
 | `core/schema_store.py` | `SchemaRecord` + `SchemaStore` (JSON/in-memory); persisted dictionary snapshots, metadata only ([ADR-011](adr/ADR-011-schema-persistence-store.md)). Phase 5. |
@@ -98,4 +100,5 @@ See [ADR index](adr/). Ratified: ADR-001…012.
 | 1.0 | 2026-06-10 | Engineering | Baseline incl. Phase-2 `src/core/` and chokepoint. |
 | 1.1 | 2026-06-10 | Engineering | Phase 4: `core/reports` + `core/templates`, bind-through-chokepoint flow, `/reports` + `/templates` endpoints, left-nav UI. |
 | 1.2 | 2026-06-10 | Engineering | Phase 5: `core/schema_store` + `core/introspection`, schema-introspection flow (via chokepoint), dictionary helpers; ADR-010/011. |
+| 1.4 | 2026-06-11 | Engineering | Phase 6.5: `core/auth.py` (opt-in API-key edge, ADR-013) + `core/fileio.py` (atomic store writes, ADR-014) added to the module table. |
 | 1.3 | 2026-06-10 | Engineering | Phase 6 (B1): `core/logging_config` (structured JSON logging, `request_id`); audit emits JSON; Observability cross-cutting concern; ADR-012. |

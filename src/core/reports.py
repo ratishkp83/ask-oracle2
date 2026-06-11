@@ -30,6 +30,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.core.fileio import atomic_write_json
 from src.storage import DEFAULT_STORAGE_DIR
 
 ParamType = Literal["string", "number", "date"]
@@ -227,10 +228,8 @@ class JsonFileReportStore(ReportStore):
         return reports
 
     def _save_locked(self, reports: Dict[str, Report]) -> None:
-        os.makedirs(os.path.dirname(self._path), exist_ok=True)
         serializable = {rid: rec.model_dump() for rid, rec in reports.items()}
-        with open(self._path, "w", encoding="utf-8") as fh:
-            json.dump(serializable, fh, indent=2, default=str)
+        atomic_write_json(self._path, serializable, default=str)
 
     # --- ReportStore API -----------------------------------------------------
     def create(self, data: ReportCreate) -> Report:
