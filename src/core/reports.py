@@ -19,6 +19,7 @@ file is rewritten once (idempotent thereafter).
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 import re
@@ -30,6 +31,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from src.core.errors import log_error, new_error_id
 from src.core.fileio import atomic_write_json
 from src.storage import DEFAULT_STORAGE_DIR
 
@@ -192,20 +194,31 @@ class ReportStore(ABC):
     def delete(self, report_id: str) -> bool: ...
 
 
-def _deserialize(raw: Dict[str, Any]) -> "tuple[Dict[str, Report], bool]":
-    """Return (reports-by-id, migrated?) tolerating the legacy ``{name: {sql}}``."""
+def _deserialize(raw: Dict[str, Any]) -> "tuple[Dict[str, Report], bool, Dict[str, tuple]]":
+    """Return (reports-by-id, migrated?, quarantined) tolerating the legacy
+    ``{name: {sql}}`` shape.
+
+    A record that fails validation — corrupt v2 or unparseable legacy — is
+    **quarantined** (ADR-014, ITM-014): not served, but kept as
+    ``key -> (raw record, exception type name)`` so the store can preserve it
+    verbatim on save instead of raising a 500 or silently dropping it.
+    """
     reports: Dict[str, Report] = {}
     migrated = False
+    quarantined: Dict[str, tuple] = {}
     for key, rec in raw.items():
-        if isinstance(rec, dict) and "id" in rec and "name" in rec:
-            report = Report(**rec)
-            reports[report.id] = report
-        else:
-            sql = rec.get("sql", "") if isinstance(rec, dict) else str(rec)
-            report = _new_report(ReportCreate(name=str(key), sql=sql))
-            reports[report.id] = report
-            migrated = True
-    return reports, migrated
+        try:
+            if isinstance(rec, dict) and "id" in rec and "name" in rec:
+                report = Report(**rec)
+                reports[report.id] = report
+            else:
+                sql = rec.get("sql", "") if isinstance(rec, dict) else str(rec)
+                report = _new_report(ReportCreate(name=str(key), sql=sql))
+                reports[report.id] = report
+                migrated = True
+        except (ValueError, TypeError) as exc:  # pydantic ValidationError is a ValueError
+            quarantined[key] = (rec, type(exc).__name__)
+    return reports, migrated, quarantined
 
 
 class JsonFileReportStore(ReportStore):
@@ -214,6 +227,7 @@ class JsonFileReportStore(ReportStore):
     def __init__(self, path: Optional[str] = None) -> None:
         self._path = path or os.path.join(DEFAULT_STORAGE_DIR, "reports.json")
         self._lock = threading.Lock()
+        self._quarantined: Dict[str, Any] = {}
 
     # --- persistence helpers -------------------------------------------------
     def _load_locked(self) -> Dict[str, Report]:
@@ -222,13 +236,30 @@ class JsonFileReportStore(ReportStore):
             return {}
         with open(self._path, "r", encoding="utf-8") as fh:
             raw = json.load(fh)
-        reports, migrated = _deserialize(raw)
+        reports, migrated, quarantined = _deserialize(raw)
+        for key, (_, exc_name) in quarantined.items():
+            if key not in self._quarantined:  # log once per process, not per load
+                log_error(
+                    ValueError(
+                        f"Corrupt report record '{key}' quarantined ({exc_name}); "
+                        "not served, preserved on save"
+                    ),
+                    context="report_store.corrupt_record",
+                    error_id=new_error_id(),
+                    event="corrupt_record",
+                    level=logging.WARNING,
+                )
+        self._quarantined = {key: rec for key, (rec, _) in quarantined.items()}
         if migrated:
             self._save_locked(reports)
         return reports
 
     def _save_locked(self, reports: Dict[str, Report]) -> None:
-        serializable = {rid: rec.model_dump() for rid, rec in reports.items()}
+        serializable: Dict[str, Any] = {rid: rec.model_dump() for rid, rec in reports.items()}
+        # Quarantined records ride along verbatim — corruption must never
+        # become silent data loss on the next save (ADR-014).
+        for key, rec in self._quarantined.items():
+            serializable.setdefault(key, rec)
         atomic_write_json(self._path, serializable, default=str)
 
     # --- ReportStore API -----------------------------------------------------

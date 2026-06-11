@@ -139,7 +139,7 @@ ITM-010 (base_url IP encodings), ITM-013/014 (file-store durability, RISK-16), I
 | P6.5-1 | Network edge: opt-in API-key auth + env-driven CORS (ITM-009/RISK-12) | ✅ Completed | **B1**; `core/auth.py` (`X-API-Key` vs `APP_API_KEY`, `/health` exempt, `/metrics` gated) + `ALLOWED_ORIGINS` CORS with no-`*`-with-credentials invariant; 16 tests (**201 total**); D5/D7 + ADR-013; formal ITM-009 closure at B6 |
 | P6.5-2 | `validate_base_url` numeric-encoding hardening (ITM-010) | ✅ Completed | **B2**; pure-Python `inet_aton`-style decode (`_numeric_host_to_ipv4`, ASCII-strict) before the IP checks; all-numeric-but-invalid hosts rejected fail-closed; 17 tests (**218 total**); formal ITM-010 closure at B6 |
 | P6.5-3 | Shared atomic-write helper across the 4 JSON stores (ITM-013/RISK-16) | ✅ Completed | **B3**; `core/fileio.py::atomic_write_json` (same-dir temp + fsync + `os.replace`) adopted by `storage`/`profiles`/`reports`/`schema_store`, shape unchanged; 7 tests (**225 total**); ADR-014 + D3 updated; formal ITM-013 closure at B6 |
-| P6.5-4 | Corrupt-record robustness in the report store (ITM-014) | 📋 Planned | per D-E; verify profiles/schema stores too |
+| P6.5-4 | Corrupt-record robustness in the report store (ITM-014) | ✅ Completed | **B4**; quarantine (skip-and-log w/ `error_id`, **preserve-on-save**) in `_deserialize`; profiles + schema stores had the same uncaught-raise → same treatment; 6 tests (**231 total**); formal ITM-014 closure at B6 |
 | P6.5-5 | Non-DB error-surface sanitization (ITM-017) | 📋 Planned | per D-F; config 500 / nl2sql 400 / UI config paths |
 | P6.5-6 | Tests + governed-doc updates (D3/D5/D7, ADRs, CHANGELOG, registers) + close ITM-009/010/013/014/017 | 📋 Planned | lockstep |
 | R6.5.x | Independent adversarial exit-gate review + QA (reviewer ≠ author) | 📋 Planned | iterate to PASS |
@@ -204,3 +204,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.23 | 2026-06-11 | Delivery | P6.5 design approved (P6.5-DES Completed); Build started — B1 (network edge) done: P6.5-1 Completed, 201 tests, ADR-013, D5/D7 updated, ADR index backfilled (ADR-012/013). |
 | 1.24 | 2026-06-11 | Delivery | P6.5 B2 done: P6.5-2 Completed — `validate_base_url` rejects integer/hex/octal/dotted IP encodings (fail-closed on all-numeric invalid hosts); 218 tests. |
 | 1.25 | 2026-06-11 | Delivery | P6.5 B3 done: P6.5-3 Completed — atomic JSON writes via `core/fileio.py` across the 4 stores (ADR-014, D3); 225 tests. |
+| 1.26 | 2026-06-11 | Delivery | P6.5 B4 done: P6.5-4 Completed — corrupt-record quarantine (skip-and-log + preserve-on-save) in report/profile/schema stores; 231 tests. |

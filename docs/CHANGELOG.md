@@ -26,6 +26,13 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   removed on failure — adopted by all four JSON stores (`storage.py`, `core/profiles.py`,
   `core/reports.py`, `core/schema_store.py`); on-disk shape unchanged. Cross-process
   concurrency remains the documented one-worker-per-store constraint (D7). Tests **+7 → 225**.
+- **Corrupt-record quarantine** (ITM-014, ADR-014 §3): a malformed store record no longer
+  raises out of `list`/`get` (was an uncaught `ValidationError` → 500). It is **quarantined**:
+  skipped from serving (id behaves as not-found), logged once per process with an `error_id`
+  (record *key* + exception type only — never the body), and **preserved verbatim on save** so
+  a later write can't silently drop it — survives the legacy-migration save too. The profile
+  and schema stores had the same uncaught-raise mode and get the same treatment. Tests
+  **+6 → 231** (`tests/test_store_robustness.py`).
 
 ### Added (Phase 6 — Observability & Error Handling)
 - **Structured logging** ([ADR-012](adr/ADR-012-observability-and-error-handling.md)):

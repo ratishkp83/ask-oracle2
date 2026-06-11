@@ -14,15 +14,17 @@ API layer.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import threading
 import uuid
 from abc import ABC, abstractmethod
-from typing import Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 from src.core.crypto import decrypt_secret, encrypt_secret
+from src.core.errors import log_error, new_error_id
 from src.core.fileio import atomic_write_json
 from src.storage import DEFAULT_STORAGE_DIR
 
@@ -121,6 +123,7 @@ class JsonFileProfileStore(ProfileStore):
     def __init__(self, path: Optional[str] = None) -> None:
         self._path = path or os.path.join(DEFAULT_STORAGE_DIR, "profiles.json")
         self._lock = threading.Lock()
+        self._quarantined: Dict[str, Any] = {}
 
     # --- persistence helpers -------------------------------------------------
     def _load(self) -> Dict[str, StoredProfile]:
@@ -128,10 +131,32 @@ class JsonFileProfileStore(ProfileStore):
             return {}
         with open(self._path, "r", encoding="utf-8") as fh:
             raw = json.load(fh)
-        return {pid: StoredProfile(**rec) for pid, rec in raw.items()}
+        profiles: Dict[str, StoredProfile] = {}
+        quarantined: Dict[str, Any] = {}
+        for pid, rec in raw.items():
+            try:
+                profiles[pid] = StoredProfile(**rec)
+            except (ValueError, TypeError) as exc:  # corrupt record: quarantine (ADR-014)
+                quarantined[pid] = rec
+                if pid not in self._quarantined:  # log once per process, not per load
+                    log_error(
+                        ValueError(
+                            f"Corrupt profile record '{pid}' quarantined "
+                            f"({type(exc).__name__}); not served, preserved on save"
+                        ),
+                        context="profile_store.corrupt_record",
+                        error_id=new_error_id(),
+                        event="corrupt_record",
+                        level=logging.WARNING,
+                    )
+        self._quarantined = quarantined
+        return profiles
 
     def _save(self, profiles: Dict[str, StoredProfile]) -> None:
-        serializable = {pid: rec.model_dump() for pid, rec in profiles.items()}
+        serializable: Dict[str, Any] = {pid: rec.model_dump() for pid, rec in profiles.items()}
+        # Quarantined records ride along verbatim — never silently dropped (ADR-014).
+        for pid, rec in self._quarantined.items():
+            serializable.setdefault(pid, rec)
         atomic_write_json(self._path, serializable)
 
     # --- ProfileStore API ----------------------------------------------------

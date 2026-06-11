@@ -17,6 +17,7 @@ because it shadows a Pydantic ``BaseModel`` attribute.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import threading
 import uuid
@@ -26,6 +27,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from src.core.errors import log_error, new_error_id
 from src.core.fileio import atomic_write_json
 from src.storage import DEFAULT_STORAGE_DIR
 
@@ -116,16 +118,39 @@ class JsonFileSchemaStore(SchemaStore):
     def __init__(self, path: Optional[str] = None) -> None:
         self._path = path or os.path.join(DEFAULT_STORAGE_DIR, "schemas.json")
         self._lock = threading.Lock()
+        self._quarantined: Dict[str, Any] = {}
 
     def _load(self) -> Dict[str, SchemaRecord]:
         if not os.path.exists(self._path):
             return {}
         with open(self._path, "r", encoding="utf-8") as fh:
             raw = json.load(fh)
-        return {sid: SchemaRecord(**rec) for sid, rec in raw.items()}
+        records: Dict[str, SchemaRecord] = {}
+        quarantined: Dict[str, Any] = {}
+        for sid, rec in raw.items():
+            try:
+                records[sid] = SchemaRecord(**rec)
+            except (ValueError, TypeError) as exc:  # corrupt record: quarantine (ADR-014)
+                quarantined[sid] = rec
+                if sid not in self._quarantined:  # log once per process, not per load
+                    log_error(
+                        ValueError(
+                            f"Corrupt schema record '{sid}' quarantined "
+                            f"({type(exc).__name__}); not served, preserved on save"
+                        ),
+                        context="schema_store.corrupt_record",
+                        error_id=new_error_id(),
+                        event="corrupt_record",
+                        level=logging.WARNING,
+                    )
+        self._quarantined = quarantined
+        return records
 
     def _save(self, records: Dict[str, SchemaRecord]) -> None:
-        serializable = {sid: rec.model_dump() for sid, rec in records.items()}
+        serializable: Dict[str, Any] = {sid: rec.model_dump() for sid, rec in records.items()}
+        # Quarantined records ride along verbatim — never silently dropped (ADR-014).
+        for sid, rec in self._quarantined.items():
+            serializable.setdefault(sid, rec)
         atomic_write_json(self._path, serializable)
 
     def create(
