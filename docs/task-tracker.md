@@ -134,8 +134,8 @@ ITM-010 (base_url IP encodings), ITM-013/014 (file-store durability, RISK-16), I
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | P6.5-0 | Open Phase 6.5 Discovery charter | ✅ Completed | objectives/scope/risks/success criteria + open decisions D-A…D-F; grounding facts verified against HEAD `2ba0a56` |
-| P6.5-D | Owner approval + decision resolution (D-A…D-F) | 🔄 In Progress | auth mechanism / health+metrics posture / CORS / store approach / corrupt-record policy / ITM-017 classification |
-| P6.5-DES | Design + build sequence (owner-approved) | 📋 Planned | after P6.5-D |
+| P6.5-D | Owner approval + decision resolution (D-A…D-F) | ✅ Completed | resolved 2026-06-11, all as recommended: opt-in static API key via `X-API-Key`/`APP_API_KEY` (D-A); `/health` open + minimal, `/metrics` gated (D-B); `ALLOWED_ORIGINS` env, localhost default (D-C); atomic-write helper, keep JSON (D-D); corrupt records skip+log (D-E); intentional messages verbatim + `error_id`, rest generic (D-F) |
+| P6.5-DES | Design + build sequence (owner-approved) | 🔄 In Progress | design doc pending owner approval before code |
 | P6.5-1 | Network edge: opt-in API-key auth + env-driven CORS (ITM-009/RISK-12) | 📋 Planned | per D-A/D-B/D-C |
 | P6.5-2 | `validate_base_url` numeric-encoding hardening (ITM-010) | 📋 Planned | integer/hex/octal/dotted forms |
 | P6.5-3 | Shared atomic-write helper across the 4 JSON stores (ITM-013/RISK-16) | 📋 Planned | per D-D; temp + fsync + `os.replace` |
@@ -199,3 +199,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.18 | 2026-06-10 | Delivery | Phase 6 exit gate: r1 = PASS-WITH-FIXES (F-1/F-2 S2 = dependency/CI hygiene) → remediated (3.13-capable repin, clean-install-proven, 185 green; F-3/F-4/F-5 fixed) → r2 = PASS. **Phase 6 CLOSED.** Residual ITM-016 (CI demo pending push). |
 | 1.19 | 2026-06-10 | Delivery | Pushed `d059295..2a88a04`; **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED.** Phase 6 fully closed, no open residual. |
 | 1.20 | 2026-06-11 | Delivery | Phase 6.5 Discovery opened (P6.5-0); bundles ITM-009/010/013/014/017 as a pre-deployment hardening mini-phase; P6.5-1…P6.5-6 + R6.5.x seeded as Planned; build gated on owner decisions D-A…D-F (P6.5-D). |
+| 1.21 | 2026-06-11 | Delivery | Phase 6.5 decisions D-A…D-F resolved (all as recommended); P6.5-D Completed; P6.5-DES (design) In Progress — design doc pending owner approval before code. |

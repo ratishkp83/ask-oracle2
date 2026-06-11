@@ -1,9 +1,10 @@
 # Phase 6.5 Charter — Pre-Deployment Hardening (carried preconditions)
 
-> **Document:** Phase Charter · **Version:** 1.0 · **Status:** 🔄 Discovery — OPEN (decisions pending owner approval; **no code until approved**) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
+> **Document:** Phase Charter · **Version:** 1.1 · **Status:** 🔄 Design (decisions resolved; design + build sequence pending owner approval — **no code until approved**) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
 
 ## Lifecycle stage
-**Discovery OPENED 2026-06-11.** This mini-phase bundles the four carried **code** preconditions
+**Discovery OPENED 2026-06-11; owner approved and resolved decisions D-A…D-F (all as
+recommended) the same day → Design.** This mini-phase bundles the four carried **code** preconditions
 that gate any networked/multi-tenant deployment (and therefore Phase 7) into one charter → one
 design → one build → one independent exit-gate review:
 
@@ -198,8 +199,29 @@ pre-GA activity — it needs a real Oracle instance, not code.
   *Recommendation: (a)* — same intentional-vs-raw discipline Phase 6 applied (D-D there), extended
   to the non-DB surfaces.
 
+## Decisions (resolved 2026-06-11)
+Owner approved the charter and resolved **all six decisions as recommended**.
+
+- **D-A — API auth mechanism:** ✅ **Static API key** via `X-API-Key` header, value from env
+  `APP_API_KEY`, enforced by a FastAPI dependency; **opt-in** — enforced only when the env var
+  is set (default/unset behaviour unchanged; UI unaffected — direct core imports).
+- **D-B — `/health` + `/metrics` posture:** ✅ **`/health` stays unauthenticated with a minimal
+  status-only body; `/metrics` requires the API key** when auth is enabled.
+- **D-C — CORS policy:** ✅ **`ALLOWED_ORIGINS` env** (comma-separated explicit origins),
+  default `http://localhost:8501,http://localhost:3000`; `allow_credentials` only ever with
+  explicit origins — `*` + credentials becomes impossible.
+- **D-D — File-store durability:** ✅ **Shared atomic-write helper** (temp + fsync +
+  `os.replace`), JSON stores kept; multi-worker concurrency remains a documented single-worker
+  constraint (D7).
+- **D-E — Corrupt-record policy:** ✅ **Skip-and-log** (server-side detail keyed by `error_id`;
+  `list`/`get` keep serving good records).
+- **D-F — ITM-017 message classification:** ✅ **App-generated intentional messages
+  (`SecretConfigError`, `LLMError`) stay verbatim + gain `error_id`; everything else caught by
+  those arms goes generic + `error_id`.**
+
 ## Revision history
 
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-11 | Product/Eng | Discovery charter opened; bundles ITM-009/010/013/014/017 (RISK-12/16) as one pre-deployment hardening mini-phase; objectives/scope/deliverables/risks/success criteria + open decisions D-A…D-F; **pending owner approval before any code**. |
+| 1.1 | 2026-06-11 | Product/Eng | Owner approved; decisions D-A…D-F resolved (all as recommended). Discovery complete → Design (design + build sequence pending owner approval before code). |
