@@ -141,8 +141,9 @@ ITM-010 (base_url IP encodings), ITM-013/014 (file-store durability, RISK-16), I
 | P6.5-3 | Shared atomic-write helper across the 4 JSON stores (ITM-013/RISK-16) | ✅ Completed | **B3**; `core/fileio.py::atomic_write_json` (same-dir temp + fsync + `os.replace`) adopted by `storage`/`profiles`/`reports`/`schema_store`, shape unchanged; 7 tests (**225 total**); ADR-014 + D3 updated; formal ITM-013 closure at B6 |
 | P6.5-4 | Corrupt-record robustness in the report store (ITM-014) | ✅ Completed | **B4**; quarantine (skip-and-log w/ `error_id`, **preserve-on-save**) in `_deserialize`; profiles + schema stores had the same uncaught-raise → same treatment; 6 tests (**231 total**); formal ITM-014 closure at B6 |
 | P6.5-5 | Non-DB error-surface sanitization (ITM-017) | ✅ Completed | **B5**; nl2sql catch-all split (ValueError/LLMError verbatim per ADR-012 rule, rest generic + `error_id`); profiles `SecretConfigError` 500 verbatim + server-side breadcrumb; 4 UI `SecretConfigError` arms show `(ref: …)` via `log_error_for_ui`; 5 tests (**236 total**); formal ITM-017 closure at B6 |
-| P6.5-6 | Tests + governed-doc updates (D3/D5/D7, ADRs, CHANGELOG, registers) + close ITM-009/010/013/014/017 | 📋 Planned | lockstep |
-| R6.5.x | Independent adversarial exit-gate review + QA (reviewer ≠ author) | 📋 Planned | iterate to PASS |
+| P6.5-6 | Tests + governed-doc updates (D3/D5/D7, ADRs, CHANGELOG, registers) + close ITM-009/010/013/014/017 | ✅ Completed | **B6**; **ITM-009/010/013/014/017 CLOSED** (issue log v1.8); RISK-12 Closed, RISK-16 → Mitigating (concurrency residual = D7 constraint), RISK-11 residual narrowed; D3/D5/D6/D7, ADR-013/014 + index, traceability NFR-8, CHANGELOG — all in lockstep; **236 tests** |
+| R6.5.1 | Prepare exit-gate review package | 🔄 In Progress | range `cd0bbfa..HEAD`; invariants + leak-proof pointers |
+| R6.5.2+ | Independent adversarial exit-gate review + QA (reviewer ≠ author, owner-supplied) | 📋 Planned | iterate to PASS |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -206,3 +207,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.25 | 2026-06-11 | Delivery | P6.5 B3 done: P6.5-3 Completed — atomic JSON writes via `core/fileio.py` across the 4 stores (ADR-014, D3); 225 tests. |
 | 1.26 | 2026-06-11 | Delivery | P6.5 B4 done: P6.5-4 Completed — corrupt-record quarantine (skip-and-log + preserve-on-save) in report/profile/schema stores; 231 tests. |
 | 1.27 | 2026-06-11 | Delivery | P6.5 B5 done: P6.5-5 Completed — ITM-017 surfaces routed (nl2sql generic-on-unexpected; SecretConfigError verbatim + breadcrumb/refs); 236 tests; design v1.2 refinement recorded. |
+| 1.28 | 2026-06-11 | Delivery | P6.5 B6 done: P6.5-6 Completed — governed-doc sweep; ITM-009/010/013/014/017 formally CLOSED; RISK-12 Closed / RISK-16 Mitigating; NFR-8 traced. Build B1…B6 complete (236 tests); R6.5.1 review-package prep is next. |

@@ -1,6 +1,6 @@
 # D6 — Test Strategy
 
-> **Document:** Test Strategy · **Version:** 1.4 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-10
+> **Document:** Test Strategy · **Version:** 1.6 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-11
 
 ## 1. Objectives
 
@@ -17,8 +17,22 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 
 ## 3. Current coverage (baseline)
 
-**185 automated tests pass locally** (160 through Phase 5 + 25 in Phase 6):
+**236 automated tests pass locally** (160 through Phase 5 + 25 in Phase 6 + 51 in Phase 6.5):
 
+- **Pre-deployment hardening (Phase 6.5)** — `test_auth.py` (16): auth is a no-op with
+  `APP_API_KEY` unset (default posture pinned); with it set, a 401 matrix across endpoints
+  incl. `/metrics`, `/health` exemption, wrong/right key, uniform 401 envelope
+  (`error_id` + `X-Request-ID`), **no key material in logs**, CORS env parse + the
+  `*`-forfeits-credentials invariant, preflight unaffected. `test_llm_providers.py` (+17):
+  ITM-010 encoding matrix (decimal/hex/octal/dotted/short-form rejected), all-numeric-invalid
+  hosts fail closed, digit-leading real hostnames pass, IPv6 regression.
+  `test_fileio.py` (7): atomic-write round-trip, overwrite, parent dirs, `default=`,
+  **failed write keeps old content**, no temp residue. `test_store_robustness.py` (6):
+  corrupt v2/legacy records quarantined (skip, not 500), **preserved verbatim across saves**
+  incl. the migration save, profile + schema stores, log-once-per-instance.
+  `test_error_handling.py` (+5): ITM-017 — unexpected `/nl2sql` failure returns generic +
+  `error_id` (full detail server-side), `LLMError`/`ValueError`/`SecretConfigError` stay
+  verbatim (the 500 now with a breadcrumb), UI `log_error_for_ui` ref.
 - **Observability & error handling (Phase 6)** — `test_logging_config.py` (7): JSON formatter
   emits valid JSON + base keys, `request_id` stamping, text mode, **idempotent** handlers,
   `LOG_LEVEL`, audit record round-trips as **secret-free** JSON. `test_error_handling.py`
@@ -90,3 +104,4 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 | 1.3 | 2026-06-10 | QA/Eng | Phase 5: +25 tests (dictionary helpers, schema store, introspection SELECT-safety + mapping, /schemas API, dictionary smoke) → 155 total. |
 | 1.4 | 2026-06-10 | QA/Eng | Phase 6: +22 tests (logging config/JSON, error sanitization + correlation incl. ITM-015 leak proof, metrics) → 182 total; CI 3.11+3.13 matrix; observability manual-check added. |
 | 1.5 | 2026-06-10 | QA/Eng | Phase 6 r1 remediation: +3 tests (introspect leak, inbound-id sanitization, sanitize unit) → 185; re-pinned to a clean-install-proven 3.13-capable set (F-1/F-2); leak tests now assert headers + cover `/schemas/introspect`. |
+| 1.6 | 2026-06-11 | QA/Eng | Phase 6.5: +51 tests (auth on/off + CORS invariant, ITM-010 encoding matrix, atomic-write contract, corrupt-record quarantine, ITM-017 surfaces) → **236 total**. |

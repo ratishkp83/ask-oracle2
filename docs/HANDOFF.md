@@ -57,13 +57,16 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
   11.0.0; `httpx<0.28` keeps openai 1.43.0); F-3/F-4/F-5 fixed. **185 tests.** Pushed
   (`d059295..2a88a04`); **CI run #7 green on both 3.11 + 3.13 → ITM-016 CLOSED**; no open
   residual.
-- **Phase 6.5 (Pre-Deployment Hardening): Discovery OPENED 2026-06-11** — bundles the carried
-  Phase-7 preconditions ITM-009 (CORS/auth, RISK-12), ITM-010 (base_url IP encodings),
-  ITM-013/014 (file-store durability, RISK-16), ITM-017 (non-DB `str(exc)` surfaces) into one
-  charter → design → build → exit-gate cycle
-  ([charters/phase-6.5-charter.md](charters/phase-6.5-charter.md)). **Decisions D-A…D-F pending
-  owner approval; no code until approved.** RISK-04 (live-Oracle pass) stays out of scope
-  (owner-scheduled). See §8.
+- **Phase 6.5 (Pre-Deployment Hardening): build B1…B6 COMPLETE 2026-06-11** ([charter](charters/phase-6.5-charter.md) ·
+  [design](pre-deployment-hardening-design.md)). Decisions D-A…D-F + design owner-approved
+  same day. Delivered: **B1** opt-in `X-API-Key` auth + env-driven CORS (`core/auth.py`,
+  ADR-013); **B2** `validate_base_url` numeric-encoding decode, fail-closed (ITM-010);
+  **B3** `core/fileio.py` atomic writes across the 4 JSON stores (ADR-014); **B4**
+  corrupt-record quarantine (skip-and-log, preserve-on-save) in report/profile/schema stores;
+  **B5** ITM-017 surfaces routed (nl2sql split; SecretConfigError verbatim + breadcrumb/refs);
+  **B6** governed-doc sweep — **ITM-009/010/013/014/017 CLOSED; RISK-12 Closed, RISK-16
+  Mitigating (single-worker D7 constraint)**. **236 tests**; chokepoint untouched. RISK-04
+  (live-Oracle pass) stays out of scope (owner-scheduled). **Exit-gate review pending** — see §8.
 
 ## 5. Non-negotiables (must never regress)
 - **SELECT/CTE only.** All DML/DDL/PL-SQL/stacked/`FOR UPDATE` rejected, fail-closed, via the single `/execute` chokepoint (`src/core/sql_safety.py`); both UI and API route through it. Verify with `tests/test_sql_safety.py` + `test_execute_endpoint.py`.
@@ -97,18 +100,18 @@ across the 4 JSON stores + corrupt-record robustness), ITM-017 (non-DB `str(exc)
 into one charter → design → build → independent exit-gate review. RISK-04 (live-Oracle pass)
 stays a separate, owner-scheduled pre-GA activity.
 
-**Decisions D-A…D-F are RESOLVED (2026-06-11, all as recommended — see the charter's
-"Decisions" section).** The design + build sequence is drafted at
-[pre-deployment-hardening-design.md](pre-deployment-hardening-design.md) (B1 edge auth/CORS →
-B2 base_url → B3 atomic writes → B4 corrupt-record quarantine → B5 ITM-017 → B6 doc sweep).
-**The gate right now is P6.5-DES: owner approval of the design — no code until approved.**
-After approval: build B1…B6 → R6.5.x exit-gate review (reviewer ≠ author) → PASS → close;
-then Phase 7 (optional) may open.
+**Build B1…B6 is COMPLETE (2026-06-11; 236 tests green; all five carried ITMs closed).**
+**The gate right now is the R6.5.x independent exit-gate review** ([gate](process/external-review-gate.md)):
+prepare the review package (R6.5.1), then the **owner supplies a fresh reviewer agent**
+(reviewer ≠ author, briefed with [process/adversarial-reviewer-prompt.md](process/adversarial-reviewer-prompt.md)
++ the phase change range) → triage findings → remediate blocking → re-review until
+PASS / PASS-WITH-FIXES → record sign-off. After the gate: Phase 6.5 closes and Phase 7
+(optional) may open, with RISK-04 (owner-scheduled live-Oracle pass) still standing pre-GA.
 
-**First steps on resume:** confirm the working tree is clean and **185 tests pass**
+**First steps on resume:** confirm the working tree is clean and **236 tests pass**
 (`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
-[task-tracker.md](task-tracker.md) P6.5-DES — if the design is still pending approval, get it
-approved before any code; if approved, start the build at B1.
+[task-tracker.md](task-tracker.md) R6.5.x — if the review hasn't run, the owner runs the
+reviewer against the package; if findings are open, remediate and re-review.
 
 ## Revision history
 | Version | Date | Author | Change |
@@ -125,3 +128,4 @@ approved before any code; if approved, start the build at B1.
 | 1.9 | 2026-06-10 | Delivery | Resume-readiness pass: removed stale §8 leftovers ("draft Phase 6 charter"/"160 tests"/"unpushed"); §4/§7 reconciled (185 tests, all pushed, carried items incl. ITM-017); next = Phase 7 (optional) or owner direction. |
 | 2.0 | 2026-06-11 | Delivery | Phase 6.5 (Pre-Deployment Hardening) Discovery OPENED — bundles ITM-009/010/013/014/017 (RISK-12/16) into one gated mini-phase; charter drafted; next action = owner resolves decisions D-A…D-F before any code. |
 | 2.1 | 2026-06-11 | Delivery | P6.5 decisions D-A…D-F resolved (all as recommended); design + build sequence B1…B6 drafted (`pre-deployment-hardening-design.md`); next action = owner approves the design before any code. |
+| 2.2 | 2026-06-11 | Delivery | P6.5 design approved + build B1…B6 complete (236 tests; ITM-009/010/013/014/017 CLOSED; RISK-12 Closed/RISK-16 Mitigating; ADR-013/014). Next action = R6.5.x exit-gate review (owner-supplied reviewer). |

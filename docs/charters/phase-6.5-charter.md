@@ -1,6 +1,6 @@
 # Phase 6.5 Charter — Pre-Deployment Hardening (carried preconditions)
 
-> **Document:** Phase Charter · **Version:** 1.2 · **Status:** 🔄 Build (design approved 2026-06-11; executing B1…B6) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
+> **Document:** Phase Charter · **Version:** 1.3 · **Status:** 🔄 Review (build B1…B6 complete 2026-06-11, 236 tests; exit-gate review pending) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
 
 ## Lifecycle stage
 **Discovery OPENED 2026-06-11; owner approved and resolved decisions D-A…D-F (all as
@@ -226,3 +226,4 @@ Owner approved the charter and resolved **all six decisions as recommended**.
 | 1.0 | 2026-06-11 | Product/Eng | Discovery charter opened; bundles ITM-009/010/013/014/017 (RISK-12/16) as one pre-deployment hardening mini-phase; objectives/scope/deliverables/risks/success criteria + open decisions D-A…D-F; **pending owner approval before any code**. |
 | 1.1 | 2026-06-11 | Product/Eng | Owner approved; decisions D-A…D-F resolved (all as recommended). Discovery complete → Design (design + build sequence pending owner approval before code). |
 | 1.2 | 2026-06-11 | Product/Eng | Design + build sequence approved by owner ([pre-deployment-hardening-design.md](../pre-deployment-hardening-design.md)) → Build; executing B1…B6. |
+| 1.3 | 2026-06-11 | Product/Eng | Build B1…B6 complete (**236 tests**; ITM-009/010/013/014/017 CLOSED; RISK-12 Closed, RISK-16 Mitigating). Next: R6.5.x exit-gate review (reviewer ≠ author, owner-supplied). |
