@@ -1,4 +1,10 @@
 services:
+  # ── FastAPI reporting API ────────────────────────────────────────────────────
+  # Accepts SQL execution, NL→SQL, profile management, schema tools.
+  # Deployment preconditions (docs/adr/ADR-009, docs/07-deployment-plan.md §5):
+  #   1. Connect only with a least-privilege, read-only Oracle account.
+  #   2. APP_SECRET_KEY must be set (profile-password encryption).
+  #   3. For any networked/non-localhost exposure: set APP_API_KEY and ALLOWED_ORIGINS.
   - type: web
     name: ask-oracle2-api
     env: python
@@ -7,15 +13,58 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
+      # ── LLM credentials (at least one provider key required for NL→SQL) ──
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
         value: llama3-70b-8192
+      # Uncomment to use OpenAI instead of Groq:
+      # - key: OPENAI_API_KEY
+      #   sync: false
+      # - key: OPENAI_MODEL
+      #   value: gpt-4o-mini
+
+      # ── Required secrets ─────────────────────────────────────────────────
+      # Derives the Fernet key used to encrypt saved profile passwords.
+      # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # WARNING: rotating this key invalidates all saved profiles (re-enter required).
+      - key: APP_SECRET_KEY
+        sync: false
+      # Enables X-API-Key authentication on every endpoint except /health.
+      # REQUIRED for any networked / non-localhost exposure (ADR-013).
+      # Leave unset only for trusted-network-only or local deployments.
+      - key: APP_API_KEY
+        sync: false
+
+      # ── CORS (required for direct browser-to-API access) ─────────────────
+      # Comma-separated explicit origins, e.g. https://myapp.example.com
+      # Do NOT use a bare "*" — that forfeits credentials (ADR-013).
+      # Blank/whitespace falls back to localhost defaults (local-only).
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+      # ── Storage ──────────────────────────────────────────────────────────
+      # Render note: ephemeral filesystem resets on redeploy.
+      # For persistent storage add a Render Disk mounted at /app/storage.
+      - key: STORAGE_DIR
+        value: /opt/render/project/src/storage
+
+      # ── Logging ──────────────────────────────────────────────────────────
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: json
+
+      # ── Python / runtime ─────────────────────────────────────────────────
       - key: PYTHON_VERSION
-        value: "3.11.0"
+        value: "3.13.0"
       - key: PYTHONPATH
         value: /opt/render/project/src
 
+  # ── Streamlit UI ─────────────────────────────────────────────────────────────
+  # Browser-based interface: connect → introspect → ask / write SQL → review → run → export.
+  # Deployment preconditions same as above except APP_API_KEY/ALLOWED_ORIGINS
+  # (those govern the HTTP API; the UI runs Python directly, not via HTTP).
   - type: web
     name: ask-oracle2-ui
     env: python
@@ -23,13 +72,28 @@ services:
     startCommand: streamlit run src/app.py --server.address=0.0.0.0 --server.port=$PORT --server.headless=true --server.enableCORS=false --server.enableXsrfProtection=false
     plan: free
     envVars:
+      # ── LLM credentials ──────────────────────────────────────────────────
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
         value: llama3-70b-8192
+
+      # ── Required secrets ─────────────────────────────────────────────────
+      - key: APP_SECRET_KEY
+        sync: false
+
+      # ── Storage ──────────────────────────────────────────────────────────
       - key: STORAGE_DIR
         value: /opt/render/project/src/storage
+
+      # ── Logging ──────────────────────────────────────────────────────────
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: json
+
+      # ── Python / runtime ─────────────────────────────────────────────────
       - key: PYTHON_VERSION
-        value: "3.11.0"
+        value: "3.13.0"
       - key: PYTHONPATH
         value: /opt/render/project/src

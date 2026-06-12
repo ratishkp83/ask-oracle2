@@ -1,19 +1,57 @@
+# Ask Oracle Reports — local Docker Compose
+#
+# Usage (pick ONE at a time — see single-worker note below):
+#   FastAPI reporting API:   docker compose --profile api up --build
+#   Streamlit browser UI:    docker compose --profile ui  up --build
+#
+# Single-worker constraint (RISK-16 / docs/07-deployment-plan.md §5):
+#   Both services write to the same 'storage' volume (profiles, reports, schemas).
+#   Running api + ui simultaneously causes concurrent JSON-store writes, which
+#   are not safe. Always run only one service profile at a time in local Docker.
+#   (On Render each service gets its own filesystem, so there is no shared store.)
+#
+# Secrets: copy .env.example → .env and fill in values. Never inline keys here.
+# See docs/07-deployment-plan.md for full configuration reference.
+
 services:
+
+  # ── FastAPI reporting API ─────────────────────────────────────────────────
   api:
+    profiles: ["api"]
     build:
       context: .
       dockerfile: Dockerfile.api.local
     ports:
       - "8000:8000"
-    # Secrets and config are read from a local, git-ignored .env file.
-    # Copy .env.example to .env and fill in real values. Never inline keys here.
     env_file:
       - .env
     environment:
       - PORT=8000
+    volumes:
+      - storage:/app/storage
     restart: always
 
+  # ── Streamlit browser UI ──────────────────────────────────────────────────
+  ui:
+    profiles: ["ui"]
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      - PORT=8501
+    volumes:
+      - storage:/app/storage
+    restart: always
+
+  # ── Inactive Vite/React scaffold ──────────────────────────────────────────
+  # Placeholder from Phase 1; not wired to the Python backend.
+  # docker compose --profile frontend up
   frontend:
+    profiles: ["frontend"]
     image: node:20-slim
     working_dir: /app
     volumes:
@@ -22,3 +60,7 @@ services:
       - "5173:5173"
     command: sh -c "npm install && npm run dev -- --host"
     restart: always
+
+volumes:
+  # Named volume keeps profiles/reports/schemas across container restarts.
+  storage:

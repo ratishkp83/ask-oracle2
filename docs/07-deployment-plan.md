@@ -1,6 +1,6 @@
 # D7 — Deployment Plan
 
-> **Document:** Deployment Plan · **Version:** 1.5 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-11
+> **Document:** Deployment Plan · **Version:** 1.6 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-12
 
 ## 0. Required database account (read-only) — **non-negotiable precondition**
 
@@ -34,8 +34,14 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 | Env | UI | API | Config source |
 |-----|----|----|---------------|
 | Local (bare) | `streamlit run src/app.py` | `uvicorn src.api:app` | git-ignored `.env` (via python-dotenv) |
-| Local (Docker) | frontend service (node) | api service (`Dockerfile.api.local`) | `env_file: .env` |
-| Hosted (Render) | `ask-oracle2-ui` | `ask-oracle2-api` | Dashboard env vars (`sync: false`) |
+| Local (Docker) | `docker compose --profile ui up --build` (`Dockerfile.local`, Python 3.13-slim) | `docker compose --profile api up --build` (`Dockerfile.api.local`, Python 3.13-slim) | `env_file: .env` — copy `.env.example` → `.env` |
+| Hosted (Render) | `ask-oracle2-ui` (`render.yaml`, Python 3.13) | `ask-oracle2-api` (`render.yaml`, Python 3.13) | Dashboard env vars (`sync: false` for secrets) |
+
+> **Docker single-worker constraint (RISK-16):** both Docker services write to the same
+> named `storage` volume. Run only **one profile at a time** (`--profile api` *or*
+> `--profile ui`). Concurrent writes to the same JSON store are not safe. On Render each
+> service has its own ephemeral filesystem (no shared store; storage resets on redeploy
+> unless a Render Disk is mounted at `/opt/render/project/src/storage`).
 
 ## 2. Configuration (environment variables)
 
@@ -50,6 +56,7 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 | `LOG_FORMAT` | `json` (stdout, 12-factor) or `text` (human-readable, local dev) | No (default `json`) |
 | `APP_API_KEY` | Enables API auth: every endpoint except `/health` then requires `X-API-Key` ([ADR-013](adr/ADR-013-network-edge-hardening.md)) | **Yes for any networked exposure**; unset = open (localhost only) |
 | `ALLOWED_ORIGINS` | CORS origins, comma-separated explicit list (a literal `*` forfeits credentials; blank/whitespace falls back to the default). **Read once at startup — changing it requires a process restart** (unlike `APP_API_KEY`, which is read per-request) | No (default `http://localhost:8501,http://localhost:3000`) |
+| `LLM_POLICY` | Controls external-LLM access: `local_external` (default — use external if key present), `local_only` (no external sends), `external_disabled` (block all LLM) | No (default `local_external`) |
 | `SCRUB_PII` | When truthy, masks PII (email/SSN/card/phone) in the NL question before an **external** LLM send (ITM-008). Opt-in — over-masking can degrade queries | No (default **off**) |
 
 > **No secrets in source or `docker-compose.yml`.** All come from env. `.env` is git-ignored.
@@ -71,8 +78,10 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 1. Green CI on the branch.
 2. Docs current (CHANGELOG entry added).
 3. **Confirm the connecting Oracle account is least-privilege read-only** (§0 / [ADR-009](adr/ADR-009-readonly-db-account-precondition.md)).
-4. Tag/commit; deploy (Render auto-deploy on push, or `docker compose up --build -d`).
-5. Post-deploy: hit `/health`; run profile test against a sandbox.
+4. **Confirm `APP_SECRET_KEY` is set** in the target environment (profiles cannot be created without it).
+5. **For any networked / non-localhost exposure:** confirm `APP_API_KEY` is set and `ALLOWED_ORIGINS` lists only trusted origins (ADR-013). Never deploy to a public URL without auth.
+6. Tag/commit; deploy (Render auto-deploy on push, or `docker compose --profile api up --build -d` / `docker compose --profile ui up --build -d`).
+7. Post-deploy: hit `/health`; run a profile test against a sandbox.
 
 ## 5. Rollback
 
@@ -108,3 +117,4 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 | 1.3 | 2026-06-11 | Eng/Ops | Phase 6.5 (B1): `APP_API_KEY`/`ALLOWED_ORIGINS` env vars + network-exposure rule (ADR-013); `/metrics` auth-gated when enabled. |
 | 1.4 | 2026-06-11 | Eng/Ops | Phase 6.5 review r1/R4: documented `ALLOWED_ORIGINS` is read once at startup (restart to change) vs `APP_API_KEY` per-request; blank-value fallback noted. |
 | 1.5 | 2026-06-11 | Eng/Ops | Round C1/B3: `SCRUB_PII` env flag added (optional NL-question PII scrubbing on external send; ITM-008). |
+| 1.6 | 2026-06-12 | Eng/Ops | Deployment GA-readiness hardening: `render.yaml` adds `APP_SECRET_KEY`/`APP_API_KEY`/`ALLOWED_ORIGINS`/`LOG_LEVEL`/`LOG_FORMAT`/`STORAGE_DIR` + Python 3.13.0; Dockerfiles pinned to Python 3.13-slim (matches CI matrix); `docker-compose.yml` adds Compose profiles (`--profile api|ui|frontend`), named `storage` volume, `ui` (Streamlit) service; `.env.example` adds 6 missing vars (`APP_API_KEY`, `ALLOWED_ORIGINS`, `LLM_POLICY`, `SCRUB_PII`, `LOG_LEVEL`, `LOG_FORMAT`); §2 adds `LLM_POLICY`; §4 release checklist adds APP_SECRET_KEY/APP_API_KEY/ALLOWED_ORIGINS gates; §1 Docker notes updated for profiles + single-worker constraint. |

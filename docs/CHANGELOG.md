@@ -4,6 +4,26 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Changed (Deployment GA-readiness hardening)
+- **`render.yaml`:** added `APP_SECRET_KEY`, `APP_API_KEY`, `ALLOWED_ORIGINS` (all `sync: false`),
+  `LOG_LEVEL` (INFO), `LOG_FORMAT` (json), and `STORAGE_DIR` to both services; bumped `PYTHON_VERSION`
+  from 3.11.0 → 3.13.0 to match the CI-validated matrix. Previously the three security-critical vars
+  were absent, meaning a naïve Render deploy would boot without profile-encryption or API auth.
+- **`Dockerfile.api.local` + `Dockerfile.local`:** base image bumped from `python:3.12-slim` →
+  `python:3.13-slim`, aligning the container image with the CI-tested 3.11/3.13 matrix.
+- **`docker-compose.yml`:** added Compose profiles (`api`, `ui`, `frontend`) so services start
+  independently, enforcing the single-worker-per-store constraint (RISK-16). Added the `ui`
+  (Streamlit) service (`Dockerfile.local`, port 8501) which was previously absent. Added a named
+  `storage` volume so profiles/reports/schemas survive container restarts. Moved the inactive
+  Vite/React `frontend` service to the `frontend` profile. Usage: `docker compose --profile api up
+  --build` *or* `docker compose --profile ui up --build` (not both simultaneously).
+- **`.env.example`:** added six missing env vars introduced since the file was last updated:
+  `APP_API_KEY` (Phase 6.5), `ALLOWED_ORIGINS` (Phase 6.5), `LLM_POLICY` (Phase 3),
+  `SCRUB_PII` (Round C1), `LOG_LEVEL` (Phase 6), `LOG_FORMAT` (Phase 6); each with inline guidance.
+- **`docs/07-deployment-plan.md`:** §1 updated for Docker profile commands + single-worker
+  constraint note; §2 adds `LLM_POLICY`; §4 release checklist adds explicit `APP_SECRET_KEY` and
+  `APP_API_KEY`/`ALLOWED_ORIGINS` gates before deploy; revision history updated.
+
 ### Added (Phase 7 — EBS Intelligence & 23ai)
 - **EBS metadata packs (B1)** ([ADR-015](adr/ADR-015-ebs-metadata-packs.md)): `src/core/ebs_packs.py`
   — curated, read-only per-module (GL/AP/AR/PO/OM) **metadata**: table descriptions, key columns,

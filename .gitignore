@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+# Vite's *.local pattern above would catch our Dockerfiles — un-ignore them explicitly.
+!Dockerfile.local
+!Dockerfile.*.local
 
 # Editor directories and files
 .vscode/*
