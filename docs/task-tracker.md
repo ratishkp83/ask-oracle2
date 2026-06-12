@@ -183,9 +183,10 @@ track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = dec
 | P7-3 | **B3** UI: Data Dictionary packs browser + Query Builder module multiselect | ✅ Completed | Data Dictionary "EBS Packs" expander (tables + glossary); Query Builder NL-mode module multiselect → `ebs_modules`; headless smoke green (279) |
 | P7-4 | **B4** `/packs` read-only API | ✅ Completed | `GET /packs` + `GET /packs/{module}` (404 uniform envelope); 5 tests (**279 total**); D5 v1.9 |
 | P7-5 | **B5** `/v1` API prefix via router (back-compat) | ✅ Completed | every route on an `APIRouter` mounted at `""` + `/v1`; handlers/middleware/auth on app; `/v1/health` exempt; 6 tests (**285 total**); D5 v1.10; **T-18 CLOSED** |
-| P7-6 | **B6** 23ai deferral ADR/note + ITM-018 | 📋 Planned | per D-A |
-| P7-7 | **B7** Governed-doc sweep + traceability + registers | 📋 Planned | lockstep |
-| R7.x | Independent exit-gate review (reviewer ≠ author) | 📋 Planned | iterate to PASS |
+| P7-6 | **B6** 23ai deferral ADR/note + ITM-018 | ✅ Completed | [ADR-016](adr/ADR-016-defer-23ai-vector-track.md) records the direction; **ITM-018** logged (deferred, not dropped) |
+| P7-7 | **B7** Governed-doc sweep + traceability + registers | ✅ Completed | D3/D5/D6/traceability (FR-14) + ADR index + CHANGELOG + issue-log in lockstep; review package prepared |
+| R7.1 | Prepare exit-gate review package | ✅ Completed | [reviews/phase-7-review-package.md](reviews/phase-7-review-package.md); range `baf4224..HEAD` |
+| R7.2+ | Independent adversarial exit-gate review (reviewer ≠ author, owner-supplied) | 📋 Planned | iterate to PASS |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -266,3 +267,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.42 | 2026-06-12 | Delivery | Phase 7 **B2 done** (P7-2): opt-in `ebs_modules` in `generate_sql_from_nl` + `/nl2sql` (external-only, combined context through `assert_no_values`); D5 v1.8; 274 tests. Next: B3 UI. |
 | 1.43 | 2026-06-12 | Delivery | Phase 7 **B4 + B3 done** (P7-4/P7-3): read-only `/packs` API (D5 v1.9; +5 → 279) + UI (Data Dictionary EBS-packs browser, Query Builder module multiselect; smoke green). Next: B5 `/v1` prefix, B6 defer, B7 sweep. |
 | 1.44 | 2026-06-12 | Delivery | Phase 7 **B5 done** (P7-5): `/v1` prefix via APIRouter mounted twice (back-compat); auth + safety gate enforced on `/v1`; `/v1/health` exempt; **T-18 CLOSED**; D5 v1.10; 285 tests. Next: B6 defer, B7 sweep. |
+| 1.45 | 2026-06-12 | Delivery | Phase 7 **B6 + B7 done**: ADR-016 (23ai deferral) + ITM-018; governed-doc sweep (traceability FR-14, D6, registers); **build B1…B7 complete (285 tests)**; R7.1 review package prepared. Next: R7.2 independent exit-gate review (owner-supplied). |

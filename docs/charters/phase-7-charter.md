@@ -1,6 +1,6 @@
 # Phase 7 Charter — EBS Intelligence & Oracle 23ai Enhancements (optional)
 
-> **Document:** Phase Charter · **Version:** 1.1 · **Status:** 🔄 Design (decisions resolved 2026-06-12; design + build sequence pending owner approval — **no code until approved**) · **Owner:** Product/Engineering · **Last updated:** 2026-06-12
+> **Document:** Phase Charter · **Version:** 1.2 · **Status:** 🔄 Review (build B1…B7 complete 2026-06-12, 285 tests; exit-gate review pending) · **Owner:** Product/Engineering · **Last updated:** 2026-06-12
 
 ## Lifecycle stage
 **Discovery OPENED 2026-06-12.** Phases 1–6, 6.5 and Round C1 are all closed; the product is
@@ -132,3 +132,4 @@ Owner resolved all four as recommended:
 |---------|------|--------|--------|
 | 1.0 | 2026-06-12 | Product/Eng | Discovery charter opened — scope proposal for the optional Phase 7 (EBS metadata packs + glossary as primary track; 23ai vector as a decide-deliberately track; optional fold-ins); decisions D-A…D-D; **pending owner approval before any code.** |
 | 1.1 | 2026-06-12 | Product/Eng | Owner resolved D-A (defer 23ai, tracked fast-follow), D-B (all 5 modules, core tables), D-C (read-only curated), D-D (fold in `/v1` T-18; not ITM-011). Discovery → Design. |
+| 1.2 | 2026-06-12 | Product/Eng | Design approved → build **B1…B7 complete** (285 tests; ADR-015/016; **T-18 CLOSED**; ITM-018 logged). Next: R7.2 independent exit-gate review (reviewer ≠ author, owner-supplied). |

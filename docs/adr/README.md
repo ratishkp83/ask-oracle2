@@ -23,5 +23,6 @@ new ADR that references the old one (don't rewrite history).
 | [ADR-013](ADR-013-network-edge-hardening.md) | Network-edge hardening (opt-in API-key auth + explicit env-driven CORS) | Accepted |
 | [ADR-014](ADR-014-file-store-durability.md) | File-store durability (atomic JSON writes; corrupt-record quarantine) | Accepted |
 | [ADR-015](ADR-015-ebs-metadata-packs.md) | EBS metadata packs as curated, redaction-safe NL→SQL overlays | Accepted |
+| [ADR-016](ADR-016-defer-23ai-vector-track.md) | Defer the Oracle 23ai vector track (record direction; ITM-018) | Accepted |
 
 Template: [ADR-template.md](ADR-template.md).
