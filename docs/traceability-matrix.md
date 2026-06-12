@@ -1,6 +1,6 @@
 # D13 — Traceability Matrix
 
-> **Document:** Traceability Matrix · **Version:** 1.8 · **Status:** Living · **Owner:** QA/Engineering · **Last updated:** 2026-06-12
+> **Document:** Traceability Matrix · **Version:** 1.9 · **Status:** Living · **Owner:** QA/Engineering · **Last updated:** 2026-06-12
 
 Maps requirements → design → implementation → tests, so coverage gaps are visible.
 
@@ -22,7 +22,7 @@ Maps requirements → design → implementation → tests, so coverage gaps are 
 | FR-14 EBS metadata packs & glossary | [ADR-015](adr/ADR-015-ebs-metadata-packs.md), [Design](ebs-intelligence-design.md) | `core/ebs_packs.py`, `nl2sql.py` (opt-in context), `api.py:/packs` + `/nl2sql` `ebs_modules`, `app.py` (Data Dictionary browser + NL multiselect); **validation:** `scripts/ebs_pack_validate.py` + [self-audit](reviews/ebs-pack-self-audit.md) (ITM-012) | `test_ebs_packs.py`, `test_packs_api.py`, `test_nl2sql.py` (EBS context), `test_ebs_pack_validate.py` |
 | NFR-1 Safety/fail-closed | [ADR-001](adr/ADR-001-sql-safety-engine.md), [ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md), [ADR-009](adr/ADR-009-readonly-db-account-precondition.md), [ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md) | `core/sql_safety.py` (incl. `SELECT…INTO` reject), `db.py:validate_binds`, introspection via chokepoint | `test_sql_safety.py` (26), `test_bind_safety.py` (14), `test_introspection.py` |
 | NFR-2 Secret confidentiality | [ADR-002](adr/ADR-002-encrypted-profiles.md), [ADR-003](adr/ADR-003-secrets-via-env.md) | `core/crypto.py`, `storage.py` (no plaintext password), `.gitignore` | `test_profiles.py::test_file_store_encrypts_at_rest`, `test_storage.py` |
-| NFR-6 Testability/CI | [Test Strategy](06-test-strategy.md) | `tests/`, CI workflow (3.11+3.13 matrix) | full suite (289) |
+| NFR-6 Testability/CI | [Test Strategy](06-test-strategy.md) | `tests/`, CI workflow (3.11+3.13 matrix) | full suite (293) |
 | NFR-7 Observability & safe error handling | [ADR-012](adr/ADR-012-observability-and-error-handling.md), [Design](observability-error-handling-design.md) | `core/logging_config.py`, `core/errors.py`, `core/metrics.py`, `api.py` middleware/handlers, `app.py` UI sanitizer | `test_logging_config.py`, `test_error_handling.py` (incl. ITM-015 leak proof + ITM-017 surfaces), `test_metrics.py` |
 | NFR-8 Deployment hardening (edge auth/CORS, SSRF encodings, store durability) | [ADR-013](adr/ADR-013-network-edge-hardening.md), [ADR-014](adr/ADR-014-file-store-durability.md), [Design](pre-deployment-hardening-design.md) | `core/auth.py`, `api.py` CORS config, `core/llm/providers.py` host decode, `core/fileio.py`, store quarantine (`reports`/`profiles`/`schema_store`) | `test_auth.py`, `test_llm_providers.py` (encoding matrix), `test_fileio.py`, `test_store_robustness.py` |
 
@@ -41,3 +41,4 @@ Maps requirements → design → implementation → tests, so coverage gaps are 
 | 1.6 | 2026-06-11 | QA/Eng | Round C1 (ITM-007/006/008): suite 260; `core/llm/pii.py` opt-in PII scrubbing, `connection.json` write path retired. |
 | 1.7 | 2026-06-12 | QA/Eng | Round C1 review r1 remediation (C1-R1-F1/F2): storage delete-warning + load TOCTOU; suite 262. |
 | 1.8 | 2026-06-12 | QA/Eng | Phase 7: FR-14 (EBS metadata packs & glossary; ADR-015) added; `/v1` (T-18) + `/packs`; suite 285. |
+| 1.9 | 2026-06-12 | QA/Eng | Phase 7 validator (ITM-012 method) + review r1 remediation (F1/F2); suite 293. |

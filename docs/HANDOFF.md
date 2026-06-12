@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 3.2 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
+> **Document:** Session Handoff · **Version:** 3.3 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -136,8 +136,17 @@ scope; D-C build ITM-008 behind a default-off flag). Build order B1…B6:
   reporting product** subject to the §5 deployment preconditions; the **EBS template pack is beta
   pending ITM-012**.
 
-**Project state: Phases 1–6 + 6.5 + Round C1 CLOSED; Phase 7 build B1…B7 COMPLETE
-(2026-06-12) — exit-gate review pending.** Decisions resolved (defer 23ai / 5 modules core /
+**Project state: ALL PHASES CLOSED (2026-06-12) — Phases 1–6, 6.5, Round C1, and Phase 7.**
+Phase 7 exit-gate review r1 = **PASS** ([phase-7-review-r1.md](reviews/phase-7-review-r1.md); no
+blocking; all 7 invariants) → two S4 findings remediated (P7-R1-F1 `ebs_modules` unknown→422;
+P7-R1-F2 `/v1` POST auth tests) → **293 tests**. **Phase 7 CLOSED.** Standing carries (both need
+external access, not code): **ITM-012** (validate EBS pack/template contents vs a real EBS — the
+validator `scripts/ebs_pack_validate.py` + [self-audit](reviews/ebs-pack-self-audit.md) are ready);
+**ITM-018** (the deferred Oracle 23ai vector track — needs a 23ai instance).
+
+----
+
+**Phase 7 (what shipped, for reference) — build B1…B7 COMPLETE (2026-06-12):** Decisions resolved (defer 23ai / 5 modules core /
 read-only / fold in `/v1`). Delivered ([design](ebs-intelligence-design.md)): **B1**
 `core/ebs_packs.py` curated packs + glossary for GL/AP/AR/PO/OM ([ADR-015](adr/ADR-015-ebs-metadata-packs.md));
 **B2** opt-in `ebs_modules` NL→SQL context (external-only, combined context through
@@ -147,18 +156,16 @@ back-compat + auth + safety preserved); **B6** 23ai deferral ([ADR-016](adr/ADR-
 **ITM-018**); **B7** doc sweep. **285 tests; chokepoint + redaction untouched.** Pack contents
 still need real-EBS validation (ITM-012).
 
-**The gate now is the R7.2 independent exit-gate review** ([gate](process/external-review-gate.md);
-reviewer ≠ author, owner-supplied) — package ready at
-[reviews/phase-7-review-package.md](reviews/phase-7-review-package.md) (range `baf4224..HEAD`).
-After PASS → close Phase 7. The remaining roadmap fast-follow is the deferred 23ai track (ITM-018,
-needs a 23ai instance).
+Exit-gate review **r1 = PASS** → P7-R1-F1/F2 (S4) remediated → **293 tests**. **Phase 7 CLOSED.**
 
-**First steps on resume:** confirm the working tree is clean and **285 tests pass**
-(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
-[task-tracker.md](task-tracker.md) R7.2 — owner runs the reviewer against the package; remediate
-findings → close. *(XE setup persists on this box: listener `OracleOraDB21Home1TNSListener` must
-be running, then `python scripts/c1_live_smoke.py`; the Streamlit UI runs via preview server
-`ask-oracle-ui` → localhost:8501 with the pre-loaded "XE (read-only)" profile.)*
+**First steps on resume:** confirm the working tree is clean and **293 tests pass**
+(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2). **Nothing is pending in
+code** — all planned phases are closed. Future work is owner-initiated: **ITM-012** (run
+`scripts/ebs_pack_validate.py` against a real EBS 12.2 instance to validate pack/template contents)
+and **ITM-018** (open a chartered 23ai effort once a 23ai instance exists). *(XE setup persists on
+this box for the core product: listener `OracleOraDB21Home1TNSListener` must be running, then
+`python scripts/c1_live_smoke.py`; the Streamlit UI runs via preview server `ask-oracle-ui` →
+localhost:8501 with the pre-loaded "XE (read-only)" profile.)*
 
 ## Revision history
 | Version | Date | Author | Change |
@@ -186,5 +193,6 @@ be running, then `python scripts/c1_live_smoke.py`; the Streamlit UI runs via pr
 | 3.0 | 2026-06-12 | Delivery | **Round C1 CLOSED** — RC1 review r1 PASS-WITH-FIXES → F1/F2 remediated (262 tests); **B6 GA-readiness verdict recorded** (GA-ready core product; EBS pack beta/ITM-012). **Phases 1–6 + 6.5 + C1 all closed; only Phase 7 (optional) remains.** |
 | 3.1 | 2026-06-12 | Delivery | Phase 7 Discovery OPENED — EBS metadata packs + glossary (primary) vs 23ai vector (decide-deliberately; XE 21c constraint) + optional fold-ins; next action = owner resolves decisions D-A…D-D before any code. |
 | 3.2 | 2026-06-12 | Delivery | Phase 7 build **B1…B7 COMPLETE** (285 tests; ADR-015/016; T-18 CLOSED; ITM-018): EBS packs + glossary, opt-in NL→SQL context, `/packs`, UI, `/v1` prefix, 23ai deferral. Next = R7.2 independent exit-gate review (owner-supplied). |
+| 3.3 | 2026-06-12 | Delivery | **Phase 7 CLOSED** — exit-gate review r1 = PASS (no blocking); P7-R1-F1/F2 (S4) remediated → 293 tests; ITM-012 validation method (validator + self-audit) shipped. **ALL PHASES CLOSED.** Carries: ITM-012, ITM-018 (need external access). |
 | 2.6 | 2026-06-11 | Delivery | **B2 ITM-006 CLOSED** (RISK-09 Closed): `connection.json` write path retired, read-and-delete migration; 245 tests. Next = B3 ITM-008. |
 | 2.7 | 2026-06-11 | Delivery | **B3 ITM-008 CLOSED**: `core/llm/pii.py` opt-in PII scrubbing (`SCRUB_PII`); 260 tests. All C1 code (B1–B3) done. Remaining: B4 CI confirm, B5 XE live pass, RC1 review, B6 verdict. |

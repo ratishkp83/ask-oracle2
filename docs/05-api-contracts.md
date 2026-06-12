@@ -63,7 +63,7 @@ Body: `ConnectionConfig { host, port?=1521, service_name?, sid?, username, passw
 ### POST /nl2sql
 Body: `{ natural_language, schema_csv?, relationships_csv?, model?, llm?, ebs_modules? }`
 `llm = { provider?, model?, api_key?, base_url? }` (omitted fields fall back to server env; `api_key` used transiently, never logged/persisted).
-`ebs_modules?` *(Phase 7, opt-in)*: list of EBS modules (`["GL","AP","AR","PO","OM"]`) whose curated **metadata** packs (table/column descriptions + glossary, no row data) are appended to the external prompt context — covered by the same redaction tripwire ([ADR-015](adr/ADR-015-ebs-metadata-packs.md)). Omitted/empty → unchanged behaviour.
+`ebs_modules?` *(Phase 7, opt-in)*: list of EBS modules (`["GL","AP","AR","PO","OM"]`, case-insensitive) whose curated **metadata** packs (table/column descriptions + glossary, no row data) are appended to the external prompt context — covered by the same redaction tripwire ([ADR-015](adr/ADR-015-ebs-metadata-packs.md)). Omitted/empty → unchanged behaviour; an **unknown** module → `422`.
 → `200 { sql, explanation, confidence: { level, reasons[] } }`
   - `explanation`: short rationale (may be `null` if the model omitted it).
   - `confidence.level`: `"High" | "Medium" | "Low"` — deterministic heuristic (schema coverage + parse + identifier resolution); **not** a correctness guarantee.

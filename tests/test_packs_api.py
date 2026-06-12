@@ -39,3 +39,17 @@ def test_packs_response_is_metadata_only():
     # No row-data-ish fields should appear in the contract (names/descriptions only).
     blob = client.get("/packs").text
     assert "password" not in blob.lower()
+
+
+# Review P7-R1-F1 — /nl2sql validates ebs_modules instead of silently ignoring.
+def test_nl2sql_rejects_unknown_ebs_module():
+    resp = client.post("/nl2sql", json={"natural_language": "x", "ebs_modules": ["BOGUS"]})
+    assert resp.status_code == 422
+    assert "Unknown EBS module" in resp.text
+
+
+def test_nl2sql_accepts_known_ebs_module_case_insensitive():
+    # A valid (lower-case) module passes validation; the call then 400s on the
+    # empty schema — i.e. it reached the handler, it was NOT rejected as 422.
+    resp = client.post("/nl2sql", json={"natural_language": "x", "ebs_modules": ["ap"]})
+    assert resp.status_code == 400

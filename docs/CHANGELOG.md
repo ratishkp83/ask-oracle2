@@ -70,6 +70,12 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   curated name (all table names High-confidence; two columns flagged to verify first). ITM-012
   close criteria are now explicit (run the validator vs a real EBS → remediate → record evidence).
 
+### Fixed (Phase 7 exit-gate review r1 — PASS, no blocking)
+- **P7-R1-F1 (S4):** `/nl2sql` now **validates** `ebs_modules` — an unknown module returns `422`
+  (was silently ignored), and values are case-normalized (`['ap']` → `AP`).
+- **P7-R1-F2 (S4):** added parametrized `/v1/execute` + `/v1/nl2sql` auth tests (401 without key).
+  Tests **+4 → 293**. Review: [phase-7-review-r1.md](reviews/phase-7-review-r1.md) (verdict **PASS**).
+
 ### Fixed (Round C1 exit-gate review r1 — PASS-WITH-FIXES, no blocking)
 - **C1-R1-F1 (S3):** `migrate_legacy_connection` no longer swallows an `OSError` from
   `os.remove` silently — if the legacy `connection.json` can't be deleted (locked/read-only), it

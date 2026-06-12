@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.0 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-12
+> **Document:** Issue Log · **Version:** 1.0 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-12 (Phase 7 closed)
 
 ## Bug workflow (mandatory)
 
@@ -133,6 +133,17 @@ tests green**. Gate cleared by the verdict; both findings remediated immediately
 | C1-R1-F1 | S3 | `migrate_legacy_connection` swallowed `OSError` from `os.remove(CONFIG_FILE)` with a bare `pass` — if the legacy file can't be deleted (locked/read-only), a plaintext connection file could remain at rest with no warning | **Fixed** — the `except OSError` now logs a `warning` via `get_logger("storage")` (the file path + error, **not** the secret value) and still returns the config so startup proceeds | ✅ Fixed (`test_storage.py::test_migrate_warns_and_proceeds_when_delete_fails`) |
 | C1-R1-F2 | S4 | TOCTOU in `load_connection_config` between `os.path.exists` and `open` — a concurrent delete would raise `FileNotFoundError` up through startup | **Fixed** — dropped the `exists()` check; `open` directly, `except FileNotFoundError: return None` | ✅ Fixed (`test_storage.py::test_load_returns_none_when_file_missing`) |
 
+## Phase 7 — independent review findings & remediation (r1)
+
+Source: [reviews/phase-7-review-r1.md](reviews/phase-7-review-r1.md) — verdict **PASS** (no
+blocking; reviewer ≠ author; all 7 phase invariants verified, incl. chokepoint-untouched and
+EBS-context tripwire-safety). Two S4 observations, both remediated. Post-remediation: **293 tests**.
+
+| ID | Sev | Finding | Disposition | Status |
+|----|-----|---------|-------------|--------|
+| P7-R1-F1 | S4 | Unknown `ebs_modules` (e.g. `["BOGUS"]`) silently ignored by `/nl2sql` — valid 200 but no EBS context and no feedback | **Fixed** — `NL2SQLRequest.ebs_modules` field-validator rejects unknown modules (422 with a clear message) and normalizes case (`['ap']`→`AP`) | ✅ Fixed (`test_packs_api.py`: unknown→422, known-lowercase accepted) |
+| P7-R1-F2 | S4 | `/v1` auth test covered `/v1/metrics` only — `/v1/execute` + `/v1/nl2sql` (safety+auth) not exercised | **Fixed** — parametrized `test_v1_post_endpoints_require_auth` asserts 401 without key on both POST paths | ✅ Fixed (`test_v1_prefix.py`) |
+
 ## Revision history
 
 | Version | Date | Author | Change |
@@ -150,4 +161,5 @@ tests green**. Gate cleared by the verdict; both findings remediated immediately
 | 1.10 | 2026-06-12 | Engineering | Round C1 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); C1-R1-F1 (storage delete-failure now logs a warning) + C1-R1-F2 (load TOCTOU → try/except) remediated; 262 tests. |
 | 1.11 | 2026-06-12 | Engineering | Phase 7 build: **T-18 CLOSED** (`/v1` prefix, B5); **ITM-018 added** (23ai vector track deferred, ADR-016); packs need real-EBS validation → still ITM-012. |
 | 1.12 | 2026-06-12 | Engineering | ITM-012 extended to cover EBS packs + **validation method defined**: self-audit done (`reviews/ebs-pack-self-audit.md`) + automated live validator (`scripts/ebs_pack_validate.py`, offline-tested); close criteria = run vs a real EBS 12.2, remediate, record evidence. |
+| 1.13 | 2026-06-12 | Engineering | Phase 7 exit-gate review r1 = PASS (no blocking); P7-R1-F1 (`ebs_modules` unknown→422) + P7-R1-F2 (`/v1` POST auth tests) remediated; 293 tests. |
 | 1.3 | 2026-06-10 | Engineering | Phase 4: ITM-011 (list/multi-value binds deferred) + ITM-012 (templates not live-EBS validated) logged. |

@@ -167,7 +167,7 @@ new features. **Scope + decisions D-A…D-C pending owner; no code until approve
 | RC1.2 | Independent adversarial exit-gate review (r1) | ✅ Done | verdict **PASS-WITH-FIXES** ([round-C1-review-r1.md](reviews/round-C1-review-r1.md)); no S1/S2; chokepoint diff empty; all B1–B3 invariants verified clean; C1-R1-F1 (S3) + C1-R1-F2 (S4) |
 | RC1.3 | Remediate r1 findings + regression | ✅ Done | C1-R1-F1 storage delete-failure → logged warning (no secret); C1-R1-F2 load TOCTOU → try/except; **+2 → 262 tests** |
 
-## Phase 7 — EBS Intelligence & Oracle 23ai Enhancements (🔄 Discovery OPENED 2026-06-12)
+## Phase 7 — EBS Intelligence & Oracle 23ai Enhancements (✅ CLOSED — exit gate passed 2026-06-12)
 
 Charter: [phase-7-charter.md](charters/phase-7-charter.md). Optional feature phase; primary
 track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = decide-deliberately
@@ -187,7 +187,9 @@ track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = dec
 | P7-7 | **B7** Governed-doc sweep + traceability + registers | ✅ Completed | D3/D5/D6/traceability (FR-14) + ADR index + CHANGELOG + issue-log in lockstep; review package prepared |
 | P7-V | EBS pack validation method (ITM-012) — self-audit + live validator | ✅ Completed | `reviews/ebs-pack-self-audit.md` (confidence-flagged; all tables High) + `scripts/ebs_pack_validate.py` (introspects a real EBS via the chokepoint, diffs every pack table/column; offline-tested, 4 tests → 289); ITM-012 close criteria defined; **live run gated on EBS access** |
 | R7.1 | Prepare exit-gate review package | ✅ Completed | [reviews/phase-7-review-package.md](reviews/phase-7-review-package.md); range `baf4224..HEAD` |
-| R7.2+ | Independent adversarial exit-gate review (reviewer ≠ author, owner-supplied) | 📋 Planned | iterate to PASS |
+| R7.2 | Independent adversarial exit-gate review (r1) | ✅ Done | verdict **PASS** ([phase-7-review-r1.md](reviews/phase-7-review-r1.md)); no blocking; all 7 invariants verified; 2 S4 (P7-R1-F1/F2) |
+| R7.3 | Remediate r1 findings + regression | ✅ Done | F1 `ebs_modules` unknown→422 (+case-normalize); F2 `/v1` POST auth tests; **+4 → 293** |
+| P7-CLOSE | Phase-7 closure sign-off | ✅ Completed | **gate PASSED 2026-06-12**: r1 = PASS (no blocking), F1/F2 remediated, 293 tests, governed docs current. **Phase 7 CLOSED.** EBS packs need real-EBS validation (ITM-012, method defined); 23ai deferred (ITM-018). |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -270,3 +272,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.44 | 2026-06-12 | Delivery | Phase 7 **B5 done** (P7-5): `/v1` prefix via APIRouter mounted twice (back-compat); auth + safety gate enforced on `/v1`; `/v1/health` exempt; **T-18 CLOSED**; D5 v1.10; 285 tests. Next: B6 defer, B7 sweep. |
 | 1.45 | 2026-06-12 | Delivery | Phase 7 **B6 + B7 done**: ADR-016 (23ai deferral) + ITM-018; governed-doc sweep (traceability FR-14, D6, registers); **build B1…B7 complete (285 tests)**; R7.1 review package prepared. Next: R7.2 independent exit-gate review (owner-supplied). |
 | 1.46 | 2026-06-12 | Delivery | ITM-012 validation method (P7-V): EBS pack self-audit (`reviews/ebs-pack-self-audit.md`) + automated live validator (`scripts/ebs_pack_validate.py`, offline-tested); 289 tests. Live EBS run gated on instance access. |
+| 1.47 | 2026-06-12 | Delivery | **Phase 7 CLOSED** — exit-gate review r1 = PASS (no blocking); P7-R1-F1/F2 (S4) remediated → 293 tests. **All phases (1–6 + 6.5 + C1 + 7) closed.** Open carries: ITM-012 (EBS live validation, method defined), ITM-018 (23ai deferred). |

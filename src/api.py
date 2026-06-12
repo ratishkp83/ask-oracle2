@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, get_args
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response
@@ -9,7 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.core import audit, metrics
@@ -46,8 +46,10 @@ from src.core.schema_store import (
 )
 from src.core.introspection import introspect_schema
 from src.core.sql_safety import SqlSafetyError, assert_safe_select
-from src.core.templates import Template, get_template, list_templates
+from src.core.templates import Module, Template, get_template, list_templates
 from src.core.ebs_packs import EbsPack, get_pack, list_packs
+
+_EBS_MODULES = set(get_args(Module))  # {"GL","AP","AR","PO","OM"}
 from src.schema import schema_from_dict, schema_to_dict
 from src.db import OracleClient, OracleConnectionConfig
 from src.nl2sql import LLMConfig, generate_sql_from_nl
@@ -211,6 +213,23 @@ class NL2SQLRequest(BaseModel):
     ebs_modules: Optional[List[str]] = Field(
         None, description="Opt-in EBS module packs to add as curated metadata context (e.g. ['AP','GL'])"
     )
+
+    @field_validator("ebs_modules")
+    @classmethod
+    def _validate_ebs_modules(cls, value: Optional[List[str]]) -> Optional[List[str]]:
+        # Reject unknown modules (422) instead of silently ignoring them (review
+        # P7-R1-F1); normalize case so ['ap'] works like ['AP'].
+        if value is None:
+            return value
+        normalized, unknown = [], []
+        for m in value:
+            mu = (m or "").strip().upper()
+            (normalized if mu in _EBS_MODULES else unknown).append(mu if mu in _EBS_MODULES else m)
+        if unknown:
+            raise ValueError(
+                f"Unknown EBS module(s): {', '.join(unknown)}. Valid: {', '.join(sorted(_EBS_MODULES))}."
+            )
+        return normalized
 
 
 class SQLExecuteRequest(BaseModel):

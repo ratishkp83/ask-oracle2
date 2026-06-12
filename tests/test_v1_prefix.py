@@ -54,3 +54,20 @@ def test_auth_applies_to_v1_but_health_exempt(monkeypatch):
     # Both health paths stay exempt (liveness probes).
     assert client.get("/health").status_code == 200
     assert client.get("/v1/health").status_code == 200
+
+
+# Review P7-R1-F2 — the POST paths (execute + nl2sql) are gated on /v1 too.
+@pytest.mark.parametrize(
+    "path,body",
+    [
+        ("/v1/execute", {"sql": "SELECT 1 FROM DUAL",
+                         "connection": {"host": "db", "port": 1521, "service_name": "XE",
+                                        "username": "u", "password": "p"}}),
+        ("/v1/nl2sql", {"natural_language": "show"}),
+    ],
+)
+def test_v1_post_endpoints_require_auth(monkeypatch, path, body):
+    monkeypatch.setenv(API_KEY_ENV, "k")
+    assert client.post(path, json=body).status_code == 401  # no key
+    # With the key it proceeds past auth (then fails on the fake DB / empty schema, not 401).
+    assert client.post(path, json=body, headers={API_KEY_HEADER: "k"}).status_code != 401
