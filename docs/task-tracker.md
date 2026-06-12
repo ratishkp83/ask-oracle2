@@ -185,6 +185,7 @@ track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = dec
 | P7-5 | **B5** `/v1` API prefix via router (back-compat) | ✅ Completed | every route on an `APIRouter` mounted at `""` + `/v1`; handlers/middleware/auth on app; `/v1/health` exempt; 6 tests (**285 total**); D5 v1.10; **T-18 CLOSED** |
 | P7-6 | **B6** 23ai deferral ADR/note + ITM-018 | ✅ Completed | [ADR-016](adr/ADR-016-defer-23ai-vector-track.md) records the direction; **ITM-018** logged (deferred, not dropped) |
 | P7-7 | **B7** Governed-doc sweep + traceability + registers | ✅ Completed | D3/D5/D6/traceability (FR-14) + ADR index + CHANGELOG + issue-log in lockstep; review package prepared |
+| P7-V | EBS pack validation method (ITM-012) — self-audit + live validator | ✅ Completed | `reviews/ebs-pack-self-audit.md` (confidence-flagged; all tables High) + `scripts/ebs_pack_validate.py` (introspects a real EBS via the chokepoint, diffs every pack table/column; offline-tested, 4 tests → 289); ITM-012 close criteria defined; **live run gated on EBS access** |
 | R7.1 | Prepare exit-gate review package | ✅ Completed | [reviews/phase-7-review-package.md](reviews/phase-7-review-package.md); range `baf4224..HEAD` |
 | R7.2+ | Independent adversarial exit-gate review (reviewer ≠ author, owner-supplied) | 📋 Planned | iterate to PASS |
 
@@ -268,3 +269,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.43 | 2026-06-12 | Delivery | Phase 7 **B4 + B3 done** (P7-4/P7-3): read-only `/packs` API (D5 v1.9; +5 → 279) + UI (Data Dictionary EBS-packs browser, Query Builder module multiselect; smoke green). Next: B5 `/v1` prefix, B6 defer, B7 sweep. |
 | 1.44 | 2026-06-12 | Delivery | Phase 7 **B5 done** (P7-5): `/v1` prefix via APIRouter mounted twice (back-compat); auth + safety gate enforced on `/v1`; `/v1/health` exempt; **T-18 CLOSED**; D5 v1.10; 285 tests. Next: B6 defer, B7 sweep. |
 | 1.45 | 2026-06-12 | Delivery | Phase 7 **B6 + B7 done**: ADR-016 (23ai deferral) + ITM-018; governed-doc sweep (traceability FR-14, D6, registers); **build B1…B7 complete (285 tests)**; R7.1 review package prepared. Next: R7.2 independent exit-gate review (owner-supplied). |
+| 1.46 | 2026-06-12 | Delivery | ITM-012 validation method (P7-V): EBS pack self-audit (`reviews/ebs-pack-self-audit.md`) + automated live validator (`scripts/ebs_pack_validate.py`, offline-tested); 289 tests. Live EBS run gated on instance access. |

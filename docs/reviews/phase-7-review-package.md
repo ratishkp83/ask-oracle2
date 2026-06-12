@@ -49,9 +49,12 @@
      Phase-6 error sanitization, Phase-6.5 edge posture, the redaction guarantee.
 
 ## Test status
-- `pytest -q` → **285 passed** (Python 3.13; mocked LLM, no live DB). New: `test_ebs_packs.py` (9),
-  `test_packs_api.py` (5), `test_nl2sql.py` EBS context (+3), `test_v1_prefix.py` (6) — **+23** over
-  Round C1's 262. CI runs the 3.11 + 3.13 matrix on push.
+- `pytest -q` → **289 passed** (Python 3.13; mocked LLM, no live DB). New: `test_ebs_packs.py` (9),
+  `test_packs_api.py` (5), `test_nl2sql.py` EBS context (+3), `test_v1_prefix.py` (6),
+  `test_ebs_pack_validate.py` (4) — **+27** over Round C1's 262. CI runs the 3.11 + 3.13 matrix on push.
+- **ITM-012 validation tooling** (also in range): `scripts/ebs_pack_validate.py` (live-EBS diff via the
+  chokepoint; offline-tested) + the confidence-flagged [self-audit](ebs-pack-self-audit.md). The
+  reviewer may sanity-check the curated names against Oracle eTRM/TRMs; a live-EBS run needs an instance.
 
 ## Known limitations / not covered
 - **Pack contents vs a real EBS instance** — not validated (table/column names vary by version /

@@ -60,6 +60,16 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   complementing the existing schema-name redaction. Patterns are conservative (opt-in, because
   over-masking can degrade a query). Tests **+15 → 260** (`tests/test_pii.py`).
 
+### Added (Phase 7 — EBS pack validation method, ITM-012)
+- **EBS pack validator** `scripts/ebs_pack_validate.py`: introspects a real EBS instance through
+  the SELECT-only chokepoint and diffs every pack table/column (key columns, glossary targets,
+  join endpoints) against `ALL_TAB_COLUMNS`, reporting `[OK]`/`[MISSING TABLE]`/`[MISSING COLS]`.
+  Read-only; runs when an EBS 12.2 instance is reachable (no lightweight EBS exists). Diff logic
+  offline-tested (`tests/test_ebs_pack_validate.py`). **Tests +4 → 289.**
+- **Pack self-audit** `docs/reviews/ebs-pack-self-audit.md`: confidence-flagged review of every
+  curated name (all table names High-confidence; two columns flagged to verify first). ITM-012
+  close criteria are now explicit (run the validator vs a real EBS → remediate → record evidence).
+
 ### Fixed (Round C1 exit-gate review r1 — PASS-WITH-FIXES, no blocking)
 - **C1-R1-F1 (S3):** `migrate_legacy_connection` no longer swallows an `OSError` from
   `os.remove` silently — if the legacy `connection.json` can't be deleted (locked/read-only), it

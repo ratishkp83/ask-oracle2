@@ -1,6 +1,6 @@
 # D6 — Test Strategy
 
-> **Document:** Test Strategy · **Version:** 1.9 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-12
+> **Document:** Test Strategy · **Version:** 1.10 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-12
 
 ## 1. Objectives
 
@@ -17,7 +17,7 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 
 ## 3. Current coverage (baseline)
 
-**285 automated tests pass locally** (160 through Phase 5 + 25 in Phase 6 + 57 in Phase 6.5 + 20 in Round C1 + 23 in Phase 7):
+**289 automated tests pass locally** (160 through Phase 5 + 25 in Phase 6 + 57 in Phase 6.5 + 20 in Round C1 + 27 in Phase 7):
 
 - **Pre-deployment hardening (Phase 6.5)** — `test_auth.py` (16): auth is a no-op with
   `APP_API_KEY` unset (default posture pinned); with it set, a 401 matrix across endpoints
@@ -110,3 +110,4 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 | 1.7 | 2026-06-11 | QA/Eng | Phase 6.5 review r1 remediation: +6 tests (Unicode fullwidth-digit SSRF fold + genuine-IDN pass, blank-`ALLOWED_ORIGINS` fallback) → **242 total**. |
 | 1.8 | 2026-06-12 | QA/Eng | Round C1: +20 tests (`test_pii.py` PII-scrubbing matrix + flag/external-path; `connection.json` migration; review-r1 F1 delete-warning + F2 load-TOCTOU) → **262 total**. Plus the out-of-band live-Oracle pass vs XE 21c (`scripts/c1_live_smoke.py`, evidence in `reviews/round-C1-live-pass.md`). |
 | 1.9 | 2026-06-12 | QA/Eng | Phase 7: +23 tests (`test_ebs_packs.py` pack integrity/tripwire-safety; `test_packs_api.py`; `test_nl2sql.py` EBS context; `test_v1_prefix.py` /v1 parity + auth/safety) → **285 total**. |
+| 1.10 | 2026-06-12 | QA/Eng | ITM-012 method: +4 tests (`test_ebs_pack_validate.py` — validator diff logic, mocked lookup) → **289 total**. |
