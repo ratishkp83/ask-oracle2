@@ -16,17 +16,16 @@ Each feature phase runs through the lifecycle micro-cycle (Discovery → Design 
 | 6 | **Observability & Error Handling** | ✅ Done | Structured JSON logs, request/error-reference IDs, uniform DB-error sanitization (**ITM-015 closed**), in-process metrics + `/metrics`. Closed via gate (r1 PASS-WITH-FIXES → r2 PASS) 2026-06-10; 185 tests; ADR-012. r1 F-1/F-2 re-pinned the validated set to a clean-install-proven 3.13-capable config; pushed, CI green on 3.11 + 3.13 (ITM-016 closed). |
 | **P6.5** | **Pre-deployment hardening (carried preconditions)** | ✅ Done | Opt-in API-key auth + env-driven CORS (ADR-013), base_url encoding fix, atomic store writes + corrupt-record quarantine (ADR-014), non-DB error surfaces routed. **ITM-009/010/013/014/017 CLOSED; RISK-12 Closed/RISK-16 Mitigating.** Closed via gate (r1 PASS-WITH-FIXES → R1–R4 remediated → closed on r1, no r2) 2026-06-11; **242 tests; pushed.** |
 | **C1** | **Pre-GA consolidation & testing** | ✅ Done | ITM-006/007/008 closed; **live-Oracle pass vs XE 21c + UI browser-test passed → RISK-04 Closed**; CI green (3.11+3.13). Closed via gate (r1 PASS-WITH-FIXES → F1/F2 remediated) 2026-06-12; **262 tests**. **GA-readiness verdict: GA-ready (core product) subject to deployment preconditions; EBS pack beta pending ITM-012** ([round-C1-ga-readiness.md](round-C1-ga-readiness.md)). |
-| 7 | Optional: Oracle 23ai & EBS enhancements | 📋 Optional | Vector search / in-DB ML; EBS metadata packs. Code preconditions cleared by Phase 6.5; networked/multi-tenant deploy still gated on RISK-04 (live-Oracle pass, in Round C1). |
+| 7 | **EBS Intelligence & 23ai enhancements** (optional) | 🔄 Discovery | Charter opened 2026-06-12 ([phase-7-charter.md](charters/phase-7-charter.md)): primary track = **EBS metadata packs + glossary** (no new infra); 23ai vector = decide-deliberately (needs a 23ai instance — XE 21c can't run it); optional fold-ins (`/v1` T-18, ITM-011). **Decisions D-A…D-D pending owner; no code until approved.** |
 
 ## Current focus
-**Round C1 CLOSED (2026-06-12)** — all items delivered (ITM-006/007/008 closed; live-Oracle pass
-vs XE 21c + UI browser-test passed, RISK-04 Closed; CI green; 262 tests); exit-gate review r1
-PASS-WITH-FIXES → F1/F2 remediated. **GA-readiness verdict recorded
-([round-C1-ga-readiness.md](round-C1-ga-readiness.md)): GA-ready for the core read-only reporting
-product subject to the §5 deployment preconditions; the EBS template pack ships beta pending
-ITM-012.** **Phases 1–6 + 6.5 + C1 are all closed.** The only remaining roadmap item is **Phase 7
-(optional: Oracle 23ai vector / EBS metadata packs)** — open it only as a deliberately chartered
-feature effort. See [task-tracker](task-tracker.md).
+**Phase 7 — EBS Intelligence & 23ai Enhancements: Discovery OPENED 2026-06-12** (owner directed
+"proceed to next dev item" after Round C1 closed GA-ready). Charter
+([phase-7-charter.md](charters/phase-7-charter.md)) proposes: **EBS metadata packs + glossary**
+as the primary, testable, high-leverage track; the **23ai vector track decided deliberately**
+(build flag-gated with a real 23ai instance, or formally defer — XE 21c cannot run vector
+features); optional fold-ins (`/v1` prefix T-18, ITM-011 multi-value binds). **Build is gated on
+owner decisions D-A…D-D; no code until approved.** See [task-tracker](task-tracker.md).
 
 ## Revision history
 
@@ -45,3 +44,4 @@ feature effort. See [task-tracker](task-tracker.md).
 | 1.10 | 2026-06-11 | Delivery | Phase 6.5 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); R1–R4 remediated (242 tests); closure pending optional r2 + push. |
 | 1.11 | 2026-06-11 | Delivery | **Phase 6.5 CLOSED** (gate passed on r1, no r2; pushed); Round C1 (pre-GA consolidation & testing) opened in Discovery; Phase-7 code preconditions all cleared. |
 | 1.12 | 2026-06-12 | Delivery | **Round C1 CLOSED** (gate r1 PASS-WITH-FIXES → F1/F2 remediated; 262 tests; RISK-04 Closed); GA-readiness verdict recorded (GA-ready core product; EBS pack beta/ITM-012). Phase 7 (optional) is the only remaining item. |
+| 1.13 | 2026-06-12 | Delivery | Phase 7 Discovery opened — EBS packs + glossary primary; 23ai decide-deliberately; decisions D-A…D-D pending owner. |

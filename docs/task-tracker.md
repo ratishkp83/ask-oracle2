@@ -167,6 +167,24 @@ new features. **Scope + decisions D-A…D-C pending owner; no code until approve
 | RC1.2 | Independent adversarial exit-gate review (r1) | ✅ Done | verdict **PASS-WITH-FIXES** ([round-C1-review-r1.md](reviews/round-C1-review-r1.md)); no S1/S2; chokepoint diff empty; all B1–B3 invariants verified clean; C1-R1-F1 (S3) + C1-R1-F2 (S4) |
 | RC1.3 | Remediate r1 findings + regression | ✅ Done | C1-R1-F1 storage delete-failure → logged warning (no secret); C1-R1-F2 load TOCTOU → try/except; **+2 → 262 tests** |
 
+## Phase 7 — EBS Intelligence & Oracle 23ai Enhancements (🔄 Discovery OPENED 2026-06-12)
+
+Charter: [phase-7-charter.md](charters/phase-7-charter.md). Optional feature phase; primary
+track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = decide-deliberately
+(XE 21c can't run it). **Decisions D-A…D-D pending owner; no code until approved.**
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| P7-0 | Open Phase 7 Discovery charter | ✅ Completed | scope proposal + decisions D-A…D-D |
+| P7-D | Owner approval + decisions (D-A 23ai / D-B pack breadth / D-C glossary mutability / D-D fold-ins) | 📋 Planned | gates all code |
+| P7-DES | Design + build sequence (owner-approved) | 📋 Planned | after P7-D |
+| P7-1 | EBS metadata packs (modules per D-B) | 📋 Planned | curated JSON; in-repo like templates |
+| P7-2 | Glossary surface (dictionary + NL→SQL context, redaction-safe) | 📋 Planned | per D-C |
+| P7-3 | 23ai vector track (build flag-gated **or** formal deferral note) | 📋 Planned | per D-A |
+| P7-4 | Fold-ins (per D-D, e.g. `/v1` prefix T-18) | 📋 Planned | — |
+| P7-5 | Tests + governed-doc updates | 📋 Planned | lockstep |
+| R7.x | Independent exit-gate review (reviewer ≠ author) | 📋 Planned | iterate to PASS |
+
 ## Standing per-phase review gate (applies to EVERY phase)
 
 Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](process/external-review-gate.md)):
@@ -240,3 +258,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.36 | 2026-06-12 | Delivery | **B4 done** — owner confirmed CI green (run #12 on `f374380`, +#10/#11); **owner browser-tested the UI against XE satisfactorily → RISK-04 Closed**. RC1.1 review package prepared (`a395003..f374380`). Remaining: RC1.2 independent review (owner-supplied), B6 GA-readiness verdict. |
 | 1.37 | 2026-06-12 | Delivery | RC1.2 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); RC1.3 remediated C1-R1-F1 (storage delete-failure warning) + C1-R1-F2 (load TOCTOU) → 262 tests. Gate cleared; B6 GA-readiness verdict next to close C1. |
 | 1.38 | 2026-06-12 | Delivery | **Round C1 CLOSED** (C1-6/B6) — GA-readiness verdict recorded (`round-C1-ga-readiness.md`): **GA-ready core product** subject to deployment preconditions; EBS pack beta pending ITM-012. Phase 7 (optional) is the only remaining roadmap item. |
+| 1.39 | 2026-06-12 | Delivery | Phase 7 Discovery opened (P7-0) — EBS metadata packs + glossary primary track; 23ai vector decide-deliberately (XE 21c constraint); P7-1…P7-5 + R7.x seeded; build gated on owner decisions D-A…D-D (P7-D). |

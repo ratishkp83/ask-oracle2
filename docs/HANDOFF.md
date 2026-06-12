@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 3.0 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
+> **Document:** Session Handoff · **Version:** 3.1 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -136,14 +136,19 @@ scope; D-C build ITM-008 behind a default-off flag). Build order B1…B6:
   reporting product** subject to the §5 deployment preconditions; the **EBS template pack is beta
   pending ITM-012**.
 
-**Project state: Phases 1–6 + 6.5 + Round C1 are ALL CLOSED.** The only remaining roadmap item is
-**Phase 7 (optional: Oracle 23ai vector / EBS metadata packs)** — its code preconditions are all
-cleared; open it only as a deliberately chartered feature effort.
+**Project state: Phases 1–6 + 6.5 + Round C1 are ALL CLOSED; Phase 7 Discovery is OPEN
+(2026-06-12).** The charter ([charters/phase-7-charter.md](charters/phase-7-charter.md)) proposes
+the **EBS metadata packs + glossary** as the primary track (curated metadata → better NL→SQL on
+EBS; no new infrastructure; redaction-safe), with the **23ai vector track decided deliberately**
+(build flag-gated only with a real 23ai instance — XE 21c can't run vector — or formally defer),
+plus optional fold-ins (`/v1` prefix T-18; ITM-011). **The gate is P7-D: owner resolves decisions
+D-A…D-D — no code until approved.**
 
 **First steps on resume:** confirm the working tree is clean and **262 tests pass**
-(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2). Nothing is pending
-unless the owner opens Phase 7 or asks for a specific pre-GA/deploy task. *(XE setup persists on
-this box for re-testing: listener `OracleOraDB21Home1TNSListener` must be running, then
+(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
+[task-tracker.md](task-tracker.md) P7-D — if decisions are pending, get them resolved; if
+resolved, draft the design doc for approval, then build. *(XE setup persists on this box for
+re-testing: listener `OracleOraDB21Home1TNSListener` must be running, then
 `python scripts/c1_live_smoke.py`; the Streamlit UI runs via preview server `ask-oracle-ui` →
 localhost:8501 with the pre-loaded "XE (read-only)" profile.)*
 
@@ -171,5 +176,6 @@ localhost:8501 with the pre-loaded "XE (read-only)" profile.)*
 | 2.8 | 2026-06-11 | Delivery | **B5 RISK-04 live-Oracle pass against XE 21c: ALL PASS** (`scripts/c1_live_smoke.py`; evidence `reviews/round-C1-live-pass.md`); RISK-04 Med→Low. Remaining: B4 CI confirm, RC1 review, B6 verdict. |
 | 2.9 | 2026-06-12 | Delivery | **B4 done** (owner confirmed CI run #12 green) + **owner UI browser-test against XE satisfactory → RISK-04 Closed**; RC1.1 review package prepared. Remaining: RC1.2 independent review (owner-supplied) → B6 GA verdict. §8 stale-duplicate cleaned. |
 | 3.0 | 2026-06-12 | Delivery | **Round C1 CLOSED** — RC1 review r1 PASS-WITH-FIXES → F1/F2 remediated (262 tests); **B6 GA-readiness verdict recorded** (GA-ready core product; EBS pack beta/ITM-012). **Phases 1–6 + 6.5 + C1 all closed; only Phase 7 (optional) remains.** |
+| 3.1 | 2026-06-12 | Delivery | Phase 7 Discovery OPENED — EBS metadata packs + glossary (primary) vs 23ai vector (decide-deliberately; XE 21c constraint) + optional fold-ins; next action = owner resolves decisions D-A…D-D before any code. |
 | 2.6 | 2026-06-11 | Delivery | **B2 ITM-006 CLOSED** (RISK-09 Closed): `connection.json` write path retired, read-and-delete migration; 245 tests. Next = B3 ITM-008. |
 | 2.7 | 2026-06-11 | Delivery | **B3 ITM-008 CLOSED**: `core/llm/pii.py` opt-in PII scrubbing (`SCRUB_PII`); 260 tests. All C1 code (B1–B3) done. Remaining: B4 CI confirm, B5 XE live pass, RC1 review, B6 verdict. |
