@@ -207,6 +207,9 @@ class NL2SQLRequest(BaseModel):
     relationships_csv: Optional[str] = Field(None, description="Relationships CSV content as string")
     model: Optional[str] = None
     llm: Optional[LLMSettings] = Field(None, description="Per-user LLM provider/model/key override")
+    ebs_modules: Optional[List[str]] = Field(
+        None, description="Opt-in EBS module packs to add as curated metadata context (e.g. ['AP','GL'])"
+    )
 
 
 class SQLExecuteRequest(BaseModel):
@@ -399,7 +402,9 @@ def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
             schema = attach_relationships(schema, rels)
 
         llm_cfg = LLMConfig(**req.llm.model_dump()) if req.llm else None
-        result = generate_sql_from_nl(req.natural_language, schema, model=req.model, llm=llm_cfg)
+        result = generate_sql_from_nl(
+            req.natural_language, schema, model=req.model, llm=llm_cfg, ebs_modules=req.ebs_modules
+        )
         confidence = (
             {"level": result.confidence.level, "reasons": result.confidence.reasons}
             if result.confidence

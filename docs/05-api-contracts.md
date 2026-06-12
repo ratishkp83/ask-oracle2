@@ -1,6 +1,6 @@
 # D5 — API Contracts
 
-> **Document:** API Contracts · **Version:** 1.6 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-11
+> **Document:** API Contracts · **Version:** 1.8 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-12
 > Service: `Ask Oracle Reports API` v2.2.0 · Swagger: `/docs` · OpenAPI: `/openapi.json`
 
 ## Conventions
@@ -58,8 +58,9 @@ Body: `ConnectionConfig { host, port?=1521, service_name?, sid?, username, passw
 → `200 { ok, elapsed_seconds, columns, rows }` · `400` connection error
 
 ### POST /nl2sql
-Body: `{ natural_language, schema_csv?, relationships_csv?, model?, llm? }`
-`llm = { provider?, model?, api_key?, base_url? }` (omitted fields fall back to server env; `api_key` used transiently, never logged/persisted)
+Body: `{ natural_language, schema_csv?, relationships_csv?, model?, llm?, ebs_modules? }`
+`llm = { provider?, model?, api_key?, base_url? }` (omitted fields fall back to server env; `api_key` used transiently, never logged/persisted).
+`ebs_modules?` *(Phase 7, opt-in)*: list of EBS modules (`["GL","AP","AR","PO","OM"]`) whose curated **metadata** packs (table/column descriptions + glossary, no row data) are appended to the external prompt context — covered by the same redaction tripwire ([ADR-015](adr/ADR-015-ebs-metadata-packs.md)). Omitted/empty → unchanged behaviour.
 → `200 { sql, explanation, confidence: { level, reasons[] } }`
   - `explanation`: short rationale (may be `null` if the model omitted it).
   - `confidence.level`: `"High" | "Medium" | "Low"` — deterministic heuristic (schema coverage + parse + identifier resolution); **not** a correctness guarantee.
@@ -156,3 +157,4 @@ if constraint views aren't visible.
 | 1.5 | 2026-06-10 | Engineering | Phase 6 (B3): read-only `GET /metrics` (in-process query counts + latency). |
 | 1.6 | 2026-06-11 | Engineering | Phase 6.5 (B1): opt-in `X-API-Key` auth (`APP_API_KEY`; `/health` exempt, `/metrics` gated) + env-driven CORS (`ALLOWED_ORIGINS`); service v2.2.0; ADR-013 (closes ITM-009). |
 | 1.7 | 2026-06-11 | Engineering | Phase 6.5 (B5): `/nl2sql` unexpected failures return generic detail + `error_id` (ITM-017); intentional `ValueError`/`LLMError` and the profiles `SecretConfigError` 500 stay verbatim (now with a server-side breadcrumb). |
+| 1.8 | 2026-06-12 | Engineering | Phase 7 (B2): `/nl2sql` gains optional `ebs_modules[]` (opt-in EBS metadata-pack context; ADR-015). |

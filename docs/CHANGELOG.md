@@ -12,6 +12,11 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   context; the output passes the external-prompt `assert_no_values` tripwire. Packs describe the
   same tables the template catalog uses (test-enforced). Tests **+9 → 271** (`tests/test_ebs_packs.py`).
   Pack *contents* still need real-EBS validation (ITM-012).
+- **NL→SQL EBS context enrichment (B2):** `generate_sql_from_nl(..., ebs_modules=[...])` and the
+  `/nl2sql` `ebs_modules[]` field — **opt-in, external-path only** (local generation unchanged):
+  the selected packs' curated metadata is appended to the external context and the **combined**
+  context runs through `assert_no_values`. Omitted/empty → byte-identical to prior behaviour.
+  Tests **+3 → 274** (`tests/test_nl2sql.py`).
 
 ### Changed (Round C1 — Pre-GA Consolidation & Testing)
 - **ITM-007 closed:** replaced the deprecated Streamlit `use_container_width=True` with

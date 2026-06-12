@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -15,6 +15,8 @@ from .core.llm.policy import select_provider
 from .core.llm.redaction import assert_no_values, build_external_context
 from .core.llm.confidence import assess_confidence
 from .core.llm.pii import pii_scrub_enabled, scrub_pii
+# Curated EBS metadata packs (Phase 7) — opt-in, metadata-only context.
+from .core.ebs_packs import build_ebs_context
 
 # Backward-compatible public surface.
 __all__ = [
@@ -72,13 +74,17 @@ def generate_sql_from_nl(
     model: Optional[str] = None,
     llm: Optional[LLMConfig] = None,
     policy: Optional[str] = None,
+    ebs_modules: Optional[List[str]] = None,
 ) -> NLSQLResult:
     """Propose Oracle SQL (+ explanation + heuristic confidence) for a question.
 
     The provider is chosen by the LLM policy ([local_only|local_external|
     external_disabled]) and the optional per-user ``llm`` config. External prompts
-    carry schema names only (strict redaction). The result is always verified to
-    be a safe SELECT/CTE before return; it is never executed here.
+    carry schema names only (strict redaction). ``ebs_modules`` (Phase 7, opt-in)
+    appends curated EBS **metadata** (table/column descriptions + glossary, no row
+    data) for the selected modules to the external context — covered by the same
+    ``assert_no_values`` tripwire. The result is always verified to be a safe
+    SELECT/CTE before return; it is never executed here.
     """
     if not natural_language or not natural_language.strip():
         raise ValueError("Empty natural language input.")
@@ -92,6 +98,11 @@ def generate_sql_from_nl(
         context = schema.to_compact_markdown()
     else:
         context = build_external_context(schema)
+        # Opt-in EBS metadata (Phase 7) — names/descriptions only; appended before
+        # the tripwire so the combined external context is verified as a whole.
+        ebs_context = build_ebs_context(ebs_modules or [])
+        if ebs_context:
+            context = context + "\n\n" + ebs_context
         assert_no_values(context)  # defense-in-depth before any external send
         # Optional, opt-in PII scrubbing of the question on the external path
         # only (ITM-008, default off). Local generation stays verbatim.

@@ -82,3 +82,51 @@ def test_provider_failure_returns_clean_message(monkeypatch):
     assert "RetryError" not in msg
     assert "sk-leak-123" not in msg
     assert "RuntimeError" in msg  # the exception *type* is acceptable signal
+
+
+# --------------------------------------------------------------------------- #
+# Phase 7 (B2) — opt-in EBS metadata packs in the external context
+# --------------------------------------------------------------------------- #
+class CapturingProvider:
+    def __init__(self, text: str, name: str = "external"):
+        self._text = text
+        self.name = name
+        self.last_user = None
+
+    def is_available(self) -> bool:
+        return True
+
+    def resolve_model(self, requested=None) -> str:
+        return "fake-model"
+
+    def complete(self, system, user, model=None) -> str:
+        self.last_user = user
+        return self._text
+
+
+def _patch_capturing(monkeypatch, prov):
+    monkeypatch.setattr(nl2sql, "select_provider", lambda cfg=None, policy=None: prov)
+
+
+def test_ebs_modules_append_glossary_to_external_prompt(monkeypatch):
+    prov = CapturingProvider("```sql\nSELECT invoice_id FROM ap_invoices_all\n```\nExplanation: invoices.")
+    _patch_capturing(monkeypatch, prov)
+    nl2sql.generate_sql_from_nl("list invoices", _schema(), ebs_modules=["AP"])
+    assert "EBS Metadata" in prov.last_user
+    assert "invoice -> AP_INVOICES_ALL" in prov.last_user  # glossary reached the prompt
+    assert "AP_PAYMENT_SCHEDULES_ALL" in prov.last_user     # table notes too
+
+
+def test_no_ebs_modules_leaves_external_prompt_unchanged(monkeypatch):
+    prov = CapturingProvider("```sql\nSELECT emp_id FROM emp\n```")
+    _patch_capturing(monkeypatch, prov)
+    nl2sql.generate_sql_from_nl("show emp", _schema())
+    assert "EBS Metadata" not in prov.last_user  # opt-in default: no pack context
+    assert "EMP" in prov.last_user                # schema-name context unchanged
+
+
+def test_local_provider_ignores_ebs_modules(monkeypatch):
+    prov = CapturingProvider("```sql\nSELECT emp_id FROM emp\n```", name="local")
+    _patch_capturing(monkeypatch, prov)
+    nl2sql.generate_sql_from_nl("show emp", _schema(), ebs_modules=["AP", "GL"])
+    assert "EBS Metadata" not in prov.last_user  # local path = schema markdown only
