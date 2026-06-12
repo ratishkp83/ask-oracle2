@@ -17,6 +17,9 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   the selected packs' curated metadata is appended to the external context and the **combined**
   context runs through `assert_no_values`. Omitted/empty → byte-identical to prior behaviour.
   Tests **+3 → 274** (`tests/test_nl2sql.py`).
+- **`/packs` API (B4):** read-only `GET /packs` + `GET /packs/{module}` (case-insensitive; 404
+  `"Unknown EBS module."` with `error_id`), mirroring `/templates`. Tests **+5 → 279**
+  (`tests/test_packs_api.py`).
 
 ### Changed (Round C1 — Pre-GA Consolidation & Testing)
 - **ITM-007 closed:** replaced the deprecated Streamlit `use_container_width=True` with

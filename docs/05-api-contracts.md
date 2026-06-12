@@ -1,6 +1,6 @@
 # D5 — API Contracts
 
-> **Document:** API Contracts · **Version:** 1.8 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-12
+> **Document:** API Contracts · **Version:** 1.9 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-12
 > Service: `Ask Oracle Reports API` v2.2.0 · Swagger: `/docs` · OpenAPI: `/openapi.json`
 
 ## Conventions
@@ -125,6 +125,13 @@ standard-EBS starter queries; review before running; never auto-executed.
 #### GET /templates → `200 Template[]`
 #### GET /templates/{id} → `200 Template` · `404` not found
 
+### EBS metadata packs *(Phase 7, read-only — [ADR-015](adr/ADR-015-ebs-metadata-packs.md))*
+`EbsPack = { module∈{GL,AP,AR,PO,OM}, name, tables[TableNote], glossary[GlossaryTerm] }` —
+`TableNote = { table, description, key_columns[], joins[] }`; `GlossaryTerm = { term, table, column?, note? }`.
+Curated **metadata only** (no row data); review-before-run like templates.
+#### GET /packs → `200 EbsPack[]`
+#### GET /packs/{module} → `200 EbsPack` (case-insensitive) · `404` `"Unknown EBS module."`
+
 ### Saved schemas & introspection *(Phase 5)*
 `SchemaRecord = { id, name, source∈{upload,introspection}, profile_id?, table_count, created_at, updated_at, definition }`
 — `definition` is the serialized schema (tables/columns/relationships); **metadata only**.
@@ -158,3 +165,4 @@ if constraint views aren't visible.
 | 1.6 | 2026-06-11 | Engineering | Phase 6.5 (B1): opt-in `X-API-Key` auth (`APP_API_KEY`; `/health` exempt, `/metrics` gated) + env-driven CORS (`ALLOWED_ORIGINS`); service v2.2.0; ADR-013 (closes ITM-009). |
 | 1.7 | 2026-06-11 | Engineering | Phase 6.5 (B5): `/nl2sql` unexpected failures return generic detail + `error_id` (ITM-017); intentional `ValueError`/`LLMError` and the profiles `SecretConfigError` 500 stay verbatim (now with a server-side breadcrumb). |
 | 1.8 | 2026-06-12 | Engineering | Phase 7 (B2): `/nl2sql` gains optional `ebs_modules[]` (opt-in EBS metadata-pack context; ADR-015). |
+| 1.9 | 2026-06-12 | Engineering | Phase 7 (B4): read-only `GET /packs` + `GET /packs/{module}` (curated EBS metadata packs; ADR-015). |

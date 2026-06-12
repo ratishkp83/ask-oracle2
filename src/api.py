@@ -47,6 +47,7 @@ from src.core.schema_store import (
 from src.core.introspection import introspect_schema
 from src.core.sql_safety import SqlSafetyError, assert_safe_select
 from src.core.templates import Template, get_template, list_templates
+from src.core.ebs_packs import EbsPack, get_pack, list_packs
 from src.schema import schema_from_dict, schema_to_dict
 from src.db import OracleClient, OracleConnectionConfig
 from src.nl2sql import LLMConfig, generate_sql_from_nl
@@ -627,6 +628,22 @@ def get_template_by_id(template_id: str) -> Template:
     if template is None:
         raise HTTPException(status_code=404, detail="Template not found.")
     return template
+
+
+# --------------------------------------------------------------------------- #
+# EBS metadata packs (read-only curated descriptions + glossary; Phase 7)
+# --------------------------------------------------------------------------- #
+@app.get("/packs", response_model=List[EbsPack])
+def get_packs() -> List[EbsPack]:
+    return list_packs()
+
+
+@app.get("/packs/{module}", response_model=EbsPack)
+def get_pack_by_module(module: str) -> EbsPack:
+    pack = get_pack(module)
+    if pack is None:
+        raise HTTPException(status_code=404, detail="Unknown EBS module.")
+    return pack
 
 
 # --------------------------------------------------------------------------- #

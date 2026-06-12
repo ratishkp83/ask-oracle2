@@ -181,7 +181,7 @@ track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = dec
 | P7-1 | **B1** EBS packs core (`core/ebs_packs.py`, 5 modules, ADR-015) | ✅ Completed | curated packs + glossary for GL/AP/AR/PO/OM (tables aligned to the template catalog); `build_ebs_context()` metadata-only, tripwire-safe; 9 tests (**271 total**); ADR-015 |
 | P7-2 | **B2** NL→SQL EBS context enrichment (opt-in, external-only, tripwire) | ✅ Completed | `generate_sql_from_nl(ebs_modules=…)` + `/nl2sql` `ebs_modules[]`; combined context through `assert_no_values`; local path unchanged; 3 tests (**274 total**); D5 v1.8 |
 | P7-3 | **B3** UI: Data Dictionary packs browser + Query Builder module multiselect | 📋 Planned | read-only (D-C) |
-| P7-4 | **B4** `/packs` read-only API | 📋 Planned | mirrors `/templates` |
+| P7-4 | **B4** `/packs` read-only API | ✅ Completed | `GET /packs` + `GET /packs/{module}` (404 uniform envelope); 5 tests (**279 total**); D5 v1.9 |
 | P7-5 | **B5** `/v1` API prefix via router (back-compat) | 📋 Planned | **closes T-18** |
 | P7-6 | **B6** 23ai deferral ADR/note + ITM-018 | 📋 Planned | per D-A |
 | P7-7 | **B7** Governed-doc sweep + traceability + registers | 📋 Planned | lockstep |
