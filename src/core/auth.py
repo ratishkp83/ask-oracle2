@@ -22,7 +22,8 @@ API_KEY_ENV = "APP_API_KEY"
 API_KEY_HEADER = "X-API-Key"
 
 # Liveness probes can't send headers on most platforms; everything else is gated.
-EXEMPT_PATHS = frozenset({"/health"})
+# Both health paths (root and the /v1 mount) are probe endpoints.
+EXEMPT_PATHS = frozenset({"/health", "/v1/health"})
 
 
 def require_api_key(request: Request) -> None:

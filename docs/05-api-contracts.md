@@ -1,6 +1,6 @@
 # D5 — API Contracts
 
-> **Document:** API Contracts · **Version:** 1.9 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-12
+> **Document:** API Contracts · **Version:** 1.10 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-12
 > Service: `Ask Oracle Reports API` v2.2.0 · Swagger: `/docs` · OpenAPI: `/openapi.json`
 
 ## Conventions
@@ -25,7 +25,10 @@
   failures; the full detail is logged server-side only. Safety-rejection reasons and
   validation messages are **not** sanitized — they stay verbatim.
 - Passwords/keys are **never** returned in any response.
-- **Versioning (planned):** introduce a `/v1` path prefix before external GA (tracked in [task-tracker](task-tracker.md)).
+- **Versioning** *(Phase 7, T-18)*: every route is mounted **twice** — at the root (back-compat)
+  **and** under **`/v1`** (e.g. `/v1/execute`, `/v1/packs`). Both forms are identical and both are
+  covered by the same auth dependency, exception handlers, and middleware. The auth exemption
+  covers **both** `/health` and `/v1/health` (liveness probes).
 
 ## Endpoints
 
@@ -166,3 +169,4 @@ if constraint views aren't visible.
 | 1.7 | 2026-06-11 | Engineering | Phase 6.5 (B5): `/nl2sql` unexpected failures return generic detail + `error_id` (ITM-017); intentional `ValueError`/`LLMError` and the profiles `SecretConfigError` 500 stay verbatim (now with a server-side breadcrumb). |
 | 1.8 | 2026-06-12 | Engineering | Phase 7 (B2): `/nl2sql` gains optional `ebs_modules[]` (opt-in EBS metadata-pack context; ADR-015). |
 | 1.9 | 2026-06-12 | Engineering | Phase 7 (B4): read-only `GET /packs` + `GET /packs/{module}` (curated EBS metadata packs; ADR-015). |
+| 1.10 | 2026-06-12 | Engineering | Phase 7 (B5): every route also mounted under **`/v1`** (T-18) via an `APIRouter` included twice; back-compat preserved; `/v1/health` also auth-exempt. |

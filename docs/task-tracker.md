@@ -182,7 +182,7 @@ track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = dec
 | P7-2 | **B2** NL→SQL EBS context enrichment (opt-in, external-only, tripwire) | ✅ Completed | `generate_sql_from_nl(ebs_modules=…)` + `/nl2sql` `ebs_modules[]`; combined context through `assert_no_values`; local path unchanged; 3 tests (**274 total**); D5 v1.8 |
 | P7-3 | **B3** UI: Data Dictionary packs browser + Query Builder module multiselect | ✅ Completed | Data Dictionary "EBS Packs" expander (tables + glossary); Query Builder NL-mode module multiselect → `ebs_modules`; headless smoke green (279) |
 | P7-4 | **B4** `/packs` read-only API | ✅ Completed | `GET /packs` + `GET /packs/{module}` (404 uniform envelope); 5 tests (**279 total**); D5 v1.9 |
-| P7-5 | **B5** `/v1` API prefix via router (back-compat) | 📋 Planned | **closes T-18** |
+| P7-5 | **B5** `/v1` API prefix via router (back-compat) | ✅ Completed | every route on an `APIRouter` mounted at `""` + `/v1`; handlers/middleware/auth on app; `/v1/health` exempt; 6 tests (**285 total**); D5 v1.10; **T-18 CLOSED** |
 | P7-6 | **B6** 23ai deferral ADR/note + ITM-018 | 📋 Planned | per D-A |
 | P7-7 | **B7** Governed-doc sweep + traceability + registers | 📋 Planned | lockstep |
 | R7.x | Independent exit-gate review (reviewer ≠ author) | 📋 Planned | iterate to PASS |
@@ -202,7 +202,7 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | ID | Task | Phase | Status |
 |----|------|-------|--------|
 | T-12 | LLM provider abstraction (`LLMProvider`) + explanation/confidence | Phase 3 | 📋 Planned (seeded by T-05) |
-| T-18 | API `/v1` versioning prefix | Phase 3/4 | 📋 Planned |
+| T-18 | API `/v1` versioning prefix | Phase 3/4 | ✅ Completed (Phase 7 / B5) |
 | T-19 | Migrate legacy `connection.json` → encrypted profiles | Phase 2 follow-up | 📋 Planned (RISK-09) |
 | T-20 | Saved reports: profile binding + parameters | Phase 4 | 📋 Planned |
 
@@ -265,3 +265,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.41 | 2026-06-12 | Delivery | Phase 7 design approved (P7-DES Completed); Build started — **B1 done**: `core/ebs_packs.py` (5-module curated packs + glossary, ADR-015), `build_ebs_context()` tripwire-safe; 271 tests. Next: B2 NL→SQL enrichment. |
 | 1.42 | 2026-06-12 | Delivery | Phase 7 **B2 done** (P7-2): opt-in `ebs_modules` in `generate_sql_from_nl` + `/nl2sql` (external-only, combined context through `assert_no_values`); D5 v1.8; 274 tests. Next: B3 UI. |
 | 1.43 | 2026-06-12 | Delivery | Phase 7 **B4 + B3 done** (P7-4/P7-3): read-only `/packs` API (D5 v1.9; +5 → 279) + UI (Data Dictionary EBS-packs browser, Query Builder module multiselect; smoke green). Next: B5 `/v1` prefix, B6 defer, B7 sweep. |
+| 1.44 | 2026-06-12 | Delivery | Phase 7 **B5 done** (P7-5): `/v1` prefix via APIRouter mounted twice (back-compat); auth + safety gate enforced on `/v1`; `/v1/health` exempt; **T-18 CLOSED**; D5 v1.10; 285 tests. Next: B6 defer, B7 sweep. |

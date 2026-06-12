@@ -23,6 +23,12 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 - **UI (B3):** a read-only **"EBS Packs"** browser in the Data Dictionary (module → table notes +
   glossary), and a **module multiselect** in the Query Builder NL mode that feeds `ebs_modules`
   into generation. Covered by the headless 7-section smoke.
+- **`/v1` API prefix (B5, closes T-18):** every route is now mounted twice — at the root
+  (back-compat) and under **`/v1`** — via an `APIRouter` included with and without the prefix.
+  Exception handlers, middleware, and the app-level auth dependency stay on the app and apply to
+  both; `/v1/health` joins `/health` as auth-exempt. Tests **+6 → 285** (`tests/test_v1_prefix.py`)
+  prove parity, the safety gate on `/v1/execute`, and auth on the prefix. No behaviour change to
+  existing (unprefixed) consumers.
 
 ### Changed (Round C1 — Pre-GA Consolidation & Testing)
 - **ITM-007 closed:** replaced the deprecated Streamlit `use_container_width=True` with

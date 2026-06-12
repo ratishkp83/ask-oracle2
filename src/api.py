@@ -4,7 +4,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -280,14 +280,22 @@ class IntrospectRequest(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# Routes are defined on a router, then mounted **twice** — at the root (for
+# back-compat) and under ``/v1`` (T-18). Exception handlers, middleware, and the
+# app-level auth dependency stay on ``app`` and apply to both mounts.
+# --------------------------------------------------------------------------- #
+router = APIRouter()
+
+
+# --------------------------------------------------------------------------- #
 # Health
 # --------------------------------------------------------------------------- #
-@app.get("/health")
+@router.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/metrics")
+@router.get("/metrics")
 def get_metrics() -> Dict[str, Any]:
     """Read-only in-process metrics: query counts + latency (no data/secrets).
 
@@ -300,7 +308,7 @@ def get_metrics() -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # Connection profiles
 # --------------------------------------------------------------------------- #
-@app.post("/profiles", response_model=ProfilePublic, status_code=201)
+@router.post("/profiles", response_model=ProfilePublic, status_code=201)
 def create_profile(body: ProfileCreate) -> ProfilePublic:
     try:
         profile = _store.create(body)
@@ -319,12 +327,12 @@ def create_profile(body: ProfileCreate) -> ProfilePublic:
     return profile
 
 
-@app.get("/profiles", response_model=List[ProfilePublic])
+@router.get("/profiles", response_model=List[ProfilePublic])
 def list_profiles() -> List[ProfilePublic]:
     return _store.list()
 
 
-@app.get("/profiles/{profile_id}", response_model=ProfilePublic)
+@router.get("/profiles/{profile_id}", response_model=ProfilePublic)
 def get_profile(profile_id: str) -> ProfilePublic:
     profile = _store.get(profile_id)
     if profile is None:
@@ -332,7 +340,7 @@ def get_profile(profile_id: str) -> ProfilePublic:
     return profile
 
 
-@app.delete("/profiles/{profile_id}", status_code=204)
+@router.delete("/profiles/{profile_id}", status_code=204)
 def delete_profile(profile_id: str) -> Response:
     if not _store.delete(profile_id):
         raise HTTPException(status_code=404, detail="Profile not found.")
@@ -340,7 +348,7 @@ def delete_profile(profile_id: str) -> Response:
     return Response(status_code=204)
 
 
-@app.post("/profiles/{profile_id}/test")
+@router.post("/profiles/{profile_id}/test")
 def test_profile(profile_id: str) -> Dict[str, Any]:
     resolved = _store.resolve(profile_id)
     if resolved is None:
@@ -363,7 +371,7 @@ def test_profile(profile_id: str) -> Dict[str, Any]:
     return {"ok": True, "elapsed_seconds": result.elapsed_seconds}
 
 
-@app.post("/test-connection")
+@router.post("/test-connection")
 def test_connection(conn: ConnectionConfig) -> Dict[str, Any]:
     """Test an inline (unsaved) connection without persisting it."""
     client = OracleClient(
@@ -386,7 +394,7 @@ def test_connection(conn: ConnectionConfig) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # NL -> SQL (proposes SQL only; never executes)
 # --------------------------------------------------------------------------- #
-@app.post("/nl2sql")
+@router.post("/nl2sql")
 def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
     try:
         schema = Schema()
@@ -524,7 +532,7 @@ def _run_sql(
     }
 
 
-@app.post("/execute")
+@router.post("/execute")
 def execute(req: SQLExecuteRequest) -> Dict[str, Any]:
     conn_cfg, username, profile_id = _resolve_target(req.profile_id, req.connection)
     return _run_sql(
@@ -540,7 +548,7 @@ def execute(req: SQLExecuteRequest) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # Saved reports (CRUD + run); run goes through the same /execute chokepoint
 # --------------------------------------------------------------------------- #
-@app.post("/reports", response_model=Report, status_code=201)
+@router.post("/reports", response_model=Report, status_code=201)
 def create_report(body: ReportCreate) -> Report:
     try:
         return _report_store.create(body)
@@ -548,12 +556,12 @@ def create_report(body: ReportCreate) -> Report:
         raise HTTPException(status_code=409, detail=str(exc))
 
 
-@app.get("/reports", response_model=List[Report])
+@router.get("/reports", response_model=List[Report])
 def list_reports() -> List[Report]:
     return _report_store.list()
 
 
-@app.get("/reports/{report_id}", response_model=Report)
+@router.get("/reports/{report_id}", response_model=Report)
 def get_report(report_id: str) -> Report:
     report = _report_store.get(report_id)
     if report is None:
@@ -561,7 +569,7 @@ def get_report(report_id: str) -> Report:
     return report
 
 
-@app.put("/reports/{report_id}", response_model=Report)
+@router.put("/reports/{report_id}", response_model=Report)
 def update_report(report_id: str, body: ReportCreate) -> Report:
     try:
         updated = _report_store.update(report_id, body)
@@ -572,14 +580,14 @@ def update_report(report_id: str, body: ReportCreate) -> Report:
     return updated
 
 
-@app.delete("/reports/{report_id}", status_code=204)
+@router.delete("/reports/{report_id}", status_code=204)
 def delete_report(report_id: str) -> Response:
     if not _report_store.delete(report_id):
         raise HTTPException(status_code=404, detail="Report not found.")
     return Response(status_code=204)
 
 
-@app.post("/reports/{report_id}/run")
+@router.post("/reports/{report_id}/run")
 def run_report(report_id: str, req: RunReportRequest) -> Dict[str, Any]:
     report = _report_store.get(report_id)
     if report is None:
@@ -617,12 +625,12 @@ def run_report(report_id: str, req: RunReportRequest) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # Templates (read-only curated EBS starter catalog)
 # --------------------------------------------------------------------------- #
-@app.get("/templates", response_model=List[Template])
+@router.get("/templates", response_model=List[Template])
 def get_templates() -> List[Template]:
     return list_templates()
 
 
-@app.get("/templates/{template_id}", response_model=Template)
+@router.get("/templates/{template_id}", response_model=Template)
 def get_template_by_id(template_id: str) -> Template:
     template = get_template(template_id)
     if template is None:
@@ -633,12 +641,12 @@ def get_template_by_id(template_id: str) -> Template:
 # --------------------------------------------------------------------------- #
 # EBS metadata packs (read-only curated descriptions + glossary; Phase 7)
 # --------------------------------------------------------------------------- #
-@app.get("/packs", response_model=List[EbsPack])
+@router.get("/packs", response_model=List[EbsPack])
 def get_packs() -> List[EbsPack]:
     return list_packs()
 
 
-@app.get("/packs/{module}", response_model=EbsPack)
+@router.get("/packs/{module}", response_model=EbsPack)
 def get_pack_by_module(module: str) -> EbsPack:
     pack = get_pack(module)
     if pack is None:
@@ -649,7 +657,7 @@ def get_pack_by_module(module: str) -> EbsPack:
 # --------------------------------------------------------------------------- #
 # Saved schemas (data-dictionary snapshots) + live introspection
 # --------------------------------------------------------------------------- #
-@app.post("/schemas", response_model=SchemaRecord, status_code=201)
+@router.post("/schemas", response_model=SchemaRecord, status_code=201)
 def create_schema(body: SchemaCreate) -> SchemaRecord:
     if body.definition is not None:
         # Normalize to enforce metadata-only persistence (review F-1): reading the
@@ -671,12 +679,12 @@ def create_schema(body: SchemaCreate) -> SchemaRecord:
         raise HTTPException(status_code=409, detail=str(exc))
 
 
-@app.get("/schemas", response_model=List[SchemaSummary])
+@router.get("/schemas", response_model=List[SchemaSummary])
 def list_schemas() -> List[SchemaSummary]:
     return _schema_store.list()
 
 
-@app.get("/schemas/{schema_id}", response_model=SchemaRecord)
+@router.get("/schemas/{schema_id}", response_model=SchemaRecord)
 def get_schema(schema_id: str) -> SchemaRecord:
     record = _schema_store.get(schema_id)
     if record is None:
@@ -684,14 +692,14 @@ def get_schema(schema_id: str) -> SchemaRecord:
     return record
 
 
-@app.delete("/schemas/{schema_id}", status_code=204)
+@router.delete("/schemas/{schema_id}", status_code=204)
 def delete_schema(schema_id: str) -> Response:
     if not _schema_store.delete(schema_id):
         raise HTTPException(status_code=404, detail="Schema not found.")
     return Response(status_code=204)
 
 
-@app.post("/schemas/introspect")
+@router.post("/schemas/introspect")
 def introspect(req: IntrospectRequest) -> Dict[str, Any]:
     conn_cfg, _username, profile_id = _resolve_target(req.profile_id, req.connection)
     client = OracleClient(conn_cfg)
@@ -722,6 +730,11 @@ def introspect(req: IntrospectRequest) -> Dict[str, Any]:
         "truncated": result.truncated,
         "saved": saved,
     }
+
+
+# Mount every route twice: at the root (back-compat) and under /v1 (T-18).
+app.include_router(router)
+app.include_router(router, prefix="/v1")
 
 
 # Run: uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
