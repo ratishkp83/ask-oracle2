@@ -176,13 +176,15 @@ track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = dec
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | P7-0 | Open Phase 7 Discovery charter | ✅ Completed | scope proposal + decisions D-A…D-D |
-| P7-D | Owner approval + decisions (D-A 23ai / D-B pack breadth / D-C glossary mutability / D-D fold-ins) | 📋 Planned | gates all code |
-| P7-DES | Design + build sequence (owner-approved) | 📋 Planned | after P7-D |
-| P7-1 | EBS metadata packs (modules per D-B) | 📋 Planned | curated JSON; in-repo like templates |
-| P7-2 | Glossary surface (dictionary + NL→SQL context, redaction-safe) | 📋 Planned | per D-C |
-| P7-3 | 23ai vector track (build flag-gated **or** formal deferral note) | 📋 Planned | per D-A |
-| P7-4 | Fold-ins (per D-D, e.g. `/v1` prefix T-18) | 📋 Planned | — |
-| P7-5 | Tests + governed-doc updates | 📋 Planned | lockstep |
+| P7-D | Owner approval + decisions (D-A 23ai / D-B pack breadth / D-C glossary mutability / D-D fold-ins) | ✅ Completed | resolved 2026-06-12: defer 23ai (tracked); all 5 modules core tables; read-only curated; fold in `/v1` (T-18), not ITM-011 |
+| P7-DES | Design + build sequence (owner-approved) | 🔄 In Progress | `docs/ebs-intelligence-design.md` (B1…B7); pending owner approval before code |
+| P7-1 | **B1** EBS packs core (`core/ebs_packs.py`, 5 modules, ADR-015) | 📋 Planned | curated; mirrors templates |
+| P7-2 | **B2** NL→SQL EBS context enrichment (opt-in, external-only, tripwire) | 📋 Planned | redaction-safe |
+| P7-3 | **B3** UI: Data Dictionary packs browser + Query Builder module multiselect | 📋 Planned | read-only (D-C) |
+| P7-4 | **B4** `/packs` read-only API | 📋 Planned | mirrors `/templates` |
+| P7-5 | **B5** `/v1` API prefix via router (back-compat) | 📋 Planned | **closes T-18** |
+| P7-6 | **B6** 23ai deferral ADR/note + ITM-018 | 📋 Planned | per D-A |
+| P7-7 | **B7** Governed-doc sweep + traceability + registers | 📋 Planned | lockstep |
 | R7.x | Independent exit-gate review (reviewer ≠ author) | 📋 Planned | iterate to PASS |
 
 ## Standing per-phase review gate (applies to EVERY phase)
@@ -259,3 +261,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.37 | 2026-06-12 | Delivery | RC1.2 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); RC1.3 remediated C1-R1-F1 (storage delete-failure warning) + C1-R1-F2 (load TOCTOU) → 262 tests. Gate cleared; B6 GA-readiness verdict next to close C1. |
 | 1.38 | 2026-06-12 | Delivery | **Round C1 CLOSED** (C1-6/B6) — GA-readiness verdict recorded (`round-C1-ga-readiness.md`): **GA-ready core product** subject to deployment preconditions; EBS pack beta pending ITM-012. Phase 7 (optional) is the only remaining roadmap item. |
 | 1.39 | 2026-06-12 | Delivery | Phase 7 Discovery opened (P7-0) — EBS metadata packs + glossary primary track; 23ai vector decide-deliberately (XE 21c constraint); P7-1…P7-5 + R7.x seeded; build gated on owner decisions D-A…D-D (P7-D). |
+| 1.40 | 2026-06-12 | Delivery | Phase 7 decisions D-A…D-D resolved (defer 23ai / 5 modules core / read-only / fold in `/v1`); P7-D Completed; design + build sequence B1…B7 drafted (`ebs-intelligence-design.md`); P7-DES In Progress — pending owner approval before code. |

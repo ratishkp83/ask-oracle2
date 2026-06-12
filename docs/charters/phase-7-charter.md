@@ -1,6 +1,6 @@
 # Phase 7 Charter — EBS Intelligence & Oracle 23ai Enhancements (optional)
 
-> **Document:** Phase Charter · **Version:** 1.0 · **Status:** 🔄 Discovery — OPEN (scope + decisions pending owner approval; **no code until approved**) · **Owner:** Product/Engineering · **Last updated:** 2026-06-12
+> **Document:** Phase Charter · **Version:** 1.1 · **Status:** 🔄 Design (decisions resolved 2026-06-12; design + build sequence pending owner approval — **no code until approved**) · **Owner:** Product/Engineering · **Last updated:** 2026-06-12
 
 ## Lifecycle stage
 **Discovery OPENED 2026-06-12.** Phases 1–6, 6.5 and Round C1 are all closed; the product is
@@ -115,7 +115,20 @@ EBS/23ai integration."* This charter defines that scope and puts the decisions t
   *Recommendation: (a)* — T-18 closes the last "before GA" note; ITM-011 only if a pack
   report actually needs list binds.
 
+## Decisions (resolved 2026-06-12)
+Owner resolved all four as recommended:
+- **D-A — 23ai vector track:** ✅ **Defer formally** — record the design direction; revisit when a
+  23ai instance or customer demand exists. (Phase 7 ships the EBS track; 23ai becomes a tracked
+  fast-follow item, **not** dropped.)
+- **D-B — EBS pack breadth:** ✅ **All 5 module families (GL/AP/AR/PO/OM), core tables only** —
+  matches the template catalog surface.
+- **D-C — Glossary mutability:** ✅ **Read-only curated packs this phase** (users can still upload
+  their own schema CSVs); editable glossary is a later increment.
+- **D-D — Fold-ins:** ✅ **Add the `/v1` API prefix (T-18)** this phase (additive, back-compat
+  mount). ITM-011 multi-value binds **not** folded in (only if a pack report needs it).
+
 ## Revision history
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-12 | Product/Eng | Discovery charter opened — scope proposal for the optional Phase 7 (EBS metadata packs + glossary as primary track; 23ai vector as a decide-deliberately track; optional fold-ins); decisions D-A…D-D; **pending owner approval before any code.** |
+| 1.1 | 2026-06-12 | Product/Eng | Owner resolved D-A (defer 23ai, tracked fast-follow), D-B (all 5 modules, core tables), D-C (read-only curated), D-D (fold in `/v1` T-18; not ITM-011). Discovery → Design. |
