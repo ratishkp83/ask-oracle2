@@ -17,6 +17,13 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   (it nudges to create an encrypted profile instead). Tests **+3 → 245** (`tests/test_storage.py`).
 
 ### Added (Round C1 — Pre-GA Consolidation & Testing)
+- **RISK-04 live-Oracle pass (B5):** the connect → introspect → bind-parameterized report → CSV
+  export → safety-rejection path was validated against a real **Oracle XE 21c** (`XEPDB1`) via a
+  least-privilege read-only account (ADR-009), driving the actual product code
+  ([`scripts/c1_live_smoke.py`](../scripts/c1_live_smoke.py)) — **all checks PASS**; the SELECT-only
+  chokepoint rejected `UPDATE` and `FOR UPDATE` before the DB was touched. Evidence:
+  [reviews/round-C1-live-pass.md](reviews/round-C1-live-pass.md). EBS-specific templates remain
+  ITM-012 (need a real EBS instance).
 - **ITM-008 closed:** optional NL-question **PII scrubbing** behind a default-off `SCRUB_PII` env
   flag (`src/core/llm/pii.py`). When enabled, the question is masked (email/SSN/card/phone →
   typed placeholders) **on the external-provider path only** (local generation stays verbatim),
