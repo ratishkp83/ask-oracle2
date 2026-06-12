@@ -20,6 +20,9 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 - **`/packs` API (B4):** read-only `GET /packs` + `GET /packs/{module}` (case-insensitive; 404
   `"Unknown EBS module."` with `error_id`), mirroring `/templates`. Tests **+5 → 279**
   (`tests/test_packs_api.py`).
+- **UI (B3):** a read-only **"EBS Packs"** browser in the Data Dictionary (module → table notes +
+  glossary), and a **module multiselect** in the Query Builder NL mode that feeds `ebs_modules`
+  into generation. Covered by the headless 7-section smoke.
 
 ### Changed (Round C1 — Pre-GA Consolidation & Testing)
 - **ITM-007 closed:** replaced the deprecated Streamlit `use_container_width=True` with

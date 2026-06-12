@@ -45,6 +45,7 @@ from src.core.reports import (
     coerce_report_binds,
 )
 from src.core.templates import get_template, list_templates
+from src.core.ebs_packs import get_pack, list_packs
 from src.core.logging_config import configure_logging
 from src.core.errors import log_error_for_ui, sanitize_db_error_for_ui
 from src.core.sql_safety import SqlSafetyError
@@ -481,6 +482,29 @@ def draw_schema_sources(conn_cfg: Optional[OracleConnectionConfig]):
 def draw_data_dictionary(schema: Schema):
     st.header("Data Dictionary")
 
+    # --- EBS packs (Phase 7, reference) -------------------------------- #
+    with st.expander("EBS Packs — module metadata + glossary (reference)"):
+        st.caption("Curated EBS table descriptions and business-term glossary — review before use.")
+        pmod = st.selectbox("EBS module", [p.module for p in list_packs()], key="dict_ebs_module")
+        pack = get_pack(pmod)
+        if pack:
+            st.markdown(f"**{pack.name} — tables**")
+            st.dataframe(
+                pd.DataFrame(
+                    [{"table": t.table, "description": t.description, "key columns": ", ".join(t.key_columns)}
+                     for t in pack.tables]
+                ),
+                width="stretch", hide_index=True,
+            )
+            st.markdown("**Glossary**")
+            st.dataframe(
+                pd.DataFrame(
+                    [{"term": g.term, "maps to": g.table + (f".{g.column}" if g.column else ""), "note": g.note or ""}
+                     for g in pack.glossary]
+                ),
+                width="stretch", hide_index=True,
+            )
+
     # --- Search / filter ----------------------------------------------- #
     st.subheader("Search")
     s1, s2, s3, s4 = st.columns([3, 2, 1, 1])
@@ -592,6 +616,12 @@ def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optio
 
     if mode == "Natural Language":
         prompt = st.text_area("What do you want to see?", placeholder="Show me total AP invoices by vendor for last quarter")
+        ebs_mods = st.multiselect(
+            "EBS module context (optional)",
+            ["GL", "AP", "AR", "PO", "OM"],
+            key="nl_ebs_modules",
+            help="Adds curated EBS table descriptions + glossary so the model can map business terms to EBS tables.",
+        )
         col1, col2 = st.columns([1, 1])
         with col1:
             if st.button("Generate SQL"):
@@ -599,7 +629,9 @@ def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optio
                     st.error("Upload schema first.")
                 else:
                     try:
-                        result = generate_sql_from_nl(prompt, schema, llm=st.session_state.llm_config)
+                        result = generate_sql_from_nl(
+                            prompt, schema, llm=st.session_state.llm_config, ebs_modules=ebs_mods or None
+                        )
                         st.session_state.generated_sql = result.sql
                         st.session_state.nl_explanation = result.explanation
                         st.session_state.nl_confidence = (
