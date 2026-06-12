@@ -1,6 +1,6 @@
 # D10 — Risk Register
 
-> **Document:** Risk Register · **Version:** 1.8 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
+> **Document:** Risk Register · **Version:** 1.9 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
 
 Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted / Closed.
 
@@ -9,7 +9,7 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | RISK-01 | Live Groq/OpenAI keys were committed to the repo | Critical | Credential compromise, billing abuse | High (if pushed) | Files cleaned + `.env` ignored; keys **rotated** by user 2026-06-10 | User | **Closed** |
 | RISK-02 | No version control on local copy | High | No history/audit; cannot govern docs | Was certain | **Resolved in P2.5** (git initialized) | Eng | Closing |
 | RISK-03 | Docs fragmented (staging vs repo) | Medium | Source-of-truth ambiguity | Medium | Governed `/docs` is authoritative; staging archived | Eng | Mitigating |
-| RISK-04 | Streamlit UI not browser-verified; engine not run against a live DB | Medium | UI/DB regressions ship undetected | Low | Headless AppTest smoke in CI; **live-Oracle engine-path pass against XE 21c PASSED 2026-06-11** (connect/introspect/bound-report/export/safety; [reviews/round-C1-live-pass.md](reviews/round-C1-live-pass.md)). **Residuals:** optional UI browser-visual walk; EBS templates ([ITM-012](issue-log.md), needs real EBS) | QA | Mitigating |
+| RISK-04 | Streamlit UI not browser-verified; engine not run against a live DB | Medium | UI/DB regressions ship undetected | Low | Headless AppTest smoke in CI; **live-Oracle engine-path pass against XE 21c PASSED 2026-06-11** ([reviews/round-C1-live-pass.md](reviews/round-C1-live-pass.md)); **owner browser-tested the Streamlit UI against XE satisfactorily 2026-06-12**. EBS-template live validation tracked separately under [ITM-012](issue-log.md) (needs real EBS) | QA | **Closed** |
 | RISK-05 | No CI; manual test runs | Medium | Regressions slip | Medium | GitHub Actions CI added in P2.5 | Eng | Closing |
 | RISK-06 | sqlglot fail-closed rejects exotic valid SELECTs | Low | Occasional false rejection | Low | Documented tradeoff; add cases as found | Eng | **Accepted** |
 | RISK-07 | "Per-user" LLM is per-session (no auth) | Low | Not true multi-tenant isolation | n/a | Revisit when identity layer added | Product | **Accepted** |
@@ -39,3 +39,4 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | 1.6 | 2026-06-11 | Delivery | Phase 6.5 review r1/R1: RISK-11 mitigation extended — host NFKC-folded so Unicode compatibility digit encodings can't bypass the SSRF guard. |
 | 1.7 | 2026-06-11 | Delivery | Round C1/B2: **RISK-09 Closed** — `connection.json` write path removed; legacy files imported once + deleted (ITM-006). |
 | 1.8 | 2026-06-11 | Delivery | Round C1/B5: RISK-04 likelihood Medium→Low — live-Oracle engine-path pass against XE 21c PASSED; residuals = optional UI browser-visual + EBS templates (ITM-012). |
+| 1.9 | 2026-06-12 | Delivery | Round C1/B4: **RISK-04 Closed** — owner browser-tested the Streamlit UI against XE satisfactorily; live engine pass already green. EBS-template validation tracked under ITM-012. |

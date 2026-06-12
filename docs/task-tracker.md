@@ -157,13 +157,14 @@ new features. **Scope + decisions D-A…D-C pending owner; no code until approve
 | C1-0 | Open Round C1 Discovery charter | ✅ Completed | objectives/scope/risks + decisions D-A…D-C |
 | C1-D | Owner approval + decisions (D-A instance / D-B scope / D-C ITM-008) | ✅ Completed | resolved 2026-06-11: **Oracle XE available** → live pass runs this round (EBS templates still ITM-012); **full scope**; **build ITM-008** behind default-off flag |
 | C1-DES | Design + build sequence + XE live-pass runbook | ✅ Completed | `docs/round-C1-design.md` (B1…B6 + read-only-account/sample-schema SQL) |
-| C1-1 | Confirm CI 3.11+3.13 green on `9209e3a` | 📋 Planned | needs Actions access (`gh` absent) — owner confirms or provides run URL |
-| C1-2 | RISK-04 live-Oracle + manual UI/observability pass | ✅ Completed (engine path) | **B5**; live pass against **XE 21c** (`XEPDB1`, read-only `aor_readonly`) via `scripts/c1_live_smoke.py` — connect/introspect/bound-report/export/safety **ALL PASS** ([evidence](reviews/round-C1-live-pass.md)); RISK-04 Med→Low. Residuals: optional UI browser-visual walk; EBS templates (ITM-012) |
+| C1-1 | Confirm CI 3.11+3.13 green on the pushed C1 code | ✅ Completed | **B4**; owner confirmed in the Actions tab — **CI run #12 green** on `f374380` (B1–B3 head), plus #10 (`9209e3a`) + #11 (`a395003`) green; a green run = both 3.11 + 3.13 legs passed. (B5 `5c1444d` is docs/script only, unpushed — no product/test change.) |
+| C1-2 | RISK-04 live-Oracle + manual UI/observability pass | ✅ Completed | **B5** + owner UI walk; live engine pass against **XE 21c** (`XEPDB1`, read-only `aor_readonly`) via `scripts/c1_live_smoke.py` — connect/introspect/bound-report/export/safety **ALL PASS** ([evidence](reviews/round-C1-live-pass.md)); **owner browser-tested the Streamlit UI against XE satisfactorily 2026-06-11**. **RISK-04 Closed.** EBS-template live validation remains ITM-012 (needs real EBS). |
 | C1-3 | ITM-006 — legacy `connection.json` → encrypted profiles | ✅ Completed | **B2**; write path removed (`save_connection_config` deleted; Save button retired); `migrate_legacy_connection()` imports-once + deletes (also any pre-F5 plaintext file); 245 tests; ITM-006 CLOSED, RISK-09 Closed |
 | C1-4 | ITM-007 — `use_container_width` → `width='stretch'` | ✅ Completed | **B1**; 14 sites in `app.py` migrated (verified `streamlit==1.58.0`); smoke green; ITM-007 CLOSED |
 | C1-5 | ITM-008 — NL PII scrubbing (per D-C) | ✅ Completed | **B3**; `core/llm/pii.py` behind default-off `SCRUB_PII`; external path only, local verbatim; email/SSN/card/phone masked; 15 tests (260 total); ITM-008 CLOSED |
 | C1-6 | Governed-doc updates + GA-readiness verdict | 📋 Planned | RISK-04 disposition; CHANGELOG/registers |
-| RC1.x | Independent exit-gate review for code-touching items (reviewer ≠ author) | 📋 Planned | where applicable (C1-3/4/5) |
+| RC1.1 | Prepare exit-gate review package (B1–B3 code) | ✅ Completed | [reviews/round-C1-review-package.md](reviews/round-C1-review-package.md); range `a395003..f374380` |
+| RC1.2+ | Independent adversarial exit-gate review (reviewer ≠ author, owner-supplied) | 📋 Planned | covers ITM-006/007/008 code; iterate to PASS |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -235,3 +236,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.33 | 2026-06-11 | Delivery | **B2 done — ITM-006 CLOSED, RISK-09 Closed**: `connection.json` write path retired, read-and-delete migration; D3 v1.5; 245 tests. Next: B3 ITM-008. |
 | 1.34 | 2026-06-11 | Delivery | **B3 done — ITM-008 CLOSED**: `core/llm/pii.py` opt-in PII scrubbing (`SCRUB_PII`, external path only); D3/D7 updated; 260 tests. All C1 code items (B1–B3) done. Next: B4 CI confirm, B5 live pass (owner XE setup), RC1 review, B6 verdict. |
 | 1.35 | 2026-06-11 | Delivery | **B5 done — RISK-04 live-Oracle pass against XE 21c: ALL PASS** (connect/introspect/bound-report/export/safety via `scripts/c1_live_smoke.py`; [evidence](reviews/round-C1-live-pass.md)); risk-register v1.8 (RISK-04 Med→Low). Remaining: B4 CI confirm, RC1 review, B6 verdict (+ optional UI browser-visual; EBS templates = ITM-012). |
+| 1.36 | 2026-06-12 | Delivery | **B4 done** — owner confirmed CI green (run #12 on `f374380`, +#10/#11); **owner browser-tested the UI against XE satisfactorily → RISK-04 Closed**. RC1.1 review package prepared (`a395003..f374380`). Remaining: RC1.2 independent review (owner-supplied), B6 GA-readiness verdict. |

@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 2.8 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
+> **Document:** Session Handoff · **Version:** 2.9 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -121,24 +121,23 @@ scope; D-C build ITM-008 behind a default-off flag). Build order B1…B6:
 - **B3 — ITM-008 DONE:** `core/llm/pii.py` opt-in NL-question PII scrubbing behind default-off
   `SCRUB_PII` (external send only; local verbatim; email/SSN/card/phone masked). **ITM-008
   CLOSED**; 260 tests. *(All C1 code items B1–B3 complete.)*
-- **B4 — CI confirm** green on `9209e3a` (no `gh` here → confirm in the Actions tab).
-- **B5 — RISK-04 live pass DONE:** XE 21c set up on this machine (read-only `aor_readonly` +
-  `aor_demo` sample in `XEPDB1`; conn in git-ignored `.env` `AOR_LIVE_*`). `scripts/c1_live_smoke.py`
-  drove the real product code (connect/introspect/bound-report/export/safety) → **ALL PASS**
-  ([evidence](reviews/round-C1-live-pass.md)); RISK-04 Med→Low. Residuals: optional UI
-  browser-visual walk; EBS templates = ITM-012.
-- **B6 — doc sweep + GA-readiness verdict.** Code-touching items (B1–B3) get an exit-gate review (RC1.x).
+- **B4 — CI confirm DONE:** owner confirmed in the Actions tab — **CI run #12 green** on `f374380`
+  (B1–B3 head), plus #10 (`9209e3a`) + #11 (`a395003`) green; a green run = both 3.11 + 3.13 legs.
+- **B5 — RISK-04 live pass DONE + UI browser-tested → RISK-04 Closed:** XE 21c on this machine
+  (read-only `aor_readonly` + `aor_demo` sample in `XEPDB1`; conn in git-ignored `.env` `AOR_LIVE_*`).
+  `scripts/c1_live_smoke.py` drove the real product code → **ALL PASS**
+  ([evidence](reviews/round-C1-live-pass.md)); the **owner also browser-tested the Streamlit UI
+  against XE satisfactorily 2026-06-12**. EBS-template validation stays ITM-012 (needs real EBS).
+- **RC1.1 DONE:** review package prepared ([reviews/round-C1-review-package.md](reviews/round-C1-review-package.md), `a395003..f374380`).
+- **B6 — GA-readiness verdict** is the final step, **after** the RC1 independent review.
 
 **First steps on resume:** confirm the working tree is clean and **260 tests pass**
-(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2). **C1 code items (B1–B3)
-and the B5 live pass are done;** what remains is **B4** (owner confirms CI green on the pushed
-commit in the Actions tab), an independent **RC1 exit-gate review** of the B1–B3 code (reviewer ≠
-author, owner-supplied), and **B6** the GA-readiness verdict. *(To re-run the live pass: XE listener
-`OracleOraDB21Home1TNSListener` must be running; then `python scripts/c1_live_smoke.py`.)*
-
-**First steps on resume:** confirm the working tree is clean and **242 tests pass**
-(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2), then check
-[task-tracker.md](task-tracker.md) R6.5.4 for the remaining closure steps.
+(`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2). **C1 is nearly done —
+B1–B5 + B4 complete, RISK-04 Closed.** What remains: the **RC1.2 independent exit-gate review** of
+the B1–B3 code (reviewer ≠ author, owner-supplied — package ready) → then **B6** the GA-readiness
+verdict closes Round C1. *(Local `main` is 1 commit ahead of origin — B5 `5c1444d` + this
+governance are unpushed; push on owner request. To re-run the live pass: ensure XE listener
+`OracleOraDB21Home1TNSListener` is running, then `python scripts/c1_live_smoke.py`.)*
 
 ## Revision history
 | Version | Date | Author | Change |
@@ -162,5 +161,6 @@ author, owner-supplied), and **B6** the GA-readiness verdict. *(To re-run the li
 | 2.6 | 2026-06-11 | Delivery | **B2 ITM-006 CLOSED / RISK-09 Closed** (connection.json write path retired); 245 tests. |
 | 2.7 | 2026-06-11 | Delivery | **B3 ITM-008 CLOSED** (opt-in `SCRUB_PII` PII scrubbing); 260 tests; all C1 code items (B1–B3) done. |
 | 2.8 | 2026-06-11 | Delivery | **B5 RISK-04 live-Oracle pass against XE 21c: ALL PASS** (`scripts/c1_live_smoke.py`; evidence `reviews/round-C1-live-pass.md`); RISK-04 Med→Low. Remaining: B4 CI confirm, RC1 review, B6 verdict. |
+| 2.9 | 2026-06-12 | Delivery | **B4 done** (owner confirmed CI run #12 green) + **owner UI browser-test against XE satisfactory → RISK-04 Closed**; RC1.1 review package prepared. Remaining: RC1.2 independent review (owner-supplied) → B6 GA verdict. §8 stale-duplicate cleaned. |
 | 2.6 | 2026-06-11 | Delivery | **B2 ITM-006 CLOSED** (RISK-09 Closed): `connection.json` write path retired, read-and-delete migration; 245 tests. Next = B3 ITM-008. |
 | 2.7 | 2026-06-11 | Delivery | **B3 ITM-008 CLOSED**: `core/llm/pii.py` opt-in PII scrubbing (`SCRUB_PII`); 260 tests. All C1 code (B1–B3) done. Remaining: B4 CI confirm, B5 XE live pass, RC1 review, B6 verdict. |

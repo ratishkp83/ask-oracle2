@@ -17,6 +17,10 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   (it nudges to create an encrypted profile instead). Tests **+3 → 245** (`tests/test_storage.py`).
 
 ### Added (Round C1 — Pre-GA Consolidation & Testing)
+- **RISK-04 Closed (B4/B5):** beyond the automated live-Oracle pass, the owner browser-tested the
+  Streamlit UI against XE (connect via saved profile → run a SELECT → export → safety rejection)
+  satisfactorily, and confirmed **CI green on both 3.11 + 3.13** for the pushed C1 code (run #12).
+  EBS-template validation against a real instance remains ITM-012.
 - **RISK-04 live-Oracle pass (B5):** the connect → introspect → bind-parameterized report → CSV
   export → safety-rejection path was validated against a real **Oracle XE 21c** (`XEPDB1`) via a
   least-privilege read-only account (ADR-009), driving the actual product code
