@@ -1,6 +1,6 @@
 # Phase 7 — Design + Build Sequence (EBS Intelligence & 23ai)
 
-> **Document:** Design · **Version:** 1.0 · **Status:** 🔄 Pending owner approval (no code until approved) · **Owner:** Engineering · **Last updated:** 2026-06-12
+> **Document:** Design · **Version:** 1.1 · **Status:** Baseline (owner-approved 2026-06-12) · **Owner:** Engineering · **Last updated:** 2026-06-12
 > Charter: [charters/phase-7-charter.md](charters/phase-7-charter.md) (D-A defer 23ai · D-B all 5 modules, core tables · D-C read-only curated · D-D fold in `/v1`).
 
 ## 1. Purpose & scope recap
@@ -116,3 +116,4 @@ ITM-011 multi-value binds (not folded in); live-EBS validation of pack contents 
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 1.0 | 2026-06-12 | Engineering | Initial design + build sequence (B1…B7) per resolved decisions D-A…D-D; pending owner approval before any code. |
+| 1.1 | 2026-06-12 | Engineering | Owner approved ("proceed clean") → Baseline; build started at B1. Packs align to the tables the Phase-4 template catalog already references. |

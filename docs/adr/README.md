@@ -22,5 +22,6 @@ new ADR that references the old one (don't rewrite history).
 | [ADR-012](ADR-012-observability-and-error-handling.md) | Observability & error handling (structured logs, error IDs, sanitized DB errors, metrics) | Accepted |
 | [ADR-013](ADR-013-network-edge-hardening.md) | Network-edge hardening (opt-in API-key auth + explicit env-driven CORS) | Accepted |
 | [ADR-014](ADR-014-file-store-durability.md) | File-store durability (atomic JSON writes; corrupt-record quarantine) | Accepted |
+| [ADR-015](ADR-015-ebs-metadata-packs.md) | EBS metadata packs as curated, redaction-safe NL→SQL overlays | Accepted |
 
 Template: [ADR-template.md](ADR-template.md).

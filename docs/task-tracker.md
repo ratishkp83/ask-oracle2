@@ -177,8 +177,8 @@ track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = dec
 |----|------|--------|-------|
 | P7-0 | Open Phase 7 Discovery charter | ✅ Completed | scope proposal + decisions D-A…D-D |
 | P7-D | Owner approval + decisions (D-A 23ai / D-B pack breadth / D-C glossary mutability / D-D fold-ins) | ✅ Completed | resolved 2026-06-12: defer 23ai (tracked); all 5 modules core tables; read-only curated; fold in `/v1` (T-18), not ITM-011 |
-| P7-DES | Design + build sequence (owner-approved) | 🔄 In Progress | `docs/ebs-intelligence-design.md` (B1…B7); pending owner approval before code |
-| P7-1 | **B1** EBS packs core (`core/ebs_packs.py`, 5 modules, ADR-015) | 📋 Planned | curated; mirrors templates |
+| P7-DES | Design + build sequence (owner-approved) | ✅ Completed | `docs/ebs-intelligence-design.md`; owner approved 2026-06-12 → build |
+| P7-1 | **B1** EBS packs core (`core/ebs_packs.py`, 5 modules, ADR-015) | ✅ Completed | curated packs + glossary for GL/AP/AR/PO/OM (tables aligned to the template catalog); `build_ebs_context()` metadata-only, tripwire-safe; 9 tests (**271 total**); ADR-015 |
 | P7-2 | **B2** NL→SQL EBS context enrichment (opt-in, external-only, tripwire) | 📋 Planned | redaction-safe |
 | P7-3 | **B3** UI: Data Dictionary packs browser + Query Builder module multiselect | 📋 Planned | read-only (D-C) |
 | P7-4 | **B4** `/packs` read-only API | 📋 Planned | mirrors `/templates` |
@@ -262,3 +262,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.38 | 2026-06-12 | Delivery | **Round C1 CLOSED** (C1-6/B6) — GA-readiness verdict recorded (`round-C1-ga-readiness.md`): **GA-ready core product** subject to deployment preconditions; EBS pack beta pending ITM-012. Phase 7 (optional) is the only remaining roadmap item. |
 | 1.39 | 2026-06-12 | Delivery | Phase 7 Discovery opened (P7-0) — EBS metadata packs + glossary primary track; 23ai vector decide-deliberately (XE 21c constraint); P7-1…P7-5 + R7.x seeded; build gated on owner decisions D-A…D-D (P7-D). |
 | 1.40 | 2026-06-12 | Delivery | Phase 7 decisions D-A…D-D resolved (defer 23ai / 5 modules core / read-only / fold in `/v1`); P7-D Completed; design + build sequence B1…B7 drafted (`ebs-intelligence-design.md`); P7-DES In Progress — pending owner approval before code. |
+| 1.41 | 2026-06-12 | Delivery | Phase 7 design approved (P7-DES Completed); Build started — **B1 done**: `core/ebs_packs.py` (5-module curated packs + glossary, ADR-015), `build_ebs_context()` tripwire-safe; 271 tests. Next: B2 NL→SQL enrichment. |

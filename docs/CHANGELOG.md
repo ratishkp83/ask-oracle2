@@ -4,6 +4,15 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 7 — EBS Intelligence & 23ai)
+- **EBS metadata packs (B1)** ([ADR-015](adr/ADR-015-ebs-metadata-packs.md)): `src/core/ebs_packs.py`
+  — curated, read-only per-module (GL/AP/AR/PO/OM) **metadata**: table descriptions, key columns,
+  canonical join hints, and a business-term **glossary** ("invoice" → `AP_INVOICES_ALL`).
+  `build_ebs_context(modules)` renders names/descriptions only (no row data) for opt-in NL→SQL
+  context; the output passes the external-prompt `assert_no_values` tripwire. Packs describe the
+  same tables the template catalog uses (test-enforced). Tests **+9 → 271** (`tests/test_ebs_packs.py`).
+  Pack *contents* still need real-EBS validation (ITM-012).
+
 ### Changed (Round C1 — Pre-GA Consolidation & Testing)
 - **ITM-007 closed:** replaced the deprecated Streamlit `use_container_width=True` with
   `width="stretch"` across all 14 `st.button`/`st.dataframe`/`st.download_button` calls in

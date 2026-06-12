@@ -1,6 +1,6 @@
 # D3 — Architecture
 
-> **Document:** Architecture · **Version:** 1.6 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-11
+> **Document:** Architecture · **Version:** 1.7 · **Status:** Baseline · **Owner:** Engineering · **Last updated:** 2026-06-12
 
 ## 1. Container view
 
@@ -44,6 +44,7 @@ Both the UI and the API converge on `src/core/`. The React/Vite scaffold exists 
 | `core/fileio.py` | `atomic_write_json()` — temp + fsync + `os.replace`, shared by all four JSON stores ([ADR-014](adr/ADR-014-file-store-durability.md)). Phase 6.5. |
 | `core/reports.py` | Report v2 models + `ReportStore` (JSON/in-memory) + legacy migration; `coerce_report_binds()` (defaults/required/typing, rejects unknown keys). Phase 4. |
 | `core/templates.py` | Curated read-only EBS template catalog (GL/AP/AR/PO/OM); parameterized `:bind` SQL, review-before-run. Phase 4. |
+| `core/ebs_packs.py` | Curated read-only EBS **metadata** packs (table/column descriptions, join hints, business-term glossary) per module; `build_ebs_context()` feeds opt-in, redaction-safe NL→SQL context ([ADR-015](adr/ADR-015-ebs-metadata-packs.md)). Phase 7. |
 | `core/schema_store.py` | `SchemaRecord` + `SchemaStore` (JSON/in-memory); persisted dictionary snapshots, metadata only ([ADR-011](adr/ADR-011-schema-persistence-store.md)). Phase 5. |
 | `core/introspection.py` | Live SELECT-only schema introspection from `ALL_*` views via `run_select` (bind-parameterized, scoped/capped, graceful) — [ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md). Phase 5. |
 | `db.py` | `OracleClient` (thin mode); `run_select(sql, limits, binds)` enforces limits, returns `QueryResult`; `validate_binds()` chokepoint backstop (scalar-only, never interpolated — [ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md)). |
@@ -103,4 +104,5 @@ See [ADR index](adr/). Ratified: ADR-001…012.
 | 1.4 | 2026-06-11 | Engineering | Phase 6.5: `core/auth.py` (opt-in API-key edge, ADR-013) + `core/fileio.py` (atomic store writes, ADR-014) added to the module table. |
 | 1.5 | 2026-06-11 | Engineering | Round C1/B2 (ITM-006): `storage.py` row updated — `connection.json` write path retired; read-and-delete migration only. |
 | 1.6 | 2026-06-11 | Engineering | Round C1/B3 (ITM-008): `core/llm/pii.py` added to the `core/llm/` row (optional NL-question PII scrubbing). |
+| 1.7 | 2026-06-12 | Engineering | Phase 7 (B1): `core/ebs_packs.py` (curated EBS metadata packs / glossary, ADR-015) added to the module table. |
 | 1.3 | 2026-06-10 | Engineering | Phase 6 (B1): `core/logging_config` (structured JSON logging, `request_id`); audit emits JSON; Observability cross-cutting concern; ADR-012. |
