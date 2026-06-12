@@ -13,7 +13,7 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 - **Local repo (git):** `D:\Ratish\Personal\Project\ask-oracle-reports-main` (branch `main`). Note: the *folder* name is legacy (`-reports-main`); it is not a tracked reference.
 - **Remote:** `origin` = https://github.com/ratishkp83/ask-oracle2 (branch `main`, in sync). Push with `git push` (upstream set). `gh` is **not** installed; auth works via cached Git Credential Manager. Commit per change; **push only when the owner asks.**
 - **OS/shell:** Windows / PowerShell. Python via `py -3`. Project virtualenv at `.venv` (deps installed; both `.venv` and `.env` are git-ignored).
-- **Run the suite (expect 185 passed):**
+- **Run the suite (expect 293 passed):**
   ```powershell
   $env:PYTHONPATH = "D:\Ratish\Personal\Project\ask-oracle-reports-main"
   $env:APP_SECRET_KEY = "test-secret-key-not-for-production"
