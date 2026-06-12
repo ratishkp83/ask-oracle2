@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.0 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-11
+> **Document:** Issue Log · **Version:** 1.0 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-12
 
 ## Bug workflow (mandatory)
 
@@ -113,6 +113,18 @@ the verdict (no blocking findings); all four findings were nonetheless remediate
 | R3 | S4 | Whitespace-only `ALLOWED_ORIGINS` (e.g. `"   "`) is truthy → skips the localhost default → empty origins list (denies all CORS) instead of the documented default | **Fixed** — `_cors_config` strips before the `or` default, so blank/whitespace falls back to the localhost pair | ✅ Fixed (`test_auth.py::test_cors_whitespace_falls_back_to_default`) |
 | R4 | S4 | Undocumented asymmetry: `APP_API_KEY` is read per-request (live rotation) while `ALLOWED_ORIGINS` is read once at import (restart required) | **Fixed (doc)** — noted in `_cors_config` docstring and [D7 §2](07-deployment-plan.md) | ✅ Documented |
 
+## Round C1 — independent review findings & remediation (r1)
+
+Source: [reviews/round-C1-review-r1.md](reviews/round-C1-review-r1.md) — verdict
+**PASS-WITH-FIXES** (no S1/S2; reviewer ≠ author; B1–B3 code, range `a395003..f374380`; all
+item invariants + the SELECT-only chokepoint verified clean). Post-remediation suite: **262
+tests green**. Gate cleared by the verdict; both findings remediated immediately.
+
+| ID | Sev | Finding | Disposition | Status |
+|----|-----|---------|-------------|--------|
+| C1-R1-F1 | S3 | `migrate_legacy_connection` swallowed `OSError` from `os.remove(CONFIG_FILE)` with a bare `pass` — if the legacy file can't be deleted (locked/read-only), a plaintext connection file could remain at rest with no warning | **Fixed** — the `except OSError` now logs a `warning` via `get_logger("storage")` (the file path + error, **not** the secret value) and still returns the config so startup proceeds | ✅ Fixed (`test_storage.py::test_migrate_warns_and_proceeds_when_delete_fails`) |
+| C1-R1-F2 | S4 | TOCTOU in `load_connection_config` between `os.path.exists` and `open` — a concurrent delete would raise `FileNotFoundError` up through startup | **Fixed** — dropped the `exists()` check; `open` directly, `except FileNotFoundError: return None` | ✅ Fixed (`test_storage.py::test_load_returns_none_when_file_missing`) |
+
 ## Revision history
 
 | Version | Date | Author | Change |
@@ -127,4 +139,5 @@ the verdict (no blocking findings); all four findings were nonetheless remediate
 | 1.7 | 2026-06-10 | Engineering | Phase 6 exit-gate r1 = PASS-WITH-FIXES: F-1/F-2 (S2) corrected ITM-016's premature closure (pins not 3.13-installable + CI never run) → **re-pinned to a clean-install-proven 3.13-capable set** (185 green); F-3/F-4/F-5 fixed; F-7→ITM-017 (Phase-7). ITM-016 now Mitigating (CI demo pending push). |
 | 1.8 | 2026-06-11 | Engineering | Phase 6.5 build B1–B5: **ITM-009 CLOSED** (ADR-013 edge auth/CORS), **ITM-010 CLOSED** (encoding decode, fail-closed), **ITM-013 CLOSED** (atomic writes, ADR-014; multi-worker = D7 constraint), **ITM-014 CLOSED** (quarantine), **ITM-017 CLOSED** (non-DB surfaces routed); Phase-3 F7, Phase-4 R1/R2, Phase-6 F-7 statuses updated. |
 | 1.9 | 2026-06-11 | Engineering | Phase 6.5 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); R1–R4 logged + all remediated (R1 NFKC Unicode-digit SSRF fold; R2 fd-close; R3 blank-CORS fallback; R4 doc); 242 tests; ITM-010 closure note extended. |
+| 1.10 | 2026-06-12 | Engineering | Round C1 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); C1-R1-F1 (storage delete-failure now logs a warning) + C1-R1-F2 (load TOCTOU → try/except) remediated; 262 tests. |
 | 1.3 | 2026-06-10 | Engineering | Phase 4: ITM-011 (list/multi-value binds deferred) + ITM-012 (templates not live-EBS validated) logged. |

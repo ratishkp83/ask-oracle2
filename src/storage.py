@@ -4,6 +4,8 @@ import json
 import os
 from typing import Dict, Optional
 
+from src.core.logging_config import get_logger
+
 # Render native runtime uses /opt/render/project/src as the working directory.
 # Docker uses /app. STORAGE_DIR env var overrides both.
 _DEFAULT = os.path.join(
@@ -18,10 +20,13 @@ CONFIG_FILE = os.path.join(DEFAULT_STORAGE_DIR, "connection.json")
 
 
 def load_connection_config() -> Optional[Dict[str, object]]:
-    if not os.path.exists(CONFIG_FILE):
+    # Open directly and treat a missing file as None — avoids the TOCTOU window
+    # between an exists() check and open() (review C1-R1-F2).
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
         return None
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
 
 
 def migrate_legacy_connection() -> Optional[Dict[str, object]]:
@@ -39,6 +44,12 @@ def migrate_legacy_connection() -> Optional[Dict[str, object]]:
         return None
     try:
         os.remove(CONFIG_FILE)
-    except OSError:
-        pass
+    except OSError as exc:
+        # Don't fail startup, but surface it: a legacy file we couldn't delete
+        # may keep a plaintext password at rest (review C1-R1-F1).
+        get_logger("storage").warning(
+            "Could not remove legacy connection.json after import; a plaintext "
+            "connection file may remain at rest",
+            extra={"extra_fields": {"error": str(exc), "path": CONFIG_FILE}},
+        )
     return cfg

@@ -1,6 +1,6 @@
 # Round C1 Charter — Pre-GA Consolidation & Testing
 
-> **Document:** Round Charter · **Version:** 1.1 · **Status:** 🔄 Design (decisions resolved 2026-06-11; design + build next) · **Owner:** Product/Engineering · **Last updated:** 2026-06-11
+> **Document:** Round Charter · **Version:** 1.2 · **Status:** ✅ CLOSED 2026-06-12 (all items delivered; exit-gate review r1 PASS-WITH-FIXES → remediated; GA-readiness verdict recorded) · **Owner:** Product/Engineering · **Last updated:** 2026-06-12
 
 ## Lifecycle stage
 **Discovery OPENED 2026-06-11.** With Phases 1–6 and the Phase-6.5 hardening mini-phase all
@@ -98,3 +98,4 @@ Owner approved the round and resolved all three decisions:
 |---------|------|--------|--------|
 | 1.0 | 2026-06-11 | Product/Eng | Discovery charter opened after Phase 6.5 closure; bundles CI confirmation, RISK-04 live pass, and ITM-006/007/008; objectives/scope/risks/success criteria + open decisions D-A…D-C; **pending owner approval before any code.** |
 | 1.1 | 2026-06-11 | Product/Eng | Owner resolved D-A (Oracle XE available → live pass runs this round; EBS-template validation still ITM-012), D-B (full scope), D-C (build ITM-008 behind a default-off flag). Discovery → Design. |
+| 1.2 | 2026-06-12 | Product/Eng | **Round CLOSED** — B1–B6 delivered (262 tests; ITM-006/007/008 closed; RISK-04/09 Closed; live-Oracle pass + UI browser-test passed; CI green); exit-gate review r1 PASS-WITH-FIXES → F1/F2 remediated; GA-readiness verdict recorded ([round-C1-ga-readiness.md](../round-C1-ga-readiness.md)). |

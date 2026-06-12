@@ -147,7 +147,7 @@ ITM-010 (base_url IP encodings), ITM-013/014 (file-store durability, RISK-16), I
 | R6.5.3 | Remediate r1 findings + regression | ✅ Done | R1 NFKC host-fold (Unicode fullwidth-digit IP encodings rejected at the guard; genuine IDN preserved); R2 `os.close(fd)` on error path; R3 blank `ALLOWED_ORIGINS` → localhost fallback; R4 documented (D7); **+6 → 242 tests** |
 | R6.5.4 | Phase-6.5 closure sign-off | ✅ Completed | **gate PASSED 2026-06-11**: r1 = PASS-WITH-FIXES (no blocking), R1–R4 all remediated, 242 tests, governed docs current. Closed on r1 by owner direction (no r2). Pushed `2ba0a56..9209e3a`. CI-matrix green confirmation deferred to **Round C1**. |
 
-## Round C1 — Pre-GA Consolidation & Testing (🔄 Discovery OPENED 2026-06-11)
+## Round C1 — Pre-GA Consolidation & Testing (✅ CLOSED 2026-06-12)
 
 Charter: [round-C1-charter.md](charters/round-C1-charter.md). Verification + pre-GA cleanups, no
 new features. **Scope + decisions D-A…D-C pending owner; no code until approved.**
@@ -162,9 +162,10 @@ new features. **Scope + decisions D-A…D-C pending owner; no code until approve
 | C1-3 | ITM-006 — legacy `connection.json` → encrypted profiles | ✅ Completed | **B2**; write path removed (`save_connection_config` deleted; Save button retired); `migrate_legacy_connection()` imports-once + deletes (also any pre-F5 plaintext file); 245 tests; ITM-006 CLOSED, RISK-09 Closed |
 | C1-4 | ITM-007 — `use_container_width` → `width='stretch'` | ✅ Completed | **B1**; 14 sites in `app.py` migrated (verified `streamlit==1.58.0`); smoke green; ITM-007 CLOSED |
 | C1-5 | ITM-008 — NL PII scrubbing (per D-C) | ✅ Completed | **B3**; `core/llm/pii.py` behind default-off `SCRUB_PII`; external path only, local verbatim; email/SSN/card/phone masked; 15 tests (260 total); ITM-008 CLOSED |
-| C1-6 | Governed-doc updates + GA-readiness verdict | 📋 Planned | RISK-04 disposition; CHANGELOG/registers |
+| C1-6 | Governed-doc updates + GA-readiness verdict | ✅ Completed | **B6**; [round-C1-ga-readiness.md](round-C1-ga-readiness.md) — **GA-ready (core product) subject to deployment preconditions; EBS pack beta pending ITM-012**; registers/CHANGELOG/traceability current. **Round C1 CLOSED.** |
 | RC1.1 | Prepare exit-gate review package (B1–B3 code) | ✅ Completed | [reviews/round-C1-review-package.md](reviews/round-C1-review-package.md); range `a395003..f374380` |
-| RC1.2+ | Independent adversarial exit-gate review (reviewer ≠ author, owner-supplied) | 📋 Planned | covers ITM-006/007/008 code; iterate to PASS |
+| RC1.2 | Independent adversarial exit-gate review (r1) | ✅ Done | verdict **PASS-WITH-FIXES** ([round-C1-review-r1.md](reviews/round-C1-review-r1.md)); no S1/S2; chokepoint diff empty; all B1–B3 invariants verified clean; C1-R1-F1 (S3) + C1-R1-F2 (S4) |
+| RC1.3 | Remediate r1 findings + regression | ✅ Done | C1-R1-F1 storage delete-failure → logged warning (no secret); C1-R1-F2 load TOCTOU → try/except; **+2 → 262 tests** |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -237,3 +238,5 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.34 | 2026-06-11 | Delivery | **B3 done — ITM-008 CLOSED**: `core/llm/pii.py` opt-in PII scrubbing (`SCRUB_PII`, external path only); D3/D7 updated; 260 tests. All C1 code items (B1–B3) done. Next: B4 CI confirm, B5 live pass (owner XE setup), RC1 review, B6 verdict. |
 | 1.35 | 2026-06-11 | Delivery | **B5 done — RISK-04 live-Oracle pass against XE 21c: ALL PASS** (connect/introspect/bound-report/export/safety via `scripts/c1_live_smoke.py`; [evidence](reviews/round-C1-live-pass.md)); risk-register v1.8 (RISK-04 Med→Low). Remaining: B4 CI confirm, RC1 review, B6 verdict (+ optional UI browser-visual; EBS templates = ITM-012). |
 | 1.36 | 2026-06-12 | Delivery | **B4 done** — owner confirmed CI green (run #12 on `f374380`, +#10/#11); **owner browser-tested the UI against XE satisfactorily → RISK-04 Closed**. RC1.1 review package prepared (`a395003..f374380`). Remaining: RC1.2 independent review (owner-supplied), B6 GA-readiness verdict. |
+| 1.37 | 2026-06-12 | Delivery | RC1.2 exit-gate review r1 = PASS-WITH-FIXES (no S1/S2); RC1.3 remediated C1-R1-F1 (storage delete-failure warning) + C1-R1-F2 (load TOCTOU) → 262 tests. Gate cleared; B6 GA-readiness verdict next to close C1. |
+| 1.38 | 2026-06-12 | Delivery | **Round C1 CLOSED** (C1-6/B6) — GA-readiness verdict recorded (`round-C1-ga-readiness.md`): **GA-ready core product** subject to deployment preconditions; EBS pack beta pending ITM-012. Phase 7 (optional) is the only remaining roadmap item. |

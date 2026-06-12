@@ -34,6 +34,15 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   complementing the existing schema-name redaction. Patterns are conservative (opt-in, because
   over-masking can degrade a query). Tests **+15 → 260** (`tests/test_pii.py`).
 
+### Fixed (Round C1 exit-gate review r1 — PASS-WITH-FIXES, no blocking)
+- **C1-R1-F1 (S3):** `migrate_legacy_connection` no longer swallows an `OSError` from
+  `os.remove` silently — if the legacy `connection.json` can't be deleted (locked/read-only), it
+  now logs a `warning` (path + error, never the secret) so an operator knows a plaintext file may
+  remain at rest; startup still proceeds.
+- **C1-R1-F2 (S4):** removed the TOCTOU in `load_connection_config` (open directly +
+  `except FileNotFoundError: return None` instead of an `exists()` pre-check). Tests **+2 → 262**
+  (`tests/test_storage.py`). Review: [round-C1-review-r1.md](reviews/round-C1-review-r1.md).
+
 ### Added (Phase 6.5 — Pre-Deployment Hardening)
 - **Opt-in API-key auth + explicit CORS** ([ADR-013](adr/ADR-013-network-edge-hardening.md),
   closes the code portion of ITM-009/RISK-12): `src/core/auth.py` — app-level dependency

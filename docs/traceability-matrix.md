@@ -1,6 +1,6 @@
 # D13 — Traceability Matrix
 
-> **Document:** Traceability Matrix · **Version:** 1.6 · **Status:** Living · **Owner:** QA/Engineering · **Last updated:** 2026-06-11
+> **Document:** Traceability Matrix · **Version:** 1.7 · **Status:** Living · **Owner:** QA/Engineering · **Last updated:** 2026-06-12
 
 Maps requirements → design → implementation → tests, so coverage gaps are visible.
 
@@ -21,7 +21,7 @@ Maps requirements → design → implementation → tests, so coverage gaps are 
 | FR-13 Schema persistence | [Design §4](data-dictionary-design.md), [ADR-011](adr/ADR-011-schema-persistence-store.md) | `core/schema_store.py`, `api.py:/schemas` | `test_schema_store.py`, `test_schemas_api.py` |
 | NFR-1 Safety/fail-closed | [ADR-001](adr/ADR-001-sql-safety-engine.md), [ADR-007](adr/ADR-007-parameterized-reports-bind-variables.md), [ADR-009](adr/ADR-009-readonly-db-account-precondition.md), [ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md) | `core/sql_safety.py` (incl. `SELECT…INTO` reject), `db.py:validate_binds`, introspection via chokepoint | `test_sql_safety.py` (26), `test_bind_safety.py` (14), `test_introspection.py` |
 | NFR-2 Secret confidentiality | [ADR-002](adr/ADR-002-encrypted-profiles.md), [ADR-003](adr/ADR-003-secrets-via-env.md) | `core/crypto.py`, `storage.py` (no plaintext password), `.gitignore` | `test_profiles.py::test_file_store_encrypts_at_rest`, `test_storage.py` |
-| NFR-6 Testability/CI | [Test Strategy](06-test-strategy.md) | `tests/`, CI workflow (3.11+3.13 matrix) | full suite (260) |
+| NFR-6 Testability/CI | [Test Strategy](06-test-strategy.md) | `tests/`, CI workflow (3.11+3.13 matrix) | full suite (262) |
 | NFR-7 Observability & safe error handling | [ADR-012](adr/ADR-012-observability-and-error-handling.md), [Design](observability-error-handling-design.md) | `core/logging_config.py`, `core/errors.py`, `core/metrics.py`, `api.py` middleware/handlers, `app.py` UI sanitizer | `test_logging_config.py`, `test_error_handling.py` (incl. ITM-015 leak proof + ITM-017 surfaces), `test_metrics.py` |
 | NFR-8 Deployment hardening (edge auth/CORS, SSRF encodings, store durability) | [ADR-013](adr/ADR-013-network-edge-hardening.md), [ADR-014](adr/ADR-014-file-store-durability.md), [Design](pre-deployment-hardening-design.md) | `core/auth.py`, `api.py` CORS config, `core/llm/providers.py` host decode, `core/fileio.py`, store quarantine (`reports`/`profiles`/`schema_store`) | `test_auth.py`, `test_llm_providers.py` (encoding matrix), `test_fileio.py`, `test_store_robustness.py` |
 
@@ -38,3 +38,4 @@ Maps requirements → design → implementation → tests, so coverage gaps are 
 | 1.4 | 2026-06-11 | QA/Eng | Phase 6.5: NFR-8 (deployment hardening) added (ADR-013/014); NFR-7 extended with ITM-017; suite 236. |
 | 1.5 | 2026-06-11 | QA/Eng | Phase 6.5 review r1 remediation (R1–R4): NFR-8 hardened (Unicode SSRF fold, fd-close, blank-CORS fallback); suite 242. |
 | 1.6 | 2026-06-11 | QA/Eng | Round C1 (ITM-007/006/008): suite 260; `core/llm/pii.py` opt-in PII scrubbing, `connection.json` write path retired. |
+| 1.7 | 2026-06-12 | QA/Eng | Round C1 review r1 remediation (C1-R1-F1/F2): storage delete-warning + load TOCTOU; suite 262. |

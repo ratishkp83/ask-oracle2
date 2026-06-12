@@ -1,6 +1,6 @@
 # D6 — Test Strategy
 
-> **Document:** Test Strategy · **Version:** 1.7 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-11
+> **Document:** Test Strategy · **Version:** 1.8 · **Status:** Baseline · **Owner:** QA/Engineering · **Last updated:** 2026-06-12
 
 ## 1. Objectives
 
@@ -17,7 +17,7 @@ Prove the product's core guarantees on every change: **read-only safety**, **cre
 
 ## 3. Current coverage (baseline)
 
-**242 automated tests pass locally** (160 through Phase 5 + 25 in Phase 6 + 57 in Phase 6.5 incl. review-r1 remediation):
+**262 automated tests pass locally** (160 through Phase 5 + 25 in Phase 6 + 57 in Phase 6.5 + 20 in Round C1 incl. review-r1 remediation):
 
 - **Pre-deployment hardening (Phase 6.5)** — `test_auth.py` (16): auth is a no-op with
   `APP_API_KEY` unset (default posture pinned); with it set, a 401 matrix across endpoints
@@ -108,3 +108,4 @@ GitHub Actions (`.github/workflows/ci.yml`) installs `requirements-dev.txt` and 
 | 1.5 | 2026-06-10 | QA/Eng | Phase 6 r1 remediation: +3 tests (introspect leak, inbound-id sanitization, sanitize unit) → 185; re-pinned to a clean-install-proven 3.13-capable set (F-1/F-2); leak tests now assert headers + cover `/schemas/introspect`. |
 | 1.6 | 2026-06-11 | QA/Eng | Phase 6.5: +51 tests (auth on/off + CORS invariant, ITM-010 encoding matrix, atomic-write contract, corrupt-record quarantine, ITM-017 surfaces) → **236 total**. |
 | 1.7 | 2026-06-11 | QA/Eng | Phase 6.5 review r1 remediation: +6 tests (Unicode fullwidth-digit SSRF fold + genuine-IDN pass, blank-`ALLOWED_ORIGINS` fallback) → **242 total**. |
+| 1.8 | 2026-06-12 | QA/Eng | Round C1: +20 tests (`test_pii.py` PII-scrubbing matrix + flag/external-path; `connection.json` migration; review-r1 F1 delete-warning + F2 load-TOCTOU) → **262 total**. Plus the out-of-band live-Oracle pass vs XE 21c (`scripts/c1_live_smoke.py`, evidence in `reviews/round-C1-live-pass.md`). |

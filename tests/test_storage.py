@@ -7,12 +7,24 @@ file that may still hold a plaintext password.
 """
 
 import json
+import logging
 
 import src.storage as storage
+from src.core.logging_config import JsonFormatter
 
 
 def _write_legacy(cfg_file, payload):
     cfg_file.write_text(json.dumps(payload), encoding="utf-8")
+
+
+class _Capture(logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.setFormatter(JsonFormatter())
+        self.lines: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.lines.append(self.format(record))
 
 
 def test_migrate_legacy_connection_imports_and_deletes(tmp_path, monkeypatch):
@@ -52,3 +64,35 @@ def test_migrate_none_when_absent(tmp_path, monkeypatch):
 def test_plaintext_write_path_is_removed():
     # ITM-006: the connection.json *write* path no longer exists.
     assert not hasattr(storage, "save_connection_config")
+
+
+def test_load_returns_none_when_file_missing(tmp_path, monkeypatch):
+    # C1-R1-F2: open directly (no exists() check) and treat absence as None.
+    monkeypatch.setattr(storage, "CONFIG_FILE", str(tmp_path / "nope.json"))
+    assert storage.load_connection_config() is None
+
+
+def test_migrate_warns_and_proceeds_when_delete_fails(tmp_path, monkeypatch):
+    # C1-R1-F1: an undeletable legacy file must not crash startup, but must log
+    # a warning so the operator knows a plaintext file may remain at rest.
+    cfg_file = tmp_path / "connection.json"
+    monkeypatch.setattr(storage, "CONFIG_FILE", str(cfg_file))
+    _write_legacy(cfg_file, {"host": "db", "username": "u", "password": "stuck-plaintext"})
+
+    def _boom(_path):
+        raise OSError("file is locked")
+
+    monkeypatch.setattr(storage.os, "remove", _boom)
+
+    logger = logging.getLogger("ask_oracle")
+    cap = _Capture()
+    logger.addHandler(cap)
+    try:
+        migrated = storage.migrate_legacy_connection()
+    finally:
+        logger.removeHandler(cap)
+
+    assert migrated["password"] == "stuck-plaintext"  # session still works
+    joined = "\n".join(cap.lines)
+    assert "plaintext" in joined and "file is locked" in joined  # operator warned
+    assert "stuck-plaintext" not in joined  # the secret value itself is not logged
