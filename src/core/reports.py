@@ -35,7 +35,7 @@ from src.core.errors import log_error, new_error_id
 from src.core.fileio import atomic_write_json
 from src.storage import DEFAULT_STORAGE_DIR
 
-ParamType = Literal["string", "number", "date"]
+ParamType = Literal["string", "number", "date", "list"]
 
 # Oracle bind/identifier names: a letter or underscore, then word chars; capped at
 # 30 to stay within the classic Oracle identifier limit.
@@ -141,6 +141,17 @@ def _coerce_value(ptype: ParamType, name: str, value: Any) -> Any:
             return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
         except ValueError:
             raise ValueError(f"Parameter '{name}' must be a date (YYYY-MM-DD).")
+    if ptype == "list":
+        if isinstance(value, list):
+            if not value:
+                raise ValueError(f"Parameter '{name}' requires at least one value.")
+            return value
+        if isinstance(value, str):
+            items = [s.strip() for s in value.split(",") if s.strip()]
+            if not items:
+                raise ValueError(f"Parameter '{name}' requires at least one value.")
+            return items
+        raise ValueError(f"Parameter '{name}' must be a list or comma-separated string.")
     return str(value)
 
 

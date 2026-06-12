@@ -224,7 +224,7 @@ No app-code or chokepoint changes; 293 tests remain green. Committed `f353ebc` (
 | T-18 | API `/v1` versioning prefix | Phase 3/4 | ✅ Completed (Phase 7 / B5) |
 | T-19 | Migrate legacy `connection.json` → encrypted profiles | Phase 2 follow-up | ✅ Completed (Round C1 / B2; RISK-09 Closed) |
 | T-20 | Saved reports: profile binding + parameters | Phase 4 | ✅ Completed (Phase 4 / P4-1/P4-5) |
-| ITM-011 | List/multi-value bind parameters | Feature | 📋 Open (deferred; no customer demand yet) |
+| ITM-011 | List/multi-value bind parameters | Feature | ✅ Closed (2026-06-12; `expand_list_binds` in `src/db.py`; `"list"` ParamType in `reports.py`; 14 new tests → 307 total) |
 | ITM-012 | EBS pack + template validation vs real EBS 12.2 | External | 📋 Open (tooling ready; gated on EBS instance access) |
 | ITM-018 | Oracle 23ai vector track | Feature | 📋 Deferred (ADR-016; needs a 23ai instance) |
 | ITM-019 | Render persistent storage → Render Disk | Ops | ✅ Resolved (Render Disk; render.yaml disk blocks + D7 §5 runbook; no code change) |

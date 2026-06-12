@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 3.3 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
+> **Document:** Session Handoff · **Version:** 3.5 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 ## 0. How to work here (operating model)
@@ -13,7 +13,7 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 - **Local repo (git):** `D:\Ratish\Personal\Project\ask-oracle-reports-main` (branch `main`). Note: the *folder* name is legacy (`-reports-main`); it is not a tracked reference.
 - **Remote:** `origin` = https://github.com/ratishkp83/ask-oracle2 (branch `main`, in sync). Push with `git push` (upstream set). `gh` is **not** installed; auth works via cached Git Credential Manager. Commit per change; **push only when the owner asks.**
 - **OS/shell:** Windows / PowerShell. Python via `py -3`. Project virtualenv at `.venv` (deps installed; both `.venv` and `.env` are git-ignored).
-- **Run the suite (expect 293 passed):**
+- **Run the suite (expect 307 passed):**
   ```powershell
   $env:PYTHONPATH = "D:\Ratish\Personal\Project\ask-oracle-reports-main"
   $env:APP_SECRET_KEY = "test-secret-key-not-for-production"
@@ -160,15 +160,16 @@ still need real-EBS validation (ITM-012).
 
 Exit-gate review **r1 = PASS** → P7-R1-F1/F2 (S4) remediated → **293 tests**. **Phase 7 CLOSED.**
 
-**Open carries (four items; nothing is pending in code):**
-- **ITM-011** — list/multi-value bind parameters (feature gap; deferred indefinitely).
+**Open carries (two items; nothing is pending in code):**
 - **ITM-012** — EBS pack + template validation vs a real EBS 12.2 instance (tooling ready: `scripts/ebs_pack_validate.py` + `docs/reviews/ebs-pack-self-audit.md`; gated on access).
 - **ITM-018** — Oracle 23ai vector track (deferred per ADR-016; needs a 23ai instance to charter).
-- **ITM-019** — Render ephemeral storage: profiles/reports/schemas are lost on Render redeploy. Resolution options: (a) mount a Render Disk at `STORAGE_DIR`; (b) DB-backed store; (c) accept for pilots and document. Owner decision, no code needed until the path is chosen.
 
-**First steps on resume:** confirm the working tree is clean and **293 tests pass**
+**ITM-011 CLOSED (2026-06-12):** `expand_list_binds` in `src/db.py`; `"list"` ParamType in `reports.py`; 14 new tests → **307 total**.
+**ITM-019 CLOSED:** Render Disk decision; `render.yaml` commented `disk:` blocks; D7 §5.
+
+**First steps on resume:** confirm the working tree is clean and **307 tests pass**
 (`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2). **Nothing is pending in
-code** — all planned phases are closed. Future work is owner-initiated: **ITM-012** (run
+code** — all planned phases + ITM-011/019 are closed. Future work is owner-initiated: **ITM-012** (run
 `scripts/ebs_pack_validate.py` against a real EBS 12.2 instance to validate pack/template contents)
 and **ITM-018** (open a chartered 23ai effort once a 23ai instance exists). *(XE setup persists on
 this box for the core product: listener `OracleOraDB21Home1TNSListener` must be running, then
@@ -202,6 +203,7 @@ localhost:8501 with the pre-loaded "XE (read-only)" profile.)*
 | 3.1 | 2026-06-12 | Delivery | Phase 7 Discovery OPENED — EBS metadata packs + glossary (primary) vs 23ai vector (decide-deliberately; XE 21c constraint) + optional fold-ins; next action = owner resolves decisions D-A…D-D before any code. |
 | 3.2 | 2026-06-12 | Delivery | Phase 7 build **B1…B7 COMPLETE** (285 tests; ADR-015/016; T-18 CLOSED; ITM-018): EBS packs + glossary, opt-in NL→SQL context, `/packs`, UI, `/v1` prefix, 23ai deferral. Next = R7.2 independent exit-gate review (owner-supplied). |
 | 3.3 | 2026-06-12 | Delivery | **Phase 7 CLOSED** — exit-gate review r1 = PASS (no blocking); P7-R1-F1/F2 (S4) remediated → 293 tests; ITM-012 validation method (validator + self-audit) shipped. **ALL PHASES CLOSED.** Carries: ITM-012, ITM-018 (need external access). |
-| 3.4 | 2026-06-12 | Delivery | **Deployment GA-readiness hardening COMPLETE** — DH-1…DH-6: render.yaml security vars + Python 3.13; Dockerfiles pinned to 3.13-slim; docker-compose profiles + named volume + Streamlit ui service; .env.example 6 missing vars; D7 v1.6. BUG-006 fixed (Dockerfiles were untracked). ITM-019 opened (Render ephemeral storage). Pushed `f353ebc`. Open carries: ITM-011/012/018/019. |
+| 3.4 | 2026-06-12 | Delivery | **Deployment GA-readiness hardening COMPLETE** — DH-1…DH-6: render.yaml security vars + Python 3.13; Dockerfiles pinned to 3.13-slim; docker-compose profiles + named volume + Streamlit ui service; .env.example 6 missing vars; D7 v1.6. BUG-006 fixed (Dockerfiles were untracked). ITM-019 RESOLVED (Render Disk). Pushed `f353ebc`. |
+| 3.5 | 2026-06-12 | Delivery | **ITM-011 CLOSED** — `expand_list_binds` in `src/db.py` (list→`:name_0,:name_1,…` safe expansion; safety check on original SQL); `validate_binds` accepts non-empty flat lists; `"list"` ParamType + `_coerce_value` in `reports.py`; 14 new tests → **307 total**. Open carries: ITM-012, ITM-018. |
 | 2.6 | 2026-06-11 | Delivery | **B2 ITM-006 CLOSED** (RISK-09 Closed): `connection.json` write path retired, read-and-delete migration; 245 tests. Next = B3 ITM-008. |
 | 2.7 | 2026-06-11 | Delivery | **B3 ITM-008 CLOSED**: `core/llm/pii.py` opt-in PII scrubbing (`SCRUB_PII`); 260 tests. All C1 code (B1–B3) done. Remaining: B4 CI confirm, B5 XE live pass, RC1 review, B6 verdict. |

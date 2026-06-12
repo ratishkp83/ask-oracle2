@@ -18,6 +18,7 @@ __all__ = [
     "build_dsn",
     "is_safe_select",
     "validate_binds",
+    "expand_list_binds",
     "QueryResult",
     "OracleClient",
 ]
@@ -31,12 +32,28 @@ _BIND_NAME_MAX = 30
 _ALLOWED_BIND_TYPES = (str, int, float, bool, date, datetime)
 
 
-def validate_binds(binds: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """Validate a bind map (or None) and return a safe dict for ``cur.execute``.
+def _validate_scalar(name: str, value: Any, index: Optional[int] = None) -> None:
+    """Raise SqlSafetyError if *value* is not an acceptable Oracle bind scalar."""
+    label = f"{name}[{index}]" if index is not None else name
+    if value is None:
+        return
+    if isinstance(value, list):
+        raise SqlSafetyError(f"Bind '{label}' is nested; only flat lists of scalars are allowed.")
+    if not isinstance(value, _ALLOWED_BIND_TYPES):
+        raise SqlSafetyError(
+            f"Bind '{label}' must be a scalar (str/number/date), got {type(value).__name__}."
+        )
+    if isinstance(value, float) and not math.isfinite(value):
+        raise SqlSafetyError(f"Bind '{label}' must be a finite number.")
 
-    Raises :class:`SqlSafetyError` for a non-mapping, an invalid bind name, or a
-    non-scalar value (dict/list/object) — anything that could carry structure
-    rather than a plain value.
+
+def validate_binds(binds: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Validate a bind map (or None) and return a safe dict ready for expansion.
+
+    Scalars (str/int/float/bool/date/datetime/None) are accepted as-is.
+    Non-empty flat lists of scalars are accepted for IN-clause expansion via
+    :func:`expand_list_binds`. Empty lists, nested structures, and dicts are
+    rejected with :class:`SqlSafetyError`.
     """
     if binds is None:
         return {}
@@ -45,16 +62,59 @@ def validate_binds(binds: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     for name, value in binds.items():
         if not isinstance(name, str) or len(name) > _BIND_NAME_MAX or not _BIND_NAME_RE.match(name):
             raise SqlSafetyError(f"Invalid bind name: {name!r}.")
-        if value is None:
-            continue
-        if not isinstance(value, _ALLOWED_BIND_TYPES):
-            raise SqlSafetyError(
-                f"Bind '{name}' must be a scalar (str/number/date), got {type(value).__name__}."
-            )
-        # Reject non-finite numbers (NaN/Infinity) — never valid for an Oracle NUMBER.
-        if isinstance(value, float) and not math.isfinite(value):
-            raise SqlSafetyError(f"Bind '{name}' must be a finite number.")
+        if isinstance(value, list):
+            if not value:
+                raise SqlSafetyError(
+                    f"Bind '{name}' is an empty list; Oracle does not support IN ()."
+                )
+            for i, item in enumerate(value):
+                _validate_scalar(name, item, index=i)
+        else:
+            _validate_scalar(name, value)
     return binds
+
+
+
+def expand_list_binds(sql: str, binds: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+    """Expand list-valued binds into individual :name_0, :name_1, ... placeholders.
+
+    Call this **after** :func:`validate_binds` and **before** ``cur.execute``.
+    The safety check (:func:`assert_safe_select`) must run on the *original* SQL
+    text and is unaffected by this transformation.
+
+    Scalar binds pass through unchanged. For each list bind:
+    - The SQL token ``:name`` is replaced by ``:name_0, :name_1, ...``
+    - The returned binds dict contains ``name_0``, ``name_1``, ... instead.
+
+    Raises :class:`SqlSafetyError` if an expanded placeholder name would exceed
+    the 30-character Oracle identifier limit.
+    """
+    expanded: Dict[str, Any] = {}
+    scalar_names = {n for n, v in binds.items() if not isinstance(v, list)}
+
+    for name, value in binds.items():
+        if not isinstance(value, list):
+            expanded[name] = value
+            continue
+        child_names = [f"{name}_{i}" for i in range(len(value))]
+        for cn in child_names:
+            if len(cn) > _BIND_NAME_MAX:
+                raise SqlSafetyError(
+                    f"Expanded bind name '{cn}' ({len(cn)} chars) exceeds the "
+                    f"{_BIND_NAME_MAX}-char Oracle limit. Shorten '{name}' or reduce "
+                    "the list length."
+                )
+            if cn in scalar_names:
+                raise SqlSafetyError(
+                    f"Expanded bind name '{cn}' collides with an existing scalar bind. "
+                    f"Rename the list bind '{name}'."
+                )
+        placeholder = ", ".join(f":{cn}" for cn in child_names)
+        pattern = r"(?<![:\w]):" + re.escape(name) + r"(?!\w)"
+        sql = re.sub(pattern, placeholder, sql)
+        for cn, item in zip(child_names, value):
+            expanded[cn] = item
+    return sql, expanded
 
 
 @dataclass
@@ -128,6 +188,7 @@ class OracleClient:
         if not result.allowed:
             raise SqlSafetyError(result.reason or "Only SELECT/CTE queries are allowed.")
         safe_binds = validate_binds(binds)
+        exec_sql, exec_binds = expand_list_binds(sql, safe_binds)
 
         limits = limits or load_safety_limits()
         start = time.perf_counter()
@@ -138,7 +199,7 @@ class OracleClient:
             except Exception:  # noqa: BLE001 - not fatal if unsupported
                 pass
             with conn.cursor() as cur:
-                cur.execute(sql, safe_binds)
+                cur.execute(exec_sql, exec_binds)
                 columns = [d[0] for d in cur.description] if cur.description else []
                 rows: List[Tuple[Any, ...]] = []
                 total_bytes = 0

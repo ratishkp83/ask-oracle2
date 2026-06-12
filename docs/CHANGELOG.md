@@ -4,6 +4,23 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (ITM-011 — List/multi-value bind parameters)
+- **`expand_list_binds(sql, binds)` in `src/db.py`:** rewrites each list-valued bind `:name` →
+  `:name_0, :name_1, …` using a word-boundary regex (not string interpolation). Expanded names are
+  new bind placeholders; the values reach the driver as typed scalars, never spliced into SQL text.
+  Called in `run_select` **after** `assert_safe_select` (safety check on the original SQL) and
+  **after** `validate_binds`. Scalar binds pass through unchanged.
+- **`validate_binds` updated:** now accepts non-empty flat lists of scalars for IN-clause expansion.
+  Empty lists (Oracle `IN ()` is invalid), nested lists, and non-scalar items are rejected with
+  `SqlSafetyError`. New `_validate_scalar` helper reduces duplication.
+- **`ParamType = Literal["string","number","date","list"]`** in `src/core/reports.py`: the `"list"`
+  type parses a comma-separated string into a list or accepts a list directly. At least one element
+  is required.
+- **Tests** (`tests/test_bind_safety.py`): 14 new tests — 3 list-accept cases, 3 new list-reject
+  cases in the bad-cases parametrize, 6 `expand_list_binds` unit tests, 1 `run_select`-expansion
+  integration test, 1 DML-with-list-bind rejection. **307 total** (was 293). SELECT/CTE-only
+  chokepoint and `assert_no_values` redaction tripwire are unaffected.
+
 ### Changed (Deployment GA-readiness hardening)
 - **`render.yaml`:** added `APP_SECRET_KEY`, `APP_API_KEY`, `ALLOWED_ORIGINS` (all `sync: false`),
   `LOG_LEVEL` (INFO), `LOG_FORMAT` (json), and `STORAGE_DIR` to both services; bumped `PYTHON_VERSION`
