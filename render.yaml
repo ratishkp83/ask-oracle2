@@ -5,13 +5,24 @@ services:
   #   1. Connect only with a least-privilege, read-only Oracle account.
   #   2. APP_SECRET_KEY must be set (profile-password encryption).
   #   3. For any networked/non-localhost exposure: set APP_API_KEY and ALLOWED_ORIGINS.
+  #
+  # Storage / persistence (ITM-019):
+  #   The free plan has an ephemeral filesystem — STORAGE_DIR is wiped on every
+  #   redeploy. For production use, switch plan to 'starter' (or higher) and
+  #   uncomment the 'disk:' block below. The disk is billed separately (~$0.25/GB/mo).
+  #   Each service (api, ui) has its own disk; they do NOT share storage on Render.
   - type: web
     name: ask-oracle2-api
     env: python
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: uvicorn src.api:app --host 0.0.0.0 --port $PORT
+    # Change to 'starter' (or higher) when adding the disk block below.
     plan: free
     healthCheckPath: /health
+    # disk:                                    # ← uncomment for persistent storage
+    #   name: ask-oracle2-api-storage          #   (requires plan: starter or higher)
+    #   mountPath: /opt/render/project/src/storage
+    #   sizeGB: 1
     envVars:
       # ── LLM credentials (at least one provider key required for NL→SQL) ──
       - key: GROQ_API_KEY
@@ -44,8 +55,8 @@ services:
         sync: false
 
       # ── Storage ──────────────────────────────────────────────────────────
-      # Render note: ephemeral filesystem resets on redeploy.
-      # For persistent storage add a Render Disk mounted at /app/storage.
+      # Free plan: ephemeral — data lost on redeploy.
+      # Paid plan + disk block above: this path lands on the persistent disk.
       - key: STORAGE_DIR
         value: /opt/render/project/src/storage
 
@@ -65,12 +76,21 @@ services:
   # Browser-based interface: connect → introspect → ask / write SQL → review → run → export.
   # Deployment preconditions same as above except APP_API_KEY/ALLOWED_ORIGINS
   # (those govern the HTTP API; the UI runs Python directly, not via HTTP).
+  #
+  # Storage / persistence (ITM-019): same ephemeral / Render Disk pattern as api.
+  # The UI's disk is independent of the api service disk — profiles/reports created
+  # in the UI are not visible to the API and vice versa (separate filesystems on Render).
   - type: web
     name: ask-oracle2-ui
     env: python
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: streamlit run src/app.py --server.address=0.0.0.0 --server.port=$PORT --server.headless=true --server.enableCORS=false --server.enableXsrfProtection=false
+    # Change to 'starter' (or higher) when adding the disk block below.
     plan: free
+    # disk:                                    # ← uncomment for persistent storage
+    #   name: ask-oracle2-ui-storage           #   (requires plan: starter or higher)
+    #   mountPath: /opt/render/project/src/storage
+    #   sizeGB: 1
     envVars:
       # ── LLM credentials ──────────────────────────────────────────────────
       - key: GROQ_API_KEY
@@ -83,6 +103,8 @@ services:
         sync: false
 
       # ── Storage ──────────────────────────────────────────────────────────
+      # Free plan: ephemeral — data lost on redeploy.
+      # Paid plan + disk block above: this path lands on the persistent disk.
       - key: STORAGE_DIR
         value: /opt/render/project/src/storage
 

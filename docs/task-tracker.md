@@ -227,7 +227,7 @@ No app-code or chokepoint changes; 293 tests remain green. Committed `f353ebc` (
 | ITM-011 | List/multi-value bind parameters | Feature | 📋 Open (deferred; no customer demand yet) |
 | ITM-012 | EBS pack + template validation vs real EBS 12.2 | External | 📋 Open (tooling ready; gated on EBS instance access) |
 | ITM-018 | Oracle 23ai vector track | Feature | 📋 Deferred (ADR-016; needs a 23ai instance) |
-| ITM-019 | Render persistent storage (Render Disk or DB-backed store) | Ops | 📋 Open (deployment architecture decision; no code needed until owner decides tier) |
+| ITM-019 | Render persistent storage → Render Disk | Ops | ✅ Resolved (Render Disk; render.yaml disk blocks + D7 §5 runbook; no code change) |
 
 ## Dependencies & critical path
 

@@ -45,17 +45,13 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 
 - ITM-019: (Deployment GA-readiness hardening — S3/ops) **Render free-tier filesystems are
   ephemeral** — any data written to `STORAGE_DIR` (profiles, reports, schemas) is lost on service
-  redeploy or restart. The current `render.yaml` points `STORAGE_DIR` to
-  `/opt/render/project/src/storage`, which lives inside the ephemeral container filesystem.
-  **Impact:** a user who creates connection profiles or saved reports on Render will lose them on
-  the next redeploy. **Mitigation options (in order of preference):**
-  (1) Mount a **Render Disk** (paid Render feature, ~$1/month) at the `STORAGE_DIR` path — zero
-  code change; (2) Switch to a DB-backed store (SQLite on a persistent disk, or Render PostgreSQL)
-  — requires a store-adapter implementation; (3) Accept ephemeral state for short-lived pilots and
-  document it clearly. The current `render.yaml` and D7 §1 include inline warnings. This item is
-  **not a code issue** — it is a deployment architecture decision for the owner to make before
-  production use of the Render path. Severity: S3 (data-loss on redeploy in the Render deployment
-  path).
+  redeploy or restart. **✅ RESOLVED — 2026-06-12:** decision = **Render Disk** (no code change;
+  the existing JSON+atomic-write stores are production-quality per ADR-014; SQLite still needs a
+  disk; PostgreSQL adds an external DB dependency that conflicts with the product identity).
+  `render.yaml` now includes commented `disk:` blocks for both services (uncomment + upgrade plan
+  to `starter` to activate); D7 §5 "Render persistent storage" documents the setup steps, disk
+  independence between services, and rollback guidance. Free-tier pilots remain ephemeral by
+  design — acknowledged, documented, not a defect. **Close criteria met.**
 
 ## Phase 3 — independent review findings & remediation (r1 → r2)
 
@@ -178,4 +174,5 @@ EBS-context tripwire-safety). Two S4 observations, both remediated. Post-remedia
 | 1.12 | 2026-06-12 | Engineering | ITM-012 extended to cover EBS packs + **validation method defined**: self-audit done (`reviews/ebs-pack-self-audit.md`) + automated live validator (`scripts/ebs_pack_validate.py`, offline-tested); close criteria = run vs a real EBS 12.2, remediate, record evidence. |
 | 1.13 | 2026-06-12 | Engineering | Phase 7 exit-gate review r1 = PASS (no blocking); P7-R1-F1 (`ebs_modules` unknown→422) + P7-R1-F2 (`/v1` POST auth tests) remediated; 293 tests. |
 | 1.14 | 2026-06-12 | Engineering | Deployment GA-readiness hardening: **BUG-006 logged + FIXED** (Dockerfiles untracked since init due to `*.local` gitignore; added negation exceptions, first-committed in `f353ebc`); **ITM-019 added** (Render ephemeral storage / no persistence across redeployments — deployment architecture decision for owner). |
+| 1.15 | 2026-06-12 | Engineering | **ITM-019 RESOLVED** — Render Disk selected (no code change); `render.yaml` disk blocks added; D7 §5 runbook written. |
 | 1.3 | 2026-06-10 | Engineering | Phase 4: ITM-011 (list/multi-value binds deferred) + ITM-012 (templates not live-EBS validated) logged. |

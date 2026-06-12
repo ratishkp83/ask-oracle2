@@ -1,6 +1,6 @@
 # D7 — Deployment Plan
 
-> **Document:** Deployment Plan · **Version:** 1.6 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-12
+> **Document:** Deployment Plan · **Version:** 1.7 · **Status:** Baseline · **Owner:** Engineering/Ops · **Last updated:** 2026-06-12
 
 ## 0. Required database account (read-only) — **non-negotiable precondition**
 
@@ -83,7 +83,42 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 6. Tag/commit; deploy (Render auto-deploy on push, or `docker compose --profile api up --build -d` / `docker compose --profile ui up --build -d`).
 7. Post-deploy: hit `/health`; run a profile test against a sandbox.
 
-## 5. Rollback
+## 5. Render persistent storage (ITM-019)
+
+Render free-plan services have **ephemeral filesystems** — `STORAGE_DIR` is wiped on every
+redeploy. For production use you must add a **Render Disk** (the simplest path — no code
+change required) or accept ephemeral state for short-lived pilots.
+
+### Why Render Disk (not SQLite / PostgreSQL)
+The existing JSON+atomic-write stores are production-quality (ADR-014; atomic temp+fsync+`os.replace`,
+corrupt-record quarantine). SQLite still requires a disk for persistence (same cost, more code).
+PostgreSQL adds an external DB dependency that conflicts with the product's identity. Render Disk
+is mount-and-forget: the app writes to `STORAGE_DIR` exactly as it does locally.
+
+### Setup steps (per service)
+1. In the Render dashboard, upgrade the service plan from **free → starter** (or higher).
+2. Under the service's **Disks** tab, click **Add Disk**:
+   - **Name:** `ask-oracle2-api-storage` (or `-ui-storage` for the UI service)
+   - **Mount path:** `/opt/render/project/src/storage` (must match `STORAGE_DIR`)
+   - **Size:** 1 GB (sufficient for profiles/reports/schemas at any realistic scale)
+3. Alternatively, uncomment the `disk:` block in `render.yaml` and redeploy — Render will
+   provision the disk automatically on the next deploy.
+
+### Disk independence
+Each Render service (api, ui) has its **own disk**. Profiles/reports created in the UI service
+are not visible to the API service and vice versa — they have separate filesystems. This matches
+the single-worker-per-store constraint (RISK-16) and is expected behavior; users of the API
+manage their own profiles via the API.
+
+### Rollback / data safety
+- Always back up `STORAGE_DIR` before destructive operations (`profiles.json`, `reports.json`,
+  `schemas.json`).
+- Render Disk data persists across redeployments but not across disk deletions. Use Render's
+  disk snapshot feature (if available on your plan) for additional protection.
+- `APP_SECRET_KEY` rotation invalidates all encrypted profile passwords (re-entry required) —
+  see §3 rotation runbook.
+
+## 6. Rollback
 
 - Render: redeploy previous successful deploy from dashboard.
 - Docker: redeploy previous image/commit.
@@ -117,4 +152,5 @@ Onboarding/release checklist must confirm the connecting profile uses such an ac
 | 1.3 | 2026-06-11 | Eng/Ops | Phase 6.5 (B1): `APP_API_KEY`/`ALLOWED_ORIGINS` env vars + network-exposure rule (ADR-013); `/metrics` auth-gated when enabled. |
 | 1.4 | 2026-06-11 | Eng/Ops | Phase 6.5 review r1/R4: documented `ALLOWED_ORIGINS` is read once at startup (restart to change) vs `APP_API_KEY` per-request; blank-value fallback noted. |
 | 1.5 | 2026-06-11 | Eng/Ops | Round C1/B3: `SCRUB_PII` env flag added (optional NL-question PII scrubbing on external send; ITM-008). |
+| 1.7 | 2026-06-12 | Eng/Ops | ITM-019 resolved: decision = Render Disk (no code change; existing JSON stores are correct); `render.yaml` adds commented `disk:` blocks with setup instructions for both services; §5 "Render persistent storage" section added (why Render Disk, setup steps, disk independence, rollback). Monitoring section renumbered to §7. |
 | 1.6 | 2026-06-12 | Eng/Ops | Deployment GA-readiness hardening: `render.yaml` adds `APP_SECRET_KEY`/`APP_API_KEY`/`ALLOWED_ORIGINS`/`LOG_LEVEL`/`LOG_FORMAT`/`STORAGE_DIR` + Python 3.13.0; Dockerfiles pinned to Python 3.13-slim (matches CI matrix); `docker-compose.yml` adds Compose profiles (`--profile api|ui|frontend`), named `storage` volume, `ui` (Streamlit) service; `.env.example` adds 6 missing vars (`APP_API_KEY`, `ALLOWED_ORIGINS`, `LLM_POLICY`, `SCRUB_PII`, `LOG_LEVEL`, `LOG_FORMAT`); §2 adds `LLM_POLICY`; §4 release checklist adds APP_SECRET_KEY/APP_API_KEY/ALLOWED_ORIGINS gates; §1 Docker notes updated for profiles + single-worker constraint. |
