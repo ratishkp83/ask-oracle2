@@ -201,14 +201,33 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | R2.x | Phase-2 independent adversarial review + QA | ⏭️ Waived | Gate effective Phase 3+ ([ADR-006](adr/ADR-006-external-review-gate.md)); Phase-2 author-only review accepted ([RISK-10](risk-register.md)) |
 | R3.x | Phase-3 independent adversarial review + QA | ✅ Completed | r1 FAIL → remediate → **r2 PASS-WITH-FIXES** (no open blocking); gate closed 2026-06-10 |
 
-## Backlog (next phases)
+## Deployment GA-Readiness Hardening (✅ COMPLETE — 2026-06-12)
+
+Unplanned post-Phase-7 improvement: audit and fix the deployment artifacts against
+the five GA-readiness preconditions recorded in [round-C1-ga-readiness.md](round-C1-ga-readiness.md).
+No app-code or chokepoint changes; 293 tests remain green. Committed `f353ebc` (pushed).
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| DH-1 | `render.yaml`: add `APP_SECRET_KEY`/`APP_API_KEY`/`ALLOWED_ORIGINS` (sync:false) + `LOG_LEVEL`/`LOG_FORMAT`/`STORAGE_DIR`; bump `PYTHON_VERSION` 3.11→3.13 | ✅ Completed | B1; missing vars would cause profile-encryption failure + open API on naïve deploy |
+| DH-2 | `Dockerfile.api.local` + `Dockerfile.local`: pin base image `python:3.12-slim` → `python:3.13-slim` | ✅ Completed | B2; aligns containers with CI-validated 3.11/3.13 matrix |
+| DH-3 | `docker-compose.yml`: Compose profiles `api`/`ui`/`frontend`; named `storage` volume; add missing `ui` (Streamlit) service | ✅ Completed | B3; enforces single-worker-per-store constraint (RISK-16); Streamlit was completely absent |
+| DH-4 | `.gitignore`: add `!Dockerfile.local` + `!Dockerfile.*.local` negations | ✅ Completed | B4 / **BUG-006 FIXED**; Vite `*.local` glob had excluded both Dockerfiles from git since repo init |
+| DH-5 | `.env.example`: add `APP_API_KEY`, `ALLOWED_ORIGINS`, `LLM_POLICY`, `SCRUB_PII`, `LOG_LEVEL`, `LOG_FORMAT` | ✅ Completed | B5; 6 vars from Phases 3/6/6.5/C1 were absent |
+| DH-6 | `docs/07-deployment-plan.md` v1.6: Docker profile commands, single-worker note, `LLM_POLICY` env table, release checklist gates | ✅ Completed | B6; docs in lockstep |
+
+## Backlog / Carried items
 
 | ID | Task | Phase | Status |
 |----|------|-------|--------|
-| T-12 | LLM provider abstraction (`LLMProvider`) + explanation/confidence | Phase 3 | 📋 Planned (seeded by T-05) |
+| T-12 | LLM provider abstraction (`LLMProvider`) + explanation/confidence | Phase 3 | ✅ Completed (Phase 3 / P3-1) |
 | T-18 | API `/v1` versioning prefix | Phase 3/4 | ✅ Completed (Phase 7 / B5) |
-| T-19 | Migrate legacy `connection.json` → encrypted profiles | Phase 2 follow-up | 📋 Planned (RISK-09) |
-| T-20 | Saved reports: profile binding + parameters | Phase 4 | 📋 Planned |
+| T-19 | Migrate legacy `connection.json` → encrypted profiles | Phase 2 follow-up | ✅ Completed (Round C1 / B2; RISK-09 Closed) |
+| T-20 | Saved reports: profile binding + parameters | Phase 4 | ✅ Completed (Phase 4 / P4-1/P4-5) |
+| ITM-011 | List/multi-value bind parameters | Feature | 📋 Open (deferred; no customer demand yet) |
+| ITM-012 | EBS pack + template validation vs real EBS 12.2 | External | 📋 Open (tooling ready; gated on EBS instance access) |
+| ITM-018 | Oracle 23ai vector track | Feature | 📋 Deferred (ADR-016; needs a 23ai instance) |
+| ITM-019 | Render persistent storage (Render Disk or DB-backed store) | Ops | 📋 Open (deployment architecture decision; no code needed until owner decides tier) |
 
 ## Dependencies & critical path
 
@@ -273,3 +292,4 @@ Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](
 | 1.45 | 2026-06-12 | Delivery | Phase 7 **B6 + B7 done**: ADR-016 (23ai deferral) + ITM-018; governed-doc sweep (traceability FR-14, D6, registers); **build B1…B7 complete (285 tests)**; R7.1 review package prepared. Next: R7.2 independent exit-gate review (owner-supplied). |
 | 1.46 | 2026-06-12 | Delivery | ITM-012 validation method (P7-V): EBS pack self-audit (`reviews/ebs-pack-self-audit.md`) + automated live validator (`scripts/ebs_pack_validate.py`, offline-tested); 289 tests. Live EBS run gated on instance access. |
 | 1.47 | 2026-06-12 | Delivery | **Phase 7 CLOSED** — exit-gate review r1 = PASS (no blocking); P7-R1-F1/F2 (S4) remediated → 293 tests. **All phases (1–6 + 6.5 + C1 + 7) closed.** Open carries: ITM-012 (EBS live validation, method defined), ITM-018 (23ai deferred). |
+| 1.48 | 2026-06-12 | Delivery | **Deployment GA-readiness hardening COMPLETE** — DH-1…DH-6 + BUG-006 fixed; backlog T-12/T-18/T-19/T-20 marked completed; ITM-011/012/018/019 carried as the only open items. Pushed `f353ebc`. |

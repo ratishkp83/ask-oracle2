@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.0 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-12 (Phase 7 closed)
+> **Document:** Issue Log · **Version:** 1.0 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-12 (Deployment GA-readiness hardening)
 
 ## Bug workflow (mandatory)
 
@@ -17,6 +17,7 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 | BUG-003 | `docker-compose.yml` referenced non-existent `Dockerfile` | S3 | `docker compose build` fails | **Fixed** | Repointed to `Dockerfile.api.local`. |
 | OPS-004 | `.env` not in `.gitignore` (Groq key tracked) | S1 | Secret leak | **Closed** | Added `.env` to ignore; keys **rotated** by user 2026-06-10 ([RISK-01](risk-register.md)). |
 | BUG-005 | App crashes (`StreamlitDuplicateElementId`) once a profile exists — duplicate `Delete selected` button across Connections + Saved Reports tabs | S2 | UI unusable whenever ≥1 saved profile | **Fixed** | Workflow: Identified+Reproduced by `test_app_smoke.py`; RCA = identical auto-generated widget IDs across tabs; Fix = unique `key=` on colliding widgets (+`sys.path` shim); Validated green (51/51). |
+| BUG-006 | `Dockerfile.api.local` and `Dockerfile.local` excluded from git tracking by the `*.local` glob in `.gitignore` (a Vite-generated catch-all pattern) | S3 | Anyone cloning the repo had no Dockerfiles — `docker compose up` would fail immediately; deploy artifacts silently missing since repo init | **Fixed** — added negation exceptions `!Dockerfile.local` + `!Dockerfile.*.local` to `.gitignore`; both files committed for the first time in `f353ebc` (2026-06-12 deployment hardening). |
 
 ## Open items (non-defect, tracked)
 
@@ -41,6 +42,20 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   Revisit when a 23ai instance is available or a customer requires it; re-open as its own
   chartered effort (design + exit-gate review). Non-blocking; the testable EBS-packs value shipped
   in Phase 7.
+
+- ITM-019: (Deployment GA-readiness hardening — S3/ops) **Render free-tier filesystems are
+  ephemeral** — any data written to `STORAGE_DIR` (profiles, reports, schemas) is lost on service
+  redeploy or restart. The current `render.yaml` points `STORAGE_DIR` to
+  `/opt/render/project/src/storage`, which lives inside the ephemeral container filesystem.
+  **Impact:** a user who creates connection profiles or saved reports on Render will lose them on
+  the next redeploy. **Mitigation options (in order of preference):**
+  (1) Mount a **Render Disk** (paid Render feature, ~$1/month) at the `STORAGE_DIR` path — zero
+  code change; (2) Switch to a DB-backed store (SQLite on a persistent disk, or Render PostgreSQL)
+  — requires a store-adapter implementation; (3) Accept ephemeral state for short-lived pilots and
+  document it clearly. The current `render.yaml` and D7 §1 include inline warnings. This item is
+  **not a code issue** — it is a deployment architecture decision for the owner to make before
+  production use of the Render path. Severity: S3 (data-loss on redeploy in the Render deployment
+  path).
 
 ## Phase 3 — independent review findings & remediation (r1 → r2)
 
@@ -162,4 +177,5 @@ EBS-context tripwire-safety). Two S4 observations, both remediated. Post-remedia
 | 1.11 | 2026-06-12 | Engineering | Phase 7 build: **T-18 CLOSED** (`/v1` prefix, B5); **ITM-018 added** (23ai vector track deferred, ADR-016); packs need real-EBS validation → still ITM-012. |
 | 1.12 | 2026-06-12 | Engineering | ITM-012 extended to cover EBS packs + **validation method defined**: self-audit done (`reviews/ebs-pack-self-audit.md`) + automated live validator (`scripts/ebs_pack_validate.py`, offline-tested); close criteria = run vs a real EBS 12.2, remediate, record evidence. |
 | 1.13 | 2026-06-12 | Engineering | Phase 7 exit-gate review r1 = PASS (no blocking); P7-R1-F1 (`ebs_modules` unknown→422) + P7-R1-F2 (`/v1` POST auth tests) remediated; 293 tests. |
+| 1.14 | 2026-06-12 | Engineering | Deployment GA-readiness hardening: **BUG-006 logged + FIXED** (Dockerfiles untracked since init due to `*.local` gitignore; added negation exceptions, first-committed in `f353ebc`); **ITM-019 added** (Render ephemeral storage / no persistence across redeployments — deployment architecture decision for owner). |
 | 1.3 | 2026-06-10 | Engineering | Phase 4: ITM-011 (list/multi-value binds deferred) + ITM-012 (templates not live-EBS validated) logged. |

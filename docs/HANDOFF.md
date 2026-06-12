@@ -136,6 +136,8 @@ scope; D-C build ITM-008 behind a default-off flag). Build order B1…B6:
   reporting product** subject to the §5 deployment preconditions; the **EBS template pack is beta
   pending ITM-012**.
 
+**Deployment GA-readiness hardening COMPLETE (2026-06-12)** — post-Phase-7 unplanned improvement, no gate required (no app/chokepoint code changed). DH-1…DH-6: `render.yaml` now declares `APP_SECRET_KEY`/`APP_API_KEY`/`ALLOWED_ORIGINS` + `LOG_LEVEL`/`LOG_FORMAT`/`STORAGE_DIR`; Dockerfiles pinned to Python 3.13-slim (CI matrix); `docker-compose.yml` adds Compose profiles (`--profile api|ui|frontend`), named `storage` volume, and the missing Streamlit `ui` service; `.env.example` adds 6 missing vars; D7 v1.6 updated. **BUG-006 fixed** (Dockerfiles were silently excluded from git since repo init by the Vite `*.local` gitignore glob — negation exceptions added). **ITM-019 opened** (Render ephemeral storage — deployment architecture decision, see issue log). Pushed `1c1abf2..f353ebc`; 293 tests unchanged.
+
 **Project state: ALL PHASES CLOSED (2026-06-12) — Phases 1–6, 6.5, Round C1, and Phase 7.**
 Phase 7 exit-gate review r1 = **PASS** ([phase-7-review-r1.md](reviews/phase-7-review-r1.md); no
 blocking; all 7 invariants) → two S4 findings remediated (P7-R1-F1 `ebs_modules` unknown→422;
@@ -157,6 +159,12 @@ back-compat + auth + safety preserved); **B6** 23ai deferral ([ADR-016](adr/ADR-
 still need real-EBS validation (ITM-012).
 
 Exit-gate review **r1 = PASS** → P7-R1-F1/F2 (S4) remediated → **293 tests**. **Phase 7 CLOSED.**
+
+**Open carries (four items; nothing is pending in code):**
+- **ITM-011** — list/multi-value bind parameters (feature gap; deferred indefinitely).
+- **ITM-012** — EBS pack + template validation vs a real EBS 12.2 instance (tooling ready: `scripts/ebs_pack_validate.py` + `docs/reviews/ebs-pack-self-audit.md`; gated on access).
+- **ITM-018** — Oracle 23ai vector track (deferred per ADR-016; needs a 23ai instance to charter).
+- **ITM-019** — Render ephemeral storage: profiles/reports/schemas are lost on Render redeploy. Resolution options: (a) mount a Render Disk at `STORAGE_DIR`; (b) DB-backed store; (c) accept for pilots and document. Owner decision, no code needed until the path is chosen.
 
 **First steps on resume:** confirm the working tree is clean and **293 tests pass**
 (`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2). **Nothing is pending in
@@ -194,5 +202,6 @@ localhost:8501 with the pre-loaded "XE (read-only)" profile.)*
 | 3.1 | 2026-06-12 | Delivery | Phase 7 Discovery OPENED — EBS metadata packs + glossary (primary) vs 23ai vector (decide-deliberately; XE 21c constraint) + optional fold-ins; next action = owner resolves decisions D-A…D-D before any code. |
 | 3.2 | 2026-06-12 | Delivery | Phase 7 build **B1…B7 COMPLETE** (285 tests; ADR-015/016; T-18 CLOSED; ITM-018): EBS packs + glossary, opt-in NL→SQL context, `/packs`, UI, `/v1` prefix, 23ai deferral. Next = R7.2 independent exit-gate review (owner-supplied). |
 | 3.3 | 2026-06-12 | Delivery | **Phase 7 CLOSED** — exit-gate review r1 = PASS (no blocking); P7-R1-F1/F2 (S4) remediated → 293 tests; ITM-012 validation method (validator + self-audit) shipped. **ALL PHASES CLOSED.** Carries: ITM-012, ITM-018 (need external access). |
+| 3.4 | 2026-06-12 | Delivery | **Deployment GA-readiness hardening COMPLETE** — DH-1…DH-6: render.yaml security vars + Python 3.13; Dockerfiles pinned to 3.13-slim; docker-compose profiles + named volume + Streamlit ui service; .env.example 6 missing vars; D7 v1.6. BUG-006 fixed (Dockerfiles were untracked). ITM-019 opened (Render ephemeral storage). Pushed `f353ebc`. Open carries: ITM-011/012/018/019. |
 | 2.6 | 2026-06-11 | Delivery | **B2 ITM-006 CLOSED** (RISK-09 Closed): `connection.json` write path retired, read-and-delete migration; 245 tests. Next = B3 ITM-008. |
 | 2.7 | 2026-06-11 | Delivery | **B3 ITM-008 CLOSED**: `core/llm/pii.py` opt-in PII scrubbing (`SCRUB_PII`); 260 tests. All C1 code (B1–B3) done. Remaining: B4 CI confirm, B5 XE live pass, RC1 review, B6 verdict. |
