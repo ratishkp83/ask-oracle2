@@ -19,6 +19,8 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 | BUG-005 | App crashes (`StreamlitDuplicateElementId`) once a profile exists — duplicate `Delete selected` button across Connections + Saved Reports tabs | S2 | UI unusable whenever ≥1 saved profile | **Fixed** | Workflow: Identified+Reproduced by `test_app_smoke.py`; RCA = identical auto-generated widget IDs across tabs; Fix = unique `key=` on colliding widgets (+`sys.path` shim); Validated green (51/51). |
 | BUG-006 | `Dockerfile.api.local` and `Dockerfile.local` excluded from git tracking by the `*.local` glob in `.gitignore` (a Vite-generated catch-all pattern) | S3 | Anyone cloning the repo had no Dockerfiles — `docker compose up` would fail immediately; deploy artifacts silently missing since repo init | **Fixed** — added negation exceptions `!Dockerfile.local` + `!Dockerfile.*.local` to `.gitignore`; both files committed for the first time in `f353ebc` (2026-06-12 deployment hardening). |
 
+| BUG-007 | NL→SQL emitted non-Oracle SQL — a trailing `;` (and `LIMIT` for top-N), both rejected by Oracle as **ORA-00933** at execution (surfaced in the v2 Phase-8 UI demo) | S3 | NL→SQL unusable for top-N and for any query the model terminated with `;`; the generic sanitized error gave no hint | **Fixed** — `_parse_sql_and_explanation` strips a trailing statement terminator (`re.sub(r"[;\s]+\Z", "", sql)`); `SYSTEM_PROMPT` now mandates `FETCH FIRST n ROWS ONLY`/`ROWNUM` (never `LIMIT`) and no trailing semicolon. 7 tests (`tests/test_nl2sql_sql_cleanup.py`); SELECT-only chokepoint untouched. Pre-existing (shared with v1). |
+
 ## Open items (non-defect, tracked)
 
 - ITM-005: Streamlit UI not browser-verified — see [RISK-04](risk-register.md).

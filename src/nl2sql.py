@@ -33,7 +33,9 @@ SYSTEM_PROMPT = (
     "You are an expert Oracle SQL generator. Using ONLY the provided schema, respond with:\n"
     "1. A single Oracle SELECT (or WITH … SELECT) query inside a ```sql code fence — "
     "named columns (no SELECT *), explicit JOINs using the given relationships, and Oracle "
-    "date functions (TRUNC, ADD_MONTHS, SYSDATE) where needed.\n"
+    "date functions (TRUNC, ADD_MONTHS, SYSDATE) where needed. For row limits / top-N use "
+    "FETCH FIRST n ROWS ONLY or ROWNUM — never LIMIT (Oracle has no LIMIT). Do not end the "
+    "statement with a semicolon.\n"
     "2. Then a line beginning with 'Explanation:' and at most 3 sentences explaining the "
     "query, referring only to the provided schema. Do not include any data values."
 )
@@ -58,6 +60,9 @@ def _parse_sql_and_explanation(text: str) -> Tuple[str, Optional[str]]:
         sql = sql_part.strip()
         if sql.startswith("```"):
             sql = re.sub(r"^```[a-zA-Z]*\n|```$", "", sql, flags=re.MULTILINE).strip()
+    # Strip a trailing statement terminator: python-oracledb rejects a single
+    # statement ending in ';' (ORA-00933), and models routinely append one.
+    sql = re.sub(r"[;\s]+\Z", "", sql)
     return sql, explanation
 
 

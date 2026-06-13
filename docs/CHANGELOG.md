@@ -36,6 +36,13 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 - **P8-R1-F4 (S4):** operator-set `EMAIL_FROM` is control-stripped in `build_message`.
 - **+6 regression tests → 371 total.** Verdict: PASS-WITH-FIXES (no S1/S2; all 8 invariants hold).
 
+### Fixed (BUG-007 — NL→SQL produced non-Oracle SQL)
+- The NL→SQL output ended with a trailing `;` and used `LIMIT` for top-N, both of which Oracle
+  rejects (**ORA-00933**) at execution. `_parse_sql_and_explanation` now strips a trailing
+  statement terminator, and `SYSTEM_PROMPT` mandates `FETCH FIRST n ROWS ONLY` / `ROWNUM` (never
+  `LIMIT`) and no trailing semicolon. 7 new tests (`test_nl2sql_sql_cleanup.py`) → **378 total**.
+  SELECT-only chokepoint untouched. (Surfaced in the v2 Phase-8 UI demo; pre-existing, shared with v1.)
+
 ### Added (ITM-011 — List/multi-value bind parameters)
 - **`expand_list_binds(sql, binds)` in `src/db.py`:** rewrites each list-valued bind `:name` →
   `:name_0, :name_1, …` using a word-boundary regex (not string interpolation). Expanded names are
