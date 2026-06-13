@@ -1,6 +1,6 @@
 # Ask Oracle Reports — Documentation Governance Index
 
-> **Document:** Governance Index · **Version:** 1.1 · **Status:** Baseline · **Owner:** Delivery Lead · **Last updated:** 2026-06-10
+> **Document:** Governance Index · **Version:** 1.2 · **Status:** Baseline · **Owner:** Delivery Lead · **Last updated:** 2026-06-13
 
 This `/docs` tree is the **single source of truth** for the product. Every change
 to behaviour, contracts, or scope must be reflected here in the same change set
@@ -32,6 +32,7 @@ as the code, before the work is considered complete.
 | — | Reports/Templates/UX Design (Phase 4) | [reports-templates-ux-design.md](reports-templates-ux-design.md) | Baseline |
 | — | Data Dictionary Design (Phase 5) | [data-dictionary-design.md](data-dictionary-design.md) | Baseline |
 | — | Observability & Error Handling Design (Phase 6) | [observability-error-handling-design.md](observability-error-handling-design.md) | Baseline |
+| — | Email Follow-up Action Design (Phase 8 / v2) | [email-followup-action-design.md](email-followup-action-design.md) | Baseline |
 
 ## Process & gates
 
@@ -61,3 +62,4 @@ as the code, before the work is considered complete.
 |---------|------|--------|--------|
 | 1.0 | 2026-06-10 | Delivery | Initial governance baseline (P2.5). |
 | 1.1 | 2026-06-10 | Delivery | Phase 6: registered the Observability & Error Handling design doc (ADR-012 under `adr/`). |
+| 1.2 | 2026-06-13 | Delivery | v2 Phase 8: registered the Email Follow-up Action design doc (ADR-017 under `adr/`). |

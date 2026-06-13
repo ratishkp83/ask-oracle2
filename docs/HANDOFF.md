@@ -1,7 +1,26 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 3.5 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
+> **Document:** Session Handoff · **Version:** 3.6 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-13
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
+
+> ---
+> ### 🟢 v2 ACTIVE — Phase 8: Email a Report follow-up action (2026-06-13)
+> **Workspace:** `D:\Ratish\Personal\Project\ask-oracle-reports-main v2`, branch **`v2`** —
+> **local commits only; NO PUSH until the July limit reset.** Run the suite from the v2 dir
+> (expect **365 passed**). v2 adds the **"Send as email" follow-up action**: charter
+> [phase-8-charter.md](charters/phase-8-charter.md), design
+> [email-followup-action-design.md](email-followup-action-design.md),
+> [ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md).
+> **Build B1–B5 complete** (`0abbaca..53a4264`): `src/core/mailer/` stdlib-SMTP package (config /
+> message / recipients / sender), the opt-in **"Send as email" UI** in `src/app.py`, and
+> `scripts/p8_email_smoke.py`. **58 new tests; SELECT-only chokepoint + schema redaction untouched;
+> no LLM on the email path.** SMTP creds live in the git-ignored `.env`
+> (`SMTP_USER` / `SMTP_PASSWORD`=Gmail App Password); the feature is opt-in (`email_enabled`).
+> **Live send verified end-to-end against Gmail** (success criterion 6).
+> **Remaining:** **P8-6** independent adversarial exit-gate review (owner-supplied reviewer ≠ author;
+> v2 range `640bd92..HEAD`) and **P8-DEMO** the owner's live demo to an intended recipient.
+> Everything in §0–§7 below is **v1 history on `main`**.
+> ---
 
 ## 0. How to work here (operating model)
 Run this project like a structured, Big-4-style delivery practice: **doc-first, phase-gated**. Keep code and governed docs updated together. Define **Next Actions** every turn. Pause and ask on scope-changing or destructive/outward-facing decisions. Maintain the task tracker, risk register, issue log, ADRs, and change log.

@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.0 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-12 (ITM-011 closed)
+> **Document:** Issue Log · **Version:** 1.1 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-13 (v2 Phase 8: ITM-020/021 added)
 
 ## Bug workflow (mandatory)
 
@@ -52,6 +52,22 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   to `starter` to activate); D7 §5 "Render persistent storage" documents the setup steps, disk
   independence between services, and rollback guidance. Free-tier pilots remain ephemeral by
   design — acknowledged, documented, not a defect. **Close criteria met.**
+
+- ITM-020: (Phase 8 / v2, charter D-A/D-B — S4/feature) **Gmail API (OAuth2) + per-user sender
+  deferred.** v2 Phase 8 ships email via **SMTP + App Password, single shared mailbox**
+  ([ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md)) — the fastest path to a real,
+  demoable send with no Google verification gate. The "integrated" Gmail API path (OAuth consent,
+  the `gmail.send` sensitive scope, app-verification for external/commercial release) and a
+  **per-user sender** (each decision-maker sends as their own Gmail) are deferred to a future
+  increment; both pair with the multi-tenant identity layer ([RISK-07](risk-register.md)).
+  Non-blocking — the SMTP path is fully functional and tested.
+
+- ITM-021: (Phase 8 / v2 — S4/feature) **AI-drafted email body deferred.** An optional
+  LLM-drafted summary/recommendation in the email body was deliberately left **OUT** of Phase 8
+  because it would send **row data to the external LLM**, brushing the "schema-names-only"
+  redaction line. The MVP body is user-typed only and **no LLM is called on the email path**. If
+  added later it must be behind an **explicit opt-in** and either summarize locally or be recorded
+  as a sanctioned exception ([ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md)). Non-blocking.
 
 ## Phase 3 — independent review findings & remediation (r1 → r2)
 

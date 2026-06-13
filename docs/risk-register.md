@@ -1,6 +1,6 @@
 # D10 — Risk Register
 
-> **Document:** Risk Register · **Version:** 1.9 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
+> **Document:** Risk Register · **Version:** 1.10 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-13
 
 Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted / Closed.
 
@@ -25,6 +25,8 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | RISK-17 | Introspecting a huge catalog (EBS) overwhelms UI / times out | Medium | Slow/blocked introspection; truncated dictionary | Low | **Scoped** (owner + name filter required/encouraged) + **capped** by `SafetyLimits` (`truncated` surfaced); on-demand, no full crawl ([ADR-010](adr/ADR-010-schema-introspection-via-chokepoint.md)) | Eng | **Mitigating** |
 | RISK-18 | Persisted schema metadata sensitivity (table/column names) | Low | Local-file exposure of business metadata (no data values/creds) | Low | `schemas.json` is metadata only, git-ignored under `STORAGE_DIR` like profiles/reports | Eng | **Accepted** |
 | RISK-19 | Information disclosure via verbatim DB-driver errors (DSN/host/port/username) to the client (ITM-015) | Medium | Infrastructure detail leaked to API/UI callers | Low (local posture) | **Resolved (Phase 6):** uniform sanitization — generic message + `error_id` to the client, full detail logged server-side only ([ADR-012](adr/ADR-012-observability-and-error-handling.md)); shared by API + UI; leak-proof test | Eng | **Closed** |
+| RISK-20 | Email follow-up action (Phase 8) transmits row data to an external recipient — a deliberate egress | Medium | Sensitive report output sent outside the org / to a wrong or personal address | Low | **User-initiated + reviewed** — same trust boundary as the existing CSV/Excel export, never auto-sent; **every send audit-logged** (`ask_oracle.audit`, metadata only — no body, no row data, no credential); **optional `EMAIL_ALLOWED_DOMAINS` allow-list**; feature **opt-in** (off unless SMTP configured); **no LLM** on the path ([ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md)) | Product/Eng | **Mitigating** |
+| RISK-21 | Gmail App Password (SMTP credential) exposure via logs / API responses / return values | High | Mailbox compromise; send-as abuse | Low | **Env-only**; reaches only `smtplib.login`; **never** placed in a `SendResult`, audit field, log record, or any return; transport errors sanitized (generic + `error_id`, ADR-012 pattern); not written to any store; opt-in gate ([ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md)) | Eng | **Mitigating** |
 
 ## Revision history
 
@@ -40,3 +42,4 @@ Severity: Critical / High / Medium / Low. Status: Open / Mitigating / Accepted /
 | 1.7 | 2026-06-11 | Delivery | Round C1/B2: **RISK-09 Closed** — `connection.json` write path removed; legacy files imported once + deleted (ITM-006). |
 | 1.8 | 2026-06-11 | Delivery | Round C1/B5: RISK-04 likelihood Medium→Low — live-Oracle engine-path pass against XE 21c PASSED; residuals = optional UI browser-visual + EBS templates (ITM-012). |
 | 1.9 | 2026-06-12 | Delivery | Round C1/B4: **RISK-04 Closed** — owner browser-tested the Streamlit UI against XE satisfactorily; live engine pass already green. EBS-template validation tracked under ITM-012. |
+| 1.10 | 2026-06-13 | Delivery | **v2 Phase 8** (email follow-up action): **RISK-20** (email data egress — Mitigating via user-approved send + audit log + optional allow-list + opt-in) and **RISK-21** (SMTP credential handling — Mitigating, env-only / never logged or returned) added ([ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md)). |

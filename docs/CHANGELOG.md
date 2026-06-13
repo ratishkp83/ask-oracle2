@@ -4,6 +4,30 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 8 / v2 — Email a report follow-up action)
+- **`src/core/mailer/` package (stdlib SMTP, no new dependency):** after a report runs, a user
+  can email the result with the output attached. Modules: `config` (opt-in `email_enabled` gate
+  from `SMTP_*` env), `message` (address validation + CRLF/header-injection guard, `EMAIL_ALLOWED_DOMAINS`
+  allow-list, size cap, `EmailMessage` assembly reusing the CSV/Excel export helpers), `recipients`
+  (smart quick-pick of email-like values from the result columns), `sender`
+  (`send_report_email`: validate → build → Gmail SMTP STARTTLS/SSL → audit-log → metrics; returns
+  a `SendResult` of kind ok/rejected/error; transport errors sanitized to `GENERIC_EMAIL_DETAIL` +
+  `error_id`). See [ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md).
+- **UI:** a "Send as email (follow-up action)" expander in `src/app.py`, shown after a report runs
+  when SMTP is configured — quick-pick recipient chips, free-form To/Cc, CSV/Excel toggle; rendered
+  from `st.session_state.last_results` so it survives Streamlit reruns.
+- **Metrics:** `emails_sent` / `emails_failed` / `emails_rejected` counters in `core/metrics.py`.
+- **Live demo:** `scripts/p8_email_smoke.py` sends one real email through the product code (creds
+  from `.env`; the password is never printed). Live send verified end-to-end against Gmail.
+- **Config:** `SMTP_HOST/PORT/USER/PASSWORD`, `EMAIL_FROM`, `EMAIL_ALLOWED_DOMAINS`,
+  `EMAIL_MAX_ATTACHMENT_MB` documented in `.env.example` and added to `render.yaml` (UI service,
+  secrets `sync: false`).
+- **Tests:** 58 new (`test_mailer_{config,message,recipients,sender}.py`) — full suite **365 passed**.
+- **Security:** the SELECT-only chokepoint and schema-redaction posture are untouched; **no LLM on
+  the email path**; `SMTP_PASSWORD` is env-only and never logged or returned. New risks
+  **RISK-20/21**; deferred future increments **ITM-020** (Gmail API/OAuth + per-user sender),
+  **ITM-021** (AI-drafted body).
+
 ### Added (ITM-011 — List/multi-value bind parameters)
 - **`expand_list_binds(sql, binds)` in `src/db.py`:** rewrites each list-valued bind `:name` →
   `:name_0, :name_1, …` using a word-boundary regex (not string interpolation). Expanded names are
