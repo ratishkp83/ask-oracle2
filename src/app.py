@@ -30,6 +30,11 @@ from src.schema import (
 )
 from src.core.schema_store import JsonFileSchemaStore
 from src.core.introspection import introspect_schema
+from src.core.mailer import (
+    detect_recipient_candidates,
+    email_enabled,
+    send_report_email,
+)
 from src.nl2sql import (
     DEFAULT_GROQ_MODEL,
     DEFAULT_OPENAI_MODEL,
@@ -607,6 +612,60 @@ def _run_and_display(client: OracleClient, sql: str, binds: Optional[Dict[str, o
         st.error(f"{msg} (ref: {error_id})")
 
 
+def _append_recipient(addr: str) -> None:
+    """Add a quick-pick address to the To field (set before the widget is drawn)."""
+    current = (st.session_state.get("email_to") or "").strip()
+    parts = [p.strip() for p in current.split(",") if p.strip()]
+    if addr not in parts:
+        parts.append(addr)
+    st.session_state.email_to = ", ".join(parts)
+
+
+def _render_email_action(df: Optional[pd.DataFrame]) -> None:
+    """Follow-up action (Phase 8): email the last result with the output attached.
+
+    Opt-in — only shown when SMTP is configured (``email_enabled``). Rendered from
+    ``last_results`` so the form survives Streamlit reruns (type recipient → send).
+    """
+    if df is None or not email_enabled():
+        return
+    with st.expander("✉️ Send as email (follow-up action)", expanded=False):
+        st.caption(f"Email the last result — {len(df)} rows × {len(df.columns)} columns.")
+        candidates = detect_recipient_candidates(df)
+        if candidates:
+            st.caption("Recipients found in the results — click to add:")
+            chip_cols = st.columns(min(4, len(candidates)))
+            for i, addr in enumerate(candidates):
+                with chip_cols[i % len(chip_cols)]:
+                    # Runs before the To input below, so updating its state is allowed.
+                    if st.button(f"+ {addr}", key=f"qp_{addr}"):
+                        _append_recipient(addr)
+        st.text_input("To (comma-separated)", key="email_to")
+        st.text_input("Cc (optional)", key="email_cc")
+        st.text_input(
+            "Subject",
+            value=f"Report results — {len(df)} rows — {pd.Timestamp.now():%Y-%m-%d}",
+            key="email_subject",
+        )
+        st.text_area("Message", value="Please find the report attached.", key="email_body", height=100)
+        fmt = st.radio("Attachment", ["CSV", "Excel"], horizontal=True, key="email_fmt")
+        if st.button("Send email", type="primary", key="email_send"):
+            result = send_report_email(
+                to=st.session_state.get("email_to", ""),
+                cc=st.session_state.get("email_cc", ""),
+                subject=st.session_state.get("email_subject", ""),
+                body=st.session_state.get("email_body", ""),
+                df=df,
+                attachment_format="excel" if fmt == "Excel" else "csv",
+            )
+            if result.ok:
+                st.success(result.message)
+            elif result.kind == "rejected":
+                st.warning(result.message)
+            else:
+                st.error(f"{result.message} (ref: {result.error_id})")
+
+
 def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optional[Schema]):
     st.header("Build & Run Reports")
     if not conn_cfg:
@@ -667,6 +726,8 @@ def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optio
                 st.error("Configure a connection first.")
             elif sql.strip():
                 _run_and_display(client, sql)
+
+    _render_email_action(st.session_state.get("last_results"))
 
 
 def _profile_options(store: JsonFileProfileStore) -> Dict[str, Optional[str]]:
@@ -744,6 +805,8 @@ def draw_reports(conn_cfg: Optional[OracleConnectionConfig]):
                     )
                 else:
                     _run_and_display(client, report.sql, binds=binds)
+
+    _render_email_action(st.session_state.get("last_results"))
 
     # --- Save / manage ----------------------------------------------------- #
     st.markdown("---")
