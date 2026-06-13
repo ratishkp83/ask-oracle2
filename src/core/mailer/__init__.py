@@ -17,6 +17,7 @@ from __future__ import annotations
 from src.core.mailer.config import EmailConfig, email_enabled, load_config
 from src.core.mailer.message import EmailRejected
 from src.core.mailer.recipients import detect_recipient_candidates
+from src.core.mailer.sender import SendResult, send_report_email
 
 __all__ = [
     "EmailConfig",
@@ -24,4 +25,6 @@ __all__ = [
     "load_config",
     "EmailRejected",
     "detect_recipient_candidates",
+    "SendResult",
+    "send_report_email",
 ]

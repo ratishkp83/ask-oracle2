@@ -28,6 +28,7 @@ from src.core.logging_config import get_logger
 GENERIC_DB_DETAIL = "Database error — see server logs."
 GENERIC_SERVER_DETAIL = "Internal server error."
 GENERIC_NL2SQL_DETAIL = "Could not generate SQL — see server logs."
+GENERIC_EMAIL_DETAIL = "Email could not be sent — see server logs."
 
 logger = get_logger("errors")
 

@@ -17,6 +17,9 @@ _counters: Dict[str, int] = {
     "queries_executed": 0,
     "queries_rejected": 0,  # blocked by the SELECT-only safety layer
     "queries_errored": 0,   # reached the driver and raised
+    "emails_sent": 0,       # email follow-up action: delivered to SMTP
+    "emails_failed": 0,     # reached SMTP and raised (transport/auth)
+    "emails_rejected": 0,   # blocked before send (bad recipient/domain/oversize)
 }
 
 _latency = {"sum_seconds": 0.0, "count": 0, "max_seconds": 0.0}
