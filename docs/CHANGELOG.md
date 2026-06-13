@@ -43,6 +43,17 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   `LIMIT`) and no trailing semicolon. 7 new tests (`test_nl2sql_sql_cleanup.py`) → **378 total**.
   SELECT-only chokepoint untouched. (Surfaced in the v2 Phase-8 UI demo; pre-existing, shared with v1.)
 
+### Added (ADR-018 — Per-profile default schema)
+- Optional `current_schema` on a connection/profile. When set, the client runs
+  `ALTER SESSION SET CURRENT_SCHEMA = <schema>` on connect, so **unqualified** table names resolve
+  against a granted business schema — fixing the ADR-009 least-privilege read-only pattern
+  (`aor_readonly` + grants on `AOR_DEMO`), where bare names otherwise raise **ORA-00942**. New UI
+  field "Default schema (optional)" on the manual sidebar connection and the add-profile form.
+  `validate_schema_name` restricts the value to the Oracle identifier charset (injection-safe — a
+  schema name can't be a bind variable). It is a **session setting only**; the SELECT-only chokepoint
+  is untouched. Verified live against XE 21c. +23 tests (`test_current_schema.py`) → **401 total**.
+  See [ADR-018](adr/ADR-018-per-profile-default-schema.md).
+
 ### Added (ITM-011 — List/multi-value bind parameters)
 - **`expand_list_binds(sql, binds)` in `src/db.py`:** rewrites each list-valued bind `:name` →
   `:name_0, :name_1, …` using a word-boundary regex (not string interpolation). Expanded names are

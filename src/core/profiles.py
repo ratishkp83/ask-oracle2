@@ -39,6 +39,7 @@ class ProfileCreate(BaseModel):
     port: int = Field(1521, ge=1, le=65535)
     service_name: Optional[str] = None
     sid: Optional[str] = None
+    current_schema: Optional[str] = Field(None, max_length=128)
     username: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
     environment: Environment = "DEV"
@@ -59,6 +60,7 @@ class ProfilePublic(BaseModel):
     port: int
     service_name: Optional[str] = None
     sid: Optional[str] = None
+    current_schema: Optional[str] = None
     username: str
     environment: Environment
 
@@ -72,6 +74,7 @@ class StoredProfile(BaseModel):
     port: int
     service_name: Optional[str] = None
     sid: Optional[str] = None
+    current_schema: Optional[str] = None
     username: str
     environment: Environment
     password_encrypted: str
@@ -84,6 +87,7 @@ class StoredProfile(BaseModel):
             port=self.port,
             service_name=self.service_name,
             sid=self.sid,
+            current_schema=self.current_schema,
             username=self.username,
             environment=self.environment,
         )
@@ -96,6 +100,7 @@ class ResolvedConnection(BaseModel):
     port: int
     service_name: Optional[str] = None
     sid: Optional[str] = None
+    current_schema: Optional[str] = None
     username: str
     password: str
 
@@ -173,6 +178,7 @@ class JsonFileProfileStore(ProfileStore):
                 port=data.port,
                 service_name=data.service_name,
                 sid=data.sid,
+                current_schema=data.current_schema,
                 username=data.username,
                 environment=data.environment,
                 password_encrypted=encrypt_secret(data.password),
@@ -209,6 +215,7 @@ class JsonFileProfileStore(ProfileStore):
                 port=stored.port,
                 service_name=stored.service_name,
                 sid=stored.sid,
+                current_schema=stored.current_schema,
                 username=stored.username,
                 password=decrypt_secret(stored.password_encrypted),
             )
@@ -233,6 +240,7 @@ class InMemoryProfileStore(ProfileStore):
                 port=data.port,
                 service_name=data.service_name,
                 sid=data.sid,
+                current_schema=data.current_schema,
                 username=data.username,
                 environment=data.environment,
                 password_encrypted=encrypt_secret(data.password),
@@ -263,6 +271,7 @@ class InMemoryProfileStore(ProfileStore):
                 port=stored.port,
                 service_name=stored.service_name,
                 sid=stored.sid,
+                current_schema=stored.current_schema,
                 username=stored.username,
                 password=decrypt_secret(stored.password_encrypted),
             )

@@ -114,6 +114,7 @@ def _resolved_to_cfg(resolved) -> OracleConnectionConfig:
         sid=resolved.sid,
         username=resolved.username,
         password=resolved.password,
+        current_schema=getattr(resolved, "current_schema", None),
     )
 
 
@@ -137,6 +138,10 @@ def _draw_manual_connection() -> Optional[OracleConnectionConfig]:
     sid = st.sidebar.text_input("SID (optional)", value=str(cfg.get("sid") or ""))
     username = st.sidebar.text_input("Username", value=str(cfg.get("username", "")))
     password = st.sidebar.text_input("Password", value=str(cfg.get("password", "")), type="password")
+    current_schema = st.sidebar.text_input(
+        "Default schema (optional)", value=str(cfg.get("current_schema") or ""),
+        help="Runs ALTER SESSION SET CURRENT_SCHEMA so unqualified table names resolve here (e.g. AOR_DEMO).",
+    )
 
     test_clicked = st.sidebar.button("Test", width="stretch")
     st.sidebar.caption(
@@ -153,6 +158,7 @@ def _draw_manual_connection() -> Optional[OracleConnectionConfig]:
             sid=sid or None,
             username=username,
             password=password,
+            current_schema=current_schema or None,
         )
 
     if test_clicked:
@@ -221,6 +227,10 @@ def draw_connections(store: JsonFileProfileStore):
             sid = st.text_input("SID (optional)", key="profile_sid")
             username = st.text_input("Username", key="profile_username")
             password = st.text_input("Password", type="password", key="profile_password")
+            schema = st.text_input(
+                "Default schema (optional)", key="profile_schema",
+                help="Runs ALTER SESSION SET CURRENT_SCHEMA on connect so unqualified table names resolve here (e.g. AOR_DEMO).",
+            )
         submitted = st.form_submit_button("Add profile")
 
     if submitted:
@@ -232,6 +242,7 @@ def draw_connections(store: JsonFileProfileStore):
                     port=int(port),
                     service_name=service_name or None,
                     sid=sid or None,
+                    current_schema=schema or None,
                     username=username,
                     password=password,
                     environment=environment,

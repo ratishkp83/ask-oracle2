@@ -19,6 +19,7 @@ __all__ = [
     "is_safe_select",
     "validate_binds",
     "expand_list_binds",
+    "validate_schema_name",
     "QueryResult",
     "OracleClient",
 ]
@@ -117,6 +118,21 @@ def expand_list_binds(sql: str, binds: Dict[str, Any]) -> Tuple[str, Dict[str, A
     return sql, expanded
 
 
+# A default schema (ADR-018) cannot be a bind variable, so it is interpolated into
+# ALTER SESSION SET CURRENT_SCHEMA. This fail-closed check restricts it to the Oracle
+# identifier charset (a letter, then letters/digits/_/$/#), so it cannot inject SQL.
+_SCHEMA_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_$#]*$")
+_SCHEMA_NAME_MAX = 128
+
+
+def validate_schema_name(name: str) -> str:
+    """Return a validated Oracle schema identifier, or raise :class:`SqlSafetyError`."""
+    candidate = (name or "").strip()
+    if not candidate or len(candidate) > _SCHEMA_NAME_MAX or not _SCHEMA_NAME_RE.match(candidate):
+        raise SqlSafetyError(f"Invalid schema name: {name!r}.")
+    return candidate
+
+
 @dataclass
 class OracleConnectionConfig:
     host: str
@@ -125,6 +141,9 @@ class OracleConnectionConfig:
     sid: Optional[str]
     username: str
     password: str
+    # Optional default schema (ADR-018): when set, the session runs
+    # ALTER SESSION SET CURRENT_SCHEMA so unqualified table names resolve here.
+    current_schema: Optional[str] = None
 
 
 @dataclass
@@ -170,7 +189,16 @@ class OracleClient:
             service_name=self.config.service_name,
             sid=self.config.sid,
         )
-        return oracledb.connect(user=self.config.username, password=self.config.password, dsn=dsn)
+        conn = oracledb.connect(user=self.config.username, password=self.config.password, dsn=dsn)
+        if self.config.current_schema:
+            # Resolve unqualified table names against this schema — e.g. a least-privilege
+            # read-only account with grants on a business schema (ADR-009/ADR-018). ALTER
+            # SESSION SET CURRENT_SCHEMA is a session setting (no data change) and runs at
+            # connect time, outside the SELECT-only user-query chokepoint.
+            schema = validate_schema_name(self.config.current_schema)
+            with conn.cursor() as cur:
+                cur.execute(f"ALTER SESSION SET CURRENT_SCHEMA = {schema}")
+        return conn
 
     def run_select(
         self,
