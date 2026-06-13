@@ -71,6 +71,18 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   added later it must be behind an **explicit opt-in** and either summarize locally or be recorded
   as a sanctioned exception ([ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md)). Non-blocking.
 
+- ITM-022: (v2 Phase-8 UI demo — S4/UX) **Query Builder requires scrolling to run a query.** In
+  `draw_query_builder` (NL mode, `src/app.py`), the Generate/Run controls and the results sit far
+  apart, forcing the user to scroll to run and again to see output. Tighten the layout (keep the
+  action buttons near the editable SQL + results, and/or use columns) to cut the scrolling.
+  Non-blocking. **Next-session task.**
+
+- ITM-023: (v2 Phase-8 UI demo — S4/UX) **Email form not cleared after a successful send.** After
+  "Send email" succeeds in `_render_email_action` (`src/app.py`), the To/Cc/Subject/Body values
+  persist in `st.session_state`, so the recipient stays filled. On success, reset the form fields
+  (clear `email_to`/`email_cc`/`email_subject`/`email_body`) so the next send starts clean.
+  Non-blocking. **Next-session task.**
+
 ## Phase 8 (v2) — independent review findings & remediation (r1)
 
 Source: [reviews/phase-8-review-r1.md](reviews/phase-8-review-r1.md) — verdict **PASS-WITH-FIXES** (no S1/S2; all 8 security invariants hold). Package: [reviews/phase-8-review-package.md](reviews/phase-8-review-package.md). Remediated post-review; **371 tests green**.

@@ -54,6 +54,10 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   is untouched. Verified live against XE 21c. +23 tests (`test_current_schema.py`) → **401 total**.
   See [ADR-018](adr/ADR-018-per-profile-default-schema.md).
 
+### Changed (LLM default model)
+- `DEFAULT_GROQ_MODEL` bumped `llama3-70b-8192` (decommissioned by Groq) → `llama-3.3-70b-versatile`,
+  so NL→SQL works out-of-the-box on a current Groq model when `GROQ_MODEL` is unset.
+
 ### Added (ITM-011 — List/multi-value bind parameters)
 - **`expand_list_binds(sql, binds)` in `src/db.py`:** rewrites each list-valued bind `:name` →
   `:name_0, :name_1, …` using a word-boundary regex (not string interpolation). Expanded names are
