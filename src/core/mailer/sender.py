@@ -153,8 +153,9 @@ def send_report_email(
     _audit.info("email_sent", extra={"extra_fields": {
         "event": "email_sent", "outcome": "sent", **audit_fields,
     }})
+    size_text = f"{size / 1024:.1f} KB" if size >= 1024 else f"{size} bytes"
     return SendResult(
         kind="ok",
-        message=f"Sent to {len(envelope)} recipient(s) — {fmt.upper()} attached ({size / 1024:.0f} KB).",
+        message=f"Sent to {len(envelope)} recipient(s) - {fmt.upper()} attached ({size_text}).",
         recipients=len(envelope), attachment_bytes=size,
     )

@@ -102,6 +102,24 @@ services:
       - key: APP_SECRET_KEY
         sync: false
 
+      # ── Email follow-up action (Phase 8) ─────────────────────────────────
+      # Opt-in: "Send as email" is OFF until SMTP_USER + SMTP_PASSWORD are set.
+      # SMTP_PASSWORD is the Gmail App Password (account needs 2-Step Verification).
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_ALLOWED_DOMAINS
+        sync: false
+      - key: EMAIL_MAX_ATTACHMENT_MB
+        value: "20"
+
       # ── Storage ──────────────────────────────────────────────────────────
       # Free plan: ephemeral — data lost on redeploy.
       # Paid plan + disk block above: this path lands on the persistent disk.
