@@ -51,7 +51,8 @@ Password**, a **single shared mailbox**, using **stdlib only** (`smtplib` + `ssl
 - **Exfiltration controls:** every send is **audit-logged** on `ask_oracle.audit` — **metadata
   only** (recipients/subject/format/row_count/bytes; **no body, no row data, no credential**);
   optional **`EMAIL_ALLOWED_DOMAINS`** allow-list (default allow-all, every send still audited);
-  pre-send **size cap** (`EMAIL_MAX_ATTACHMENT_MB`, default 20, headroom under Gmail's 25 MB).
+  pre-send **size cap** on the *raw* attachment (`EMAIL_MAX_ATTACHMENT_MB`, default **17**; base64
+  inflates ~33%, keeping the encoded message under Gmail's 25 MB — P8-R1-F1).
 - **Errors:** transport/auth exceptions are sanitized — generic `GENERIC_EMAIL_DETAIL` + an
   `error_id` to the user, full detail server-side only (the ADR-012 pattern).
 - **Chokepoint untouched:** the attachment is built from the already-fetched result; no new SQL

@@ -118,7 +118,7 @@ services:
       - key: EMAIL_ALLOWED_DOMAINS
         sync: false
       - key: EMAIL_MAX_ATTACHMENT_MB
-        value: "20"
+        value: "17"
 
       # ── Storage ──────────────────────────────────────────────────────────
       # Free plan: ephemeral — data lost on redeploy.

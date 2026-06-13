@@ -191,7 +191,7 @@ track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = dec
 | R7.3 | Remediate r1 findings + regression | ✅ Done | F1 `ebs_modules` unknown→422 (+case-normalize); F2 `/v1` POST auth tests; **+4 → 293** |
 | P7-CLOSE | Phase-7 closure sign-off | ✅ Completed | **gate PASSED 2026-06-12**: r1 = PASS (no blocking), F1/F2 remediated, 293 tests, governed docs current. **Phase 7 CLOSED.** EBS packs need real-EBS validation (ITM-012, method defined); 23ai deferred (ITM-018). |
 
-## Phase 8 — Follow-up Actions: Email a Report (🟢 v2; build B1–B5 complete, B6 review pending)
+## Phase 8 — Follow-up Actions: Email a Report (✅ v2 — exit gate passed 2026-06-13)
 
 Charter: [phase-8-charter.md](charters/phase-8-charter.md) · Design:
 [email-followup-action-design.md](email-followup-action-design.md). **First v2 feature** (v2 branch;
@@ -208,8 +208,11 @@ untouched; **no LLM on the email path**. Owner directive: a real, demoable send.
 | P8-3 | **B3** "Send as email" UI in query/report views | ✅ Completed | `320da37`; opt-in expander rendered from `last_results` (survives reruns); quick-pick chips, free-form To/Cc, CSV/Excel toggle; app.py compiles |
 | P8-4 | **B4** live-demo enablement (smoke + config/deploy) | ✅ Completed | `53a4264`; `scripts/p8_email_smoke.py`; `.env.example` + `render.yaml` (UI service, secrets sync:false); **live send verified end-to-end against Gmail** (success criterion 6) |
 | P8-5 | **B5** governed-doc sweep (ADR-017, RISK-20/21, ITM-020/021, CHANGELOG, registers, HANDOFF) | ✅ Completed | this entry; docs in lockstep |
-| P8-6 | **B6** independent adversarial exit-gate review (reviewer ≠ author) | 🔜 Pending | owner-supplied reviewer; v2 range `640bd92..HEAD`; review package next |
-| P8-DEMO | Owner live demo to an intended recipient | 🔜 Pending | send to an owner-chosen recipient via the UI or smoke script (criterion 6 — path already proven) |
+| R8.1 | Prepare exit-gate review package | ✅ Completed | [reviews/phase-8-review-package.md](reviews/phase-8-review-package.md); range `640bd92..HEAD` |
+| R8.2 | Independent adversarial exit-gate review (r1) | ✅ Done | verdict **PASS-WITH-FIXES** ([reviews/phase-8-review-r1.md](reviews/phase-8-review-r1.md)); no S1/S2; all 8 security invariants hold; 2 S3 (F1/F2) + 2 S4 (F3/F4) |
+| R8.3 | Remediate r1 findings + regression | ✅ Done | F1 cap default 20→17 (base64 headroom under Gmail 25 MB); F2 `_CONTROL_RE`→`[\x00-\x1f\x7f]`; F3 doc; F4 From control-strip; **+6 → 371 tests** |
+| P8-CLOSE | Phase-8 closure sign-off | ✅ Completed | **gate PASSED 2026-06-13**: r1 PASS-WITH-FIXES (no blocking), F1–F4 remediated, 371 tests, governed docs current. **Phase 8 CLOSED.** |
+| P8-DEMO | Owner live demo to an intended recipient | 🔜 Pending | path already proven (criterion 6); owner sends to a chosen recipient via the UI / smoke script |
 
 ## Standing per-phase review gate (applies to EVERY phase)
 
@@ -316,3 +319,4 @@ No app-code or chokepoint changes; 293 tests remain green. Committed `f353ebc` (
 | 1.47 | 2026-06-12 | Delivery | **Phase 7 CLOSED** — exit-gate review r1 = PASS (no blocking); P7-R1-F1/F2 (S4) remediated → 293 tests. **All phases (1–6 + 6.5 + C1 + 7) closed.** Open carries: ITM-012 (EBS live validation, method defined), ITM-018 (23ai deferred). |
 | 1.48 | 2026-06-12 | Delivery | **Deployment GA-readiness hardening COMPLETE** — DH-1…DH-6 + BUG-006 fixed; backlog T-12/T-18/T-19/T-20 marked completed; ITM-011/012/018/019 carried as the only open items. Pushed `f353ebc`. |
 | 1.49 | 2026-06-13 | Delivery | **v2 Phase 8 — Email a Report follow-up action: build B1–B5 complete** (`0abbaca..53a4264` on branch `v2`; local commits only, no push). `core/mailer/` stdlib-SMTP package + UI + smoke; 58 new tests (**365 total**); ADR-017; RISK-20/21; ITM-020/021 deferred. **Live send verified end-to-end against Gmail.** Remaining: P8-6 independent exit-gate review (owner-supplied) + P8-DEMO owner live demo to an intended recipient. |
+| 1.50 | 2026-06-13 | Delivery | **v2 Phase 8 CLOSED** — exit-gate review r1 = **PASS-WITH-FIXES** (no S1/S2; all 8 security invariants hold). Remediated: F1 (size cap default 20→17 MB for base64 headroom under Gmail 25 MB), F2 (`_CONTROL_RE` widened to `[\x00-\x1f\x7f]`), F3 (subject-wording doc), F4 (From control-strip); **+6 → 371 tests**. Remaining: **P8-DEMO** owner live demo (path already proven). |

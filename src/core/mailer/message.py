@@ -24,7 +24,9 @@ from src.utils import dataframe_to_csv_bytes, dataframe_to_excel_bytes
 # a dotted domain, no whitespace/control chars. The point is to reject the
 # obviously invalid and anything carrying CR/LF (the header-injection guard).
 _ADDR_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
-_CONTROL_RE = re.compile(r"[\r\n\t\x00]")
+# All C0 control chars + DEL (incl. CR/LF/TAB/NUL). CR/LF are the header-injection
+# vector; the wider class also enforces the "illegal char → rejected" contract (P8-R1-F2).
+_CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
 
 _CSV = "csv"
 _EXCEL = "excel"
@@ -138,7 +140,9 @@ def build_message(
         )
 
     msg = EmailMessage()
-    msg["From"] = sender
+    # The From is operator-set (EMAIL_FROM) and may carry a display name, so it
+    # isn't address-validated — strip any control chars defensively (P8-R1-F4).
+    msg["From"] = _CONTROL_RE.sub("", sender)
     msg["To"] = ", ".join(to_list)
     if cc_list:
         msg["Cc"] = ", ".join(cc_list)

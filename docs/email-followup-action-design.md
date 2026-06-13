@@ -39,7 +39,7 @@ Feature is **enabled iff `SMTP_USER` and `SMTP_PASSWORD` are both set** (`email_
 | `SMTP_PASSWORD` | — (required) | **The Gmail App Password** (16 chars; account needs 2-Step Verification). Secret — env-only, never logged or returned. |
 | `EMAIL_FROM` | = `SMTP_USER` | "From" header. |
 | `EMAIL_ALLOWED_DOMAINS` | empty = allow all | Comma-separated allow-list (D-F). When set, every To/CC domain must match or the send is rejected. |
-| `EMAIL_MAX_ATTACHMENT_MB` | `20` | Pre-send cap (headroom under Gmail's 25 MB). |
+| `EMAIL_MAX_ATTACHMENT_MB` | `17` | Pre-send cap on the *raw* attachment; base64 (~+33%) keeps the encoded message under Gmail's 25 MB (P8-R1-F1). |
 
 ## 5. Data flow
 ```
@@ -64,7 +64,7 @@ results df (st.session_state.last_results, already through the chokepoint)
 
 ## 6. Security design (maps to charter risks)
 - **P8-R2 credential handling:** `SMTP_PASSWORD` is read from env at send time, passed only to `smtplib.login()`, **never** placed in a `SendResult`, log record, audit field, or API response. The audit log and error log carry *no* credential. Transport errors are sanitized (generic message + `error_id`), the raw exception logged server-side only — exactly the `sanitize_db_error_for_ui` pattern, via a new `GENERIC_EMAIL_DETAIL`.
-- **P8-R3 header injection:** recipients and subject are validated; any `\r`/`\n`/control char ⇒ `EmailRejected`. Message is built with `EmailMessage` (the stdlib sets headers + MIME correctly); we never concatenate raw header strings.
+- **P8-R3 header injection:** **recipient addresses** carrying any control char (full C0 + DEL) ⇒ `EmailRejected`; the **subject** has control chars **collapsed to spaces** (`sanitize_subject`) rather than rejected, so a stray tab doesn't fail a send (P8-R1-F3); the operator-set From is control-stripped (P8-R1-F4). The message is built with `EmailMessage` (the stdlib sets headers + MIME correctly); we never concatenate raw header strings.
 - **P8-R1 exfiltration:** every send is **audit-logged** on the `ask_oracle.audit` channel — `event=email_sent`, fields: `request_id`, `to` (addresses), `cc`, `subject`, `attachment_format`, `row_count`, `byte_size`, `outcome`. **No row data, no body, no credential.** Optional `EMAIL_ALLOWED_DOMAINS` (D-F) hard-rejects out-of-policy recipients before any SMTP call.
 - **P8-R4 oversize:** the serialized attachment is measured; over `EMAIL_MAX_ATTACHMENT_MB` ⇒ `EmailRejected` with a clear message (suggest narrowing the query) before connecting.
 - **No LLM call** anywhere on this path — the redaction tripwire is untouched. AI-draft remains out of scope.

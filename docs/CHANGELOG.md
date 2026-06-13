@@ -28,6 +28,14 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   **RISK-20/21**; deferred future increments **ITM-020** (Gmail API/OAuth + per-user sender),
   **ITM-021** (AI-drafted body).
 
+### Fixed (Phase 8 exit-gate review r1 — PASS-WITH-FIXES)
+- **P8-R1-F1 (S3):** attachment size-cap default 20 → **17 MB** (raw) so the base64-encoded
+  message stays under Gmail's 25 MB; `.env.example` / `render.yaml` / ADR-017 / design updated.
+- **P8-R1-F2 (S3):** `validate_address` control-char guard widened `[\r\n\t\x00]` → `[\x00-\x1f\x7f]`.
+- **P8-R1-F3 (S4):** design clarified — subject control chars are *collapsed* (not rejected).
+- **P8-R1-F4 (S4):** operator-set `EMAIL_FROM` is control-stripped in `build_message`.
+- **+6 regression tests → 371 total.** Verdict: PASS-WITH-FIXES (no S1/S2; all 8 invariants hold).
+
 ### Added (ITM-011 — List/multi-value bind parameters)
 - **`expand_list_binds(sql, binds)` in `src/db.py`:** rewrites each list-valued bind `:name` →
   `:name_0, :name_1, …` using a word-boundary regex (not string interpolation). Expanded names are

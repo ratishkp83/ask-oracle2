@@ -69,6 +69,17 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   added later it must be behind an **explicit opt-in** and either summarize locally or be recorded
   as a sanctioned exception ([ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md)). Non-blocking.
 
+## Phase 8 (v2) — independent review findings & remediation (r1)
+
+Source: [reviews/phase-8-review-r1.md](reviews/phase-8-review-r1.md) — verdict **PASS-WITH-FIXES** (no S1/S2; all 8 security invariants hold). Package: [reviews/phase-8-review-package.md](reviews/phase-8-review-package.md). Remediated post-review; **371 tests green**.
+
+| ID | Sev | Finding | Disposition |
+|----|-----|---------|-------------|
+| P8-R1-F1 | S3 | Attachment size cap measured **raw** bytes; default 20 MB → ~26.7 MB base64 > Gmail's 25 MB (user got the generic transport error instead of a clean pre-send rejection) | **Fixed** — `DEFAULT_MAX_ATTACHMENT_MB` 20→**17** (raw, with base64 headroom); `.env.example` / runtime `.env` / `render.yaml` / ADR-017 / design updated |
+| P8-R1-F2 | S3 | `validate_address` control-char guard was only `[\r\n\t\x00]`; other C0 / DEL chars passed both guards | **Fixed** — `_CONTROL_RE` widened to `[\x00-\x1f\x7f]`; 5 regression cases (embedded control char rejected). *(Not header injection — CR/LF required — but closes the "illegal char → rejected" contract.)* |
+| P8-R1-F3 | S4 | Spec said subjects are "rejected" for control chars; code **collapses** them to spaces (safe, but not the stated behaviour) | **Fixed (doc)** — design §6 now states: addresses are rejected, subject control chars are collapsed (a stray tab shouldn't fail a send) |
+| P8-R1-F4 | S4 | Operator-set `EMAIL_FROM` From header was unvalidated (operator-trust boundary; hardening only) | **Fixed** — From is control-stripped in `build_message`; regression test |
+
 ## Phase 3 — independent review findings & remediation (r1 → r2)
 
 Sources: [reviews/phase-3-review-r1.md](reviews/phase-3-review-r1.md) (verdict: FAIL — 2 blocking) → remediated (`29d956b`) → [reviews/phase-3-review-r2.md](reviews/phase-3-review-r2.md) (verdict: **PASS-WITH-FIXES — no open blocking; gate passes**). r2 independently re-executed every probe; 75 tests green.

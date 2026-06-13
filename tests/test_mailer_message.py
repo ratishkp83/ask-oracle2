@@ -41,6 +41,23 @@ def test_validate_address_rejects_header_injection(payload):
         validate_address(payload)
 
 
+@pytest.mark.parametrize("ctrl", ["\x01", "\x07", "\x0b", "\x1f", "\x7f"])
+def test_validate_address_rejects_all_control_chars(ctrl):
+    # P8-R1-F2: an embedded control char (full C0 + DEL class, not only CR/LF/TAB/NUL)
+    # is rejected. Embedded — not trailing — so str.strip() can't quietly drop it first.
+    with pytest.raises(EmailRejected):
+        validate_address(f"a{ctrl}@b.com")
+
+
+def test_build_message_strips_controls_from_sender():
+    # P8-R1-F4: control chars in the operator-set From header are stripped.
+    msg = build_message(
+        sender="Reports\r\nBcc: evil@x.com <reports@x.com>", to=["a@x.com"], cc=(),
+        subject="S", body="", df=DF, attachment_format="csv",
+    )
+    assert "\r" not in msg["From"] and "\n" not in msg["From"]
+
+
 # --- recipient parsing ---------------------------------------------------- #
 def test_parse_recipients_multi_separator_and_dedupe():
     raw = "a@x.com, b@y.com; a@X.COM  c@z.com"

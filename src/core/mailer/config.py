@@ -15,7 +15,10 @@ from typing import FrozenSet, Optional
 
 DEFAULT_HOST = "smtp.gmail.com"
 DEFAULT_PORT = 587
-DEFAULT_MAX_ATTACHMENT_MB = 20
+# 17 MB *raw* keeps the base64-encoded message under Gmail's 25 MB limit
+# (base64 inflates the attachment by ~33%; P8-R1-F1). Raise only if the
+# provider's message-size limit is higher.
+DEFAULT_MAX_ATTACHMENT_MB = 17
 
 
 @dataclass(frozen=True)
