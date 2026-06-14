@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { ResultsView } from "@/components/exec/ResultsView";
+import { SAMPLE_QUESTION, SAMPLE_RESULT, SAMPLE_SQL } from "./sampleResult";
 
-// First-run lands here (B-5): ask a question, not admin setup. The propose→run
-// flow (nl2sql → review → /execute → executive results) is wired in B5; for now
-// this is the premium entry surface.
+// First-run lands here (B-5): ask a question, not admin setup. The live
+// propose→run flow (nl2sql → review → /execute) is wired in B5b; "See a sample
+// result" previews the executive Results design (B5a) in the meantime.
 const EXAMPLES = [
   "Top customers by outstanding AR this year",
   "Monthly AP spend by supplier, last 12 months",
@@ -12,6 +14,11 @@ const EXAMPLES = [
 
 export function AskPage() {
   const [q, setQ] = useState("");
+  const [demo, setDemo] = useState(false);
+
+  if (demo) {
+    return <ResultsView question={SAMPLE_QUESTION} sql={SAMPLE_SQL} result={SAMPLE_RESULT} onBack={() => setDemo(false)} />;
+  }
 
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 pb-[16vh]">
@@ -47,7 +54,7 @@ export function AskPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {EXAMPLES.map((ex) => (
             <button
               key={ex}
@@ -59,6 +66,14 @@ export function AskPage() {
             </button>
           ))}
         </div>
+
+        <button
+          type="button"
+          onClick={() => setDemo(true)}
+          className="mt-5 text-[12.5px] font-medium text-brand hover:underline"
+        >
+          See a sample result →
+        </button>
       </div>
     </div>
   );

@@ -4,7 +4,20 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
-### Added (Phase 9 — React CXO executive UI; B1–B3)
+### Added (Phase 9 — React CXO executive UI; B1–B5a)
+- **B5a — executive Results view (the core, ADR-019):** the four-band hierarchy
+  built as real components — **summary band** (question headline + deterministic
+  run meta + SQL disclosure), **auto-derived KPI cards**, **driver chart**
+  (Recharts bar/line, auto-picked), and a **virtualized detail grid** (TanStack
+  Table + Virtual, the only scroll region). All KPI/summary/chart derivation is
+  **local, deterministic math in `web/src/lib/derive/*` — no row data to any LLM**.
+  Toolbar: client-side CSV export + a real **Email** action (POST /reports/email,
+  recipient-confirmed). A "See a sample result" affordance previews the design
+  without a live DB. Verified in-app at 1366×768: `pageScroll: 0`, grid fills the
+  viewport, premium tokens render. Two derivation bugs caught + fixed on review
+  (currency-hint `due` matched `overdue`; chart picked the first measure not the
+  priority one) → fixed by tokenized name classification + a shared `rankMeasures`.
+
 - **B3 — `web/` scaffold (ADR-019):** the React app now lives under `web/`; the
   generic Lovable mock components were removed and the 49 shadcn/ui primitives
   relocated to `web/src/components/ui`, so `src/` is pure Python again. The repo
