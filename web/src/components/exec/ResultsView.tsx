@@ -124,6 +124,9 @@ export function ResultsView({
       filename={slugify(question) || "result"}
       subject={question}
       onDrill={push}
+      // F3: a non-drillable trend (date dim) still gets a path to detail at the top
+      // level — pull the whole underlying detail (filters empty).
+      leaf={{ filters: [], onPullQuery, onPullDetail }}
     />
   );
 }
@@ -190,8 +193,11 @@ function ResultScope({
       {chart ? (
         <div className="shrink-0">
           <DriverChart spec={chart} onBarClick={(label) => onDrill(chart.dimensionIndex, label)} />
+          {/* F3: a trend line isn't drillable (Recharts lines have no click), so it
+              would otherwise dead-end. Offer a pull-to-detail path alongside it. */}
+          {chart.type === "line" && leaf && <PullDetailInline leaf={leaf} />}
         </div>
-      ) : leaf ? (
+      ) : leaf && leaf.filters.length > 0 ? (
         <NoBreakdown leaf={leaf} />
       ) : null}
 
@@ -419,6 +425,35 @@ function NoBreakdown({ leaf }: { leaf: LeafContext }) {
         className="mt-3 inline-flex items-center gap-1.5 rounded-control bg-brand px-3.5 py-2 text-[12.5px] font-medium text-white disabled:opacity-50"
       >
         Pull {value} data →
+      </button>
+    </div>
+  );
+}
+
+// F3: a compact pull-to-detail strip shown beneath a non-drillable trend line, so a
+// date dimension still has a path to the underlying detail. Pulls the current scope
+// (the active drill filters, possibly none at the top level). Hidden when no pull
+// handler is available (e.g. a non-pullable detail result).
+function PullDetailInline({ leaf }: { leaf: LeafContext }) {
+  const canPull = !!leaf.onPullDetail || !!leaf.onPullQuery;
+  if (!canPull) return null;
+  const value = leaf.filters[leaf.filters.length - 1]?.value;
+  const pull = () => {
+    if (leaf.onPullDetail) leaf.onPullDetail(leaf.filters);
+    else leaf.onPullQuery?.(value ? `Show all detail for ${value}` : "Show all detail");
+  };
+  return (
+    <div className="mt-2 flex items-center justify-between gap-3 rounded-control border border-hairline bg-surface-sunken px-3 py-2">
+      <span className="text-[12px] text-ink-muted">
+        Trends aren’t drillable.{" "}
+        {value ? `Pull the underlying detail for ${value}.` : "Pull the underlying detail."}
+      </span>
+      <button
+        type="button"
+        onClick={pull}
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-control bg-brand px-3 py-1.5 text-[12px] font-medium text-white"
+      >
+        Pull live detail →
       </button>
     </div>
   );
