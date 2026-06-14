@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SchemaPicker } from "./SchemaPicker";
@@ -73,6 +73,17 @@ describe("SchemaPicker", () => {
 
     const trigger = await screen.findByRole("button", { name: /active schema/i });
     expect(trigger).toHaveTextContent("GL_PACK");
+  });
+
+  it("ITM-030 — suppresses E11 on a transient fetch error when a schema is remembered", async () => {
+    window.localStorage.setItem("aor.schemaId", "s1"); // a valid id is remembered
+    vi.mocked(getSchemas).mockRejectedValue(new Error("network"));
+    renderPicker();
+
+    // Once the query settles into its error state (past the loading line), the
+    // E11 note must NOT show — the remembered id is still sent to nl2sql.
+    await waitFor(() => expect(screen.queryByText(/loading/i)).not.toBeInTheDocument());
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
   it("E11 — shows the no-schema notice (no picker) when none exist", async () => {

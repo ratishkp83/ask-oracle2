@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Check } from "lucide-react";
 import { getSchemas } from "@/lib/api/endpoints";
 import { ADMIN_URL } from "@/lib/config";
+import { useListboxNav } from "@/hooks/useListboxNav";
 import { useSession } from "@/app/session";
 
 // Inline schema selector that sits above the question box (decision 6: the schema
@@ -20,6 +21,7 @@ export function SchemaPicker() {
 
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const listNav = useListboxNav(open);
 
   // Resolve the active selection once the list is known: keep a still-valid
   // remembered id; otherwise default to the sole schema, else force an explicit
@@ -74,6 +76,8 @@ export function SchemaPicker() {
 
             {open && (
               <ul
+                ref={listNav.ref}
+                onKeyDown={listNav.onKeyDown}
                 role="listbox"
                 aria-label="Schemas"
                 className="absolute left-0 z-20 mt-1.5 min-w-[220px] overflow-hidden rounded-card border border-hairline bg-surface py-1 shadow-e2"
@@ -107,18 +111,20 @@ export function SchemaPicker() {
         </div>
       )}
 
-      {/* E11 — non-blocking: no active schema (none chosen, or none exist yet). */}
-      {!active && (
+      {/* E11 — non-blocking: no active schema (none chosen, or none exist yet).
+          Suppressed when a schemaId is remembered but not yet resolvable (a
+          transient /schemas fetch error): the valid id is still sent to nl2sql,
+          so the notice would be misleading (ITM-030). */}
+      {!active && !schemaId && (
         <p role="note" className="text-[12px] text-ink-faint">
           No schema selected — accuracy may be lower.{" "}
-          <a
-            href={ADMIN_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-brand hover:underline"
-          >
-            Add one in admin
-          </a>
+          {ADMIN_URL ? (
+            <a href={ADMIN_URL} target="_blank" rel="noreferrer" className="font-medium text-brand hover:underline">
+              Add one in admin
+            </a>
+          ) : (
+            <span className="font-medium text-ink-muted">add one in admin</span>
+          )}
         </p>
       )}
     </div>

@@ -94,6 +94,25 @@ describe("ConnectionPicker", () => {
     expect(trigger).toHaveTextContent("XE (read-only)");
   });
 
+  it("supports roving arrow-key navigation in the open listbox", async () => {
+    vi.mocked(getProfiles).mockResolvedValue(PROFILES);
+    const user = userEvent.setup();
+    renderPicker();
+
+    const trigger = await screen.findByRole("button", { name: /active connection/i });
+    await user.click(trigger);
+    const options = within(screen.getByRole("listbox")).getAllByRole("button");
+
+    // On open, focus lands on the selected (first) option.
+    expect(options[0]).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(options[1]).toHaveFocus();
+    await user.keyboard("{ArrowUp}");
+    expect(options[0]).toHaveFocus();
+    await user.keyboard("{End}");
+    expect(options[options.length - 1]).toHaveFocus();
+  });
+
   it("E10 — shows a calm zero-connection state when no profiles exist", async () => {
     vi.mocked(getProfiles).mockResolvedValue([]);
     renderPicker();

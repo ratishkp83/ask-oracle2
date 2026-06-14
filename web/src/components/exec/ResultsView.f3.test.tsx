@@ -55,4 +55,26 @@ describe("ResultsView — F3 trend path-to-detail", () => {
     expect(screen.getByTestId("chart")).toHaveAttribute("data-type", "line");
     expect(screen.queryByRole("button", { name: /pull live detail/i })).not.toBeInTheDocument();
   });
+
+  it("F2 — disables the live pull when the result has duplicate column names", () => {
+    // Duplicate output column ("REVENUE") would make the wrap's inline view
+    // ambiguous (ORA-00918), so the live pull is withheld (ITM-032).
+    const dup: ExecuteResult = {
+      columns: ["MONTH", "REVENUE", "REVENUE"],
+      rows: [
+        ["Jan", 100, 1],
+        ["Feb", 220, 2],
+        ["Mar", 180, 3],
+      ],
+      elapsed_seconds: 0.01,
+      row_count: 3,
+      truncated: false,
+    };
+    render(
+      <ResultsView question="Revenue by month" sql={SQL} result={dup} onPullDetail={vi.fn()} />,
+    );
+    // The trend line still renders; the live-pull affordance does not.
+    expect(screen.getByTestId("chart")).toHaveAttribute("data-type", "line");
+    expect(screen.queryByRole("button", { name: /pull live detail/i })).not.toBeInTheDocument();
+  });
 });

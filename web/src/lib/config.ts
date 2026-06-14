@@ -5,6 +5,10 @@ export const API_BASE = (import.meta.env.VITE_AOR_API_BASE as string) || "/v1";
 export const API_KEY = (import.meta.env.VITE_AOR_API_KEY as string) || "";
 
 // Admin surface (the Streamlit app) where connections/schemas are added during
-// beta. Overridable per deployment; defaults to the local Streamlit port.
+// beta. Set per deployment via VITE_AOR_ADMIN_URL. To avoid baking a wrong
+// localhost URL into a production bundle (ITM-028), it only falls back to the
+// local Streamlit port in a dev build; in production it stays empty and the UI
+// shows guidance text without a (broken) link.
 export const ADMIN_URL =
-  (import.meta.env.VITE_AOR_ADMIN_URL as string) || "http://localhost:8501";
+  (import.meta.env.VITE_AOR_ADMIN_URL as string) ||
+  (import.meta.env.DEV ? "http://localhost:8501" : "");

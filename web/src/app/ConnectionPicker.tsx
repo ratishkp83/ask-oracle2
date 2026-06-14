@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronDown, Database, Plug } from "lucide-react";
 import { getProfiles } from "@/lib/api/endpoints";
 import { ADMIN_URL } from "@/lib/config";
+import { useListboxNav } from "@/hooks/useListboxNav";
 import { useSession } from "./session";
 
 // The active-connection selector in the TopBar. Lists saved profiles and writes
@@ -18,6 +19,7 @@ export function ConnectionPicker() {
 
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const listNav = useListboxNav(open);
 
   // Default the selection once the list is known: keep a still-valid remembered
   // id, otherwise fall back to the first profile.
@@ -52,19 +54,30 @@ export function ConnectionPicker() {
     );
   }
 
-  // E10 — no connection configured (also covers an unreachable list).
+  // E10 — no connection configured (also covers an unreachable list). Render a
+  // link to the admin surface when one is configured; otherwise just guidance
+  // text (no broken link in a production bundle — ITM-028).
   if (isError || !profiles || profiles.length === 0) {
-    return (
+    const cls =
+      "flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1.5 text-[12.5px] text-ink-muted";
+    const body = (
+      <>
+        <Plug className="h-3.5 w-3.5 text-ink-faint" />
+        No connection — add one in admin
+      </>
+    );
+    return ADMIN_URL ? (
       <a
         href={ADMIN_URL}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1.5 text-[12.5px] text-ink-muted transition-colors hover:border-brand hover:text-ink"
+        className={`${cls} transition-colors hover:border-brand hover:text-ink`}
         title="Add a connection in admin"
       >
-        <Plug className="h-3.5 w-3.5 text-ink-faint" />
-        No connection — add one in admin
+        {body}
       </a>
+    ) : (
+      <span className={cls}>{body}</span>
     );
   }
 
@@ -90,6 +103,8 @@ export function ConnectionPicker() {
 
       {open && (
         <ul
+          ref={listNav.ref}
+          onKeyDown={listNav.onKeyDown}
           role="listbox"
           aria-label="Connections"
           className="absolute right-0 z-20 mt-1.5 min-w-[240px] overflow-hidden rounded-card border border-hairline bg-surface py-1 shadow-e2"

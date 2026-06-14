@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (Phase-9 B5b exit gate: F3 RESOLVED in Inc 4c; ITM-025 re-confirmed closed; BUG-008 fixed)
+> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (post-review remediation: ALL 6 exit-gate findings fixed; ITM-027/028/029/030/032 FIXED; only ITM-026 + ITM-031 remain open)
 
 ## Bug workflow (mandatory)
 
@@ -119,27 +119,27 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   they should reflect the user's **recent / most-run questions** instead. Blocked on query-history
   persistence (not yet built). Deferred to a later increment; wire the chips to history once it exists.
 
-- ITM-027: (Phase 9 — Inc 3 Packet 3a internal review, OPEN/robustness, Low) **`/profiles` Zod parse is
+- ITM-027: (Phase 9 — Inc 3 Packet 3a internal review, ✅ **FIXED** 2026-06-14 / robustness, Low) **`/profiles` Zod parse is
   strict on `environment`.** `ProfilePublicSchema.environment` is `z.enum(["DEV","TEST","PROD"])`; any
   unexpected value (or other schema drift) fails the whole list parse and drops the connection picker to
   the E10 zero-state instead of degrading gracefully. Values come from our own `Literal` so drift is
   unlikely. Fix-when-it-fits: wrap the env field (or the list parse) in `.catch()` for graceful
   degradation. Owner-approved deferral (2026-06-14). File: `web/src/lib/api/schemas.ts`.
 
-- ITM-028: (Phase 9 — Inc 3 Packet 3a internal review, OPEN/config, Low) **`ADMIN_URL` defaults to a
+- ITM-028: (Phase 9 — Inc 3 Packet 3a internal review, ✅ **FIXED** 2026-06-14 / config, Low) **`ADMIN_URL` defaults to a
   hardcoded `http://localhost:8501` in the bundle.** It is env-overridable (`VITE_AOR_ADMIN_URL`) and a
   beta-only affordance for the E10 "add a connection in admin" link, so acceptable now. Fix-when-it-fits:
   source the admin URL from server/runtime config (or hide the link when unconfigured) before GA.
   Owner-approved deferral (2026-06-14). File: `web/src/lib/config.ts`.
 
-- ITM-029: (Phase 9 — Inc 3 Packet 3a internal review, OPEN/a11y, Nit) **Connection-picker listbox lacks
+- ITM-029: (Phase 9 — Inc 3 Packet 3a internal review, ✅ **FIXED** 2026-06-14 / a11y, Nit) **Connection-picker listbox lacks
   roving arrow-key navigation.** Options are focusable buttons (Tab/Enter/Escape + outside-click all
   work), but there is no ↑/↓ roving-tabindex pattern within the `listbox`. Functional for beta.
   Fix-when-it-fits: add arrow-key navigation (or adopt the shadcn/Radix `Select` if its jsdom friction is
   resolved). Owner-approved deferral (2026-06-14). Files: `web/src/app/ConnectionPicker.tsx`,
   `web/src/features/ask/SchemaPicker.tsx` (same pattern).
 
-- ITM-030: (Phase 9 — Inc 3 Packet 3b internal review, OPEN/UX, Low/cosmetic) **Schema picker shows the
+- ITM-030: (Phase 9 — Inc 3 Packet 3b internal review, ✅ **FIXED** 2026-06-14 / UX, Low/cosmetic) **Schema picker shows the
   E11 "no schema selected" notice on a transient `/schemas` list-fetch error even when a valid `schemaId`
   is remembered.** The remembered id is still in session and is sent to `nl2sql` (so SQL accuracy is
   unaffected — the id is valid), but the name can't be resolved without the list, so the calm E11 notice
@@ -168,7 +168,7 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   helpers, and either relocate shared exports or accept the vendored-primitive warnings (or scope ESLint
   to exclude `components/ui`). Logged at the B5b close (2026-06-14).
 
-- ITM-032: (Phase 9 — B5b exit-gate review r1 / P9B-R1-F2, OPEN/robustness, Low) **Pull-detail wrap can be
+- ITM-032: (Phase 9 — B5b exit-gate review r1 / P9B-R1-F2, ✅ **FIXED** 2026-06-14 / robustness, Low) **Pull-detail wrap can be
   ambiguous on a duplicate or unaliased output column.** `buildPullDetailSql` wraps as
   `SELECT * FROM (<approved>) WHERE "COL" = :p`; if the approved `SELECT` has two output columns with the
   same name (or a colliding unaliased expression), the inline view raises **ORA-00918/-00960**. **Not a
@@ -189,11 +189,17 @@ accurate. Six non-blocking findings:
 | ID | Sev | Finding | Disposition |
 |----|-----|---------|-------------|
 | P9B-R1-F1 | S3 | `vitest run` gate brittle on the junction/spaced path (Vite `%20` canonicalization) | **Fixed** — `preserveSymlinks: true` added to `vitest.config.ts` (mirrors `vite.config.ts`) |
-| P9B-R1-F2 | S4 | Pull-detail wrap ambiguous on duplicate/unaliased output column (not security) | **Logged** → ITM-032 |
-| P9B-R1-F3 | S4 | Strict Zod enums fail whole-list parse on drift | Already **ITM-027/030** |
-| P9B-R1-F4 | S4 | `ADMIN_URL` hardcoded default in bundle | Already **ITM-028** |
-| P9B-R1-F5 | S4 | Listbox dropdowns lack arrow-key roving nav | Already **ITM-029** |
+| P9B-R1-F2 | S4 | Pull-detail wrap ambiguous on duplicate/unaliased output column (not security) | **Fixed** (ITM-032) — `ResultsView` withholds the live pull when `result.columns` has duplicates (`schemas`/RTL: `ResultsView.f3.test.tsx`) |
+| P9B-R1-F3 | S4 | Strict Zod enums fail whole-list parse on drift | **Fixed** (ITM-027) — `Environment`/`SchemaSource` use `.catch(default)` (`schemas.test.ts`) |
+| P9B-R1-F4 | S4 | `ADMIN_URL` hardcoded default in bundle | **Fixed** (ITM-028) — default only in `import.meta.env.DEV`, else empty + the affordance renders text not a link |
+| P9B-R1-F5 | S4 | Listbox dropdowns lack arrow-key roving nav | **Fixed** (ITM-029) — `useListboxNav` (Arrow/Home/End + focus-on-open) on both pickers (`ConnectionPicker.test.tsx`) |
 | P9B-R1-F6 | S4 | Cosmetic `confidence: undefined` vs `null` in AskPage review entries | **Fixed** — `editSql` now uses `null` |
+
+**Post-review remediation (all six findings closed, 2026-06-14):** all findings above are now fixed
+(F1/F6 at review close; F2–F5 immediately after, owner-directed). Also fixed **ITM-030** (schema E11
+suppressed on a transient `/schemas` error when a `schemaId` is remembered). Gates after remediation:
+**427 backend / 74 frontend / tsc clean / vite build green.** Remaining open ITMs: **ITM-026** (dynamic
+example chips — needs query history) and **ITM-031** (frontend ESLint debt — not a CI gate).
 
 ## Phase 8 (v2) — independent review findings & remediation (r1)
 

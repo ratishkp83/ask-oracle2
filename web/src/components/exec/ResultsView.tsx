@@ -55,6 +55,15 @@ export function ResultsView({
     [result, sqlMeta],
   );
   const order = useMemo(() => dimensionOrder(cols, sqlMeta), [cols, sqlMeta]);
+  // F2 (ITM-032): the live pull-detail wrap (`SELECT * FROM (<approved>) WHERE
+  // "COL" = :v`) is ambiguous if the result has duplicate output column names
+  // (ORA-00918). It's a rare shape and would only degrade to a sanitized error,
+  // but we'd rather not offer a pull we can't build cleanly — so disable the live
+  // wrap for that result. The demo's `onPullQuery` (a fresh question) is unaffected.
+  const safePullDetail = useMemo(
+    () => (new Set(result.columns).size === result.columns.length ? onPullDetail : undefined),
+    [result.columns, onPullDetail],
+  );
   const [stack, setStack] = useState<DrillLevel[]>([]);
   const rows = useMemo(() => filterRows(result.rows, stack), [result.rows, stack]);
   const push = (dimIndex: number, value: string) => setStack((s) => [...s, { dimIndex, value }]);
@@ -102,7 +111,7 @@ export function ResultsView({
         filename={`${slugify(question)}-${slugify(last.value)}`}
         subject={`${last.value} — ${question}`}
         onDrill={push}
-        leaf={{ filters, onPullQuery, onPullDetail }}
+        leaf={{ filters, onPullQuery, onPullDetail: safePullDetail }}
       />
     );
   }
@@ -126,7 +135,7 @@ export function ResultsView({
       onDrill={push}
       // F3: a non-drillable trend (date dim) still gets a path to detail at the top
       // level — pull the whole underlying detail (filters empty).
-      leaf={{ filters: [], onPullQuery, onPullDetail }}
+      leaf={{ filters: [], onPullQuery, onPullDetail: safePullDetail }}
     />
   );
 }

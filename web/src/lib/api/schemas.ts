@@ -8,7 +8,10 @@ export type Health = z.infer<typeof HealthSchema>;
 
 // Connection profiles — mirrors ProfilePublic (src/core/profiles.py). Never a
 // password: the client only ever holds the profile id (invariant 4).
-export const EnvironmentSchema = z.enum(["DEV", "TEST", "PROD"]);
+// `.catch` degrades gracefully on enum drift: an unexpected value defaults rather
+// than throwing and failing the WHOLE list parse (ITM-027), so one odd record
+// can't blank the picker.
+export const EnvironmentSchema = z.enum(["DEV", "TEST", "PROD"]).catch("DEV");
 
 export const ProfilePublicSchema = z.object({
   id: z.string(),
@@ -27,7 +30,7 @@ export const ProfileListSchema = z.array(ProfilePublicSchema);
 
 // Saved schema snapshots — mirrors SchemaSummary (src/core/schema_store.py).
 // Names/metadata only; no row data ever (invariant 3).
-export const SchemaSourceSchema = z.enum(["upload", "introspection"]);
+export const SchemaSourceSchema = z.enum(["upload", "introspection"]).catch("upload");
 
 export const SchemaSummarySchema = z.object({
   id: z.string(),
