@@ -45,6 +45,7 @@ export const SchemaSummaryListSchema = z.array(SchemaSummarySchema);
 export const ConfidenceSchema = z
   .object({ level: z.string(), reasons: z.array(z.string()).default([]) })
   .nullable();
+export type Confidence = z.infer<typeof ConfidenceSchema>;
 
 export const Nl2SqlSchema = z.object({
   sql: z.string(),
