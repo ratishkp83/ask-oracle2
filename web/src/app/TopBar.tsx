@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Database } from "lucide-react";
+import { Database } from "lucide-react";
 import { getHealth } from "@/lib/api/endpoints";
+import { ConnectionPicker } from "./ConnectionPicker";
 
 export function TopBar() {
   const { data, isError, isLoading } = useQuery({
@@ -21,14 +22,19 @@ export function TopBar() {
         </span>
       </div>
 
-      <div className="flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1.5 text-[12.5px] text-ink">
-        <span
-          className={`h-1.5 w-1.5 rounded-full ${
-            online ? "bg-gain" : isLoading ? "bg-warn" : "bg-loss"
-          }`}
-        />
-        {online ? "API connected" : isLoading ? "Connecting…" : "API offline"}
-        <ChevronDown className="h-3.5 w-3.5 text-ink-faint" />
+      <div className="flex items-center gap-2.5">
+        <ConnectionPicker />
+        <div
+          className="flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1.5 text-[12.5px] text-ink"
+          title={online ? "API connected" : isLoading ? "Connecting…" : "API offline"}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              online ? "bg-gain" : isLoading ? "bg-warn" : "bg-loss"
+            }`}
+          />
+          {online ? "API connected" : isLoading ? "Connecting…" : "API offline"}
+        </div>
       </div>
     </header>
   );

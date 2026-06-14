@@ -4,10 +4,17 @@ import {
   ExecuteSchema,
   HealthSchema,
   Nl2SqlSchema,
+  ProfileListSchema,
 } from "./schemas";
 
 export async function getHealth() {
   return HealthSchema.parse(await get("/health"));
+}
+
+// Saved connection profiles. Returns id/name/current_schema (never a password);
+// the UI picks a connection by id and the server resolves the secret.
+export async function getProfiles() {
+  return ProfileListSchema.parse(await get("/profiles"));
 }
 
 export async function nl2sql(body: { natural_language: string; ebs_modules?: string[] }) {
