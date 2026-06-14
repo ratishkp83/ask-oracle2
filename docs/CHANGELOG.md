@@ -4,7 +4,22 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
-### Added (Phase 9 — React CXO executive UI; B1–B2)
+### Added (Phase 9 — React CXO executive UI; B1–B3)
+- **B3 — `web/` scaffold (ADR-019):** the React app now lives under `web/`; the
+  generic Lovable mock components were removed and the 49 shadcn/ui primitives
+  relocated to `web/src/components/ui`, so `src/` is pure Python again. The repo
+  root stays the npm/Vite project (reuses the installed `node_modules`) with Vite
+  `root: 'web'` and a dev proxy `/v1 → 127.0.0.1:8000`. Design system in
+  `web/src/styles/tokens.css` (warm-paper canvas, deep-petrol brand, Inter +
+  Fraunces, tabular numerals) re-aliases shadcn's vars so primitives inherit the
+  look. App shell (slim left rail + top bar with a live `/health` badge), router,
+  TanStack Query provider, and a typed `/v1` client + Zod schemas. Verified: build
+  green, renders single-viewport at 1366×768, "API connected" via the proxy,
+  Fraunces headline + petrol `#0E5C63` button confirmed by computed styles.
+  Vite pinned to `^5.4.20` (the `^5.4.1` dev dep-optimizer crashes on the
+  spaced node_modules path under Node 24); `preserveSymlinks` + `process.cwd()`
+  roots keep Vite on the space-free junction.
+
 - **Charter** `docs/charters/phase-9-react-cxo-ui.md` approved by owner (design system, executive
   results-hierarchy spec, scope, risks, build plan; D-1…D-5 resolved as recommended — Fraunces,
   deep petrol `#0E5C63`, `POST /reports/email`, light-only beta, core-first phasing). Streamlit
