@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (ITM-024 closed)
+> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (ITM-027/028/029 logged — Inc 3 Packet 3a review notes, owner-approved deferral)
 
 ## Bug workflow (mandatory)
 
@@ -117,6 +117,25 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   The three chips under the Ask box are currently static placeholders; per owner request (2026-06-14)
   they should reflect the user's **recent / most-run questions** instead. Blocked on query-history
   persistence (not yet built). Deferred to a later increment; wire the chips to history once it exists.
+
+- ITM-027: (Phase 9 — Inc 3 Packet 3a internal review, OPEN/robustness, Low) **`/profiles` Zod parse is
+  strict on `environment`.** `ProfilePublicSchema.environment` is `z.enum(["DEV","TEST","PROD"])`; any
+  unexpected value (or other schema drift) fails the whole list parse and drops the connection picker to
+  the E10 zero-state instead of degrading gracefully. Values come from our own `Literal` so drift is
+  unlikely. Fix-when-it-fits: wrap the env field (or the list parse) in `.catch()` for graceful
+  degradation. Owner-approved deferral (2026-06-14). File: `web/src/lib/api/schemas.ts`.
+
+- ITM-028: (Phase 9 — Inc 3 Packet 3a internal review, OPEN/config, Low) **`ADMIN_URL` defaults to a
+  hardcoded `http://localhost:8501` in the bundle.** It is env-overridable (`VITE_AOR_ADMIN_URL`) and a
+  beta-only affordance for the E10 "add a connection in admin" link, so acceptable now. Fix-when-it-fits:
+  source the admin URL from server/runtime config (or hide the link when unconfigured) before GA.
+  Owner-approved deferral (2026-06-14). File: `web/src/lib/config.ts`.
+
+- ITM-029: (Phase 9 — Inc 3 Packet 3a internal review, OPEN/a11y, Nit) **Connection-picker listbox lacks
+  roving arrow-key navigation.** Options are focusable buttons (Tab/Enter/Escape + outside-click all
+  work), but there is no ↑/↓ roving-tabindex pattern within the `listbox`. Functional for beta.
+  Fix-when-it-fits: add arrow-key navigation (or adopt the shadcn/Radix `Select` if its jsdom friction is
+  resolved). Owner-approved deferral (2026-06-14). File: `web/src/app/ConnectionPicker.tsx`.
 
 ## Phase 8 (v2) — independent review findings & remediation (r1)
 
