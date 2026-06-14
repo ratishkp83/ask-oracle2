@@ -1,26 +1,28 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 3.6 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-13
+> **Document:** Session Handoff · **Version:** 3.7 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-14
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 > ---
-> ### 🟢 v2 ACTIVE — Phase 8: Email a Report follow-up action (2026-06-13)
-> **Workspace:** `D:\Ratish\Personal\Project\ask-oracle-reports-main v2`, branch **`v2`** —
-> **local commits only; NO PUSH until the July limit reset.** Run the suite from the v2 dir
-> (expect **365 passed**). v2 adds the **"Send as email" follow-up action**: charter
-> [phase-8-charter.md](charters/phase-8-charter.md), design
-> [email-followup-action-design.md](email-followup-action-design.md),
-> [ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md).
-> **Build B1–B5 + exit-gate review COMPLETE** (`0abbaca..HEAD`): `src/core/mailer/` stdlib-SMTP
-> package (config / message / recipients / sender), the opt-in **"Send as email" UI** in
-> `src/app.py`, and `scripts/p8_email_smoke.py`. **64 new tests (371 total); SELECT-only chokepoint
-> + schema redaction untouched; no LLM on the email path.** SMTP creds live in the git-ignored
-> `.env` (`SMTP_USER` / `SMTP_PASSWORD`=Gmail App Password); the feature is opt-in (`email_enabled`).
-> **Live send verified end-to-end against Gmail** (success criterion 6).
-> **Exit gate r1 = PASS-WITH-FIXES** (no S1/S2; all 8 security invariants hold;
-> [reviews/phase-8-review-r1.md](reviews/phase-8-review-r1.md)) → F1–F4 remediated → **Phase 8
-> CLOSED 2026-06-13**. **Remaining:** **P8-DEMO** the owner's live demo to an intended recipient
-> (the send path is already proven). Everything in §0–§7 below is **v1 history on `main`**.
+> ### 🟢 v2 ACTIVE — Phase 9: React CXO UI · B5b-3 live wiring + intelligent cascading (2026-06-14)
+> **Workspace:** `D:\Ratish\Personal\Project\ask-oracle-reports-main v2` (junction `…\aor-v2`),
+> branch **`v2`** — **local commits only; NO PUSH until the July limit reset.** Charter
+> [phase-9-react-cxo-ui.md](charters/phase-9-react-cxo-ui.md). The bespoke **React** executive surface
+> (`web/`) is built against the existing `/v1` FastAPI; Streamlit stays as the admin tool.
+> **B5b — live Query Builder + intelligent cascading — COMPLETE** as gated increments
+> ([ADR-019](adr/ADR-019-react-cxo-surface.md)/[021](adr/ADR-021-sql-aware-derivation-and-cascade.md)/[022](adr/ADR-022-auto-run-mode.md), [ADR-020](adr/ADR-020-result-export-and-email-api.md)):
+> session + connection/schema pickers (E10/E11); the **Ask state machine** with the editable
+> proposed-SQL **approve-before-run gate** (invariant 2); `nl2sql(schema_id) → review →
+> execute(profile_id) → ResultsView`; multi-level **cascade**; Decision-3 live **Pull-detail** wrap;
+> an owner-requested **Auto-run** toggle (default-off; reframes Inv 2 — chokepoint never bypassed) +
+> Edit-&-rerun; **F3** trend path-to-detail; **BUG-008** fixed (profile `current_schema` applied at
+> execution). **427 backend / 69 frontend / tsc clean / vite build green; OpenAPI 3.1.0 generates.**
+> Verified live end-to-end against XE 21c (AOR_DEMO). **Independent exit-gate review r1 = PASS** (no
+> S1/S2; reviewer ≠ author; all 5 invariants hold; [reviews/phase-9-b5b-review-r1.md](reviews/phase-9-b5b-review-r1.md))
+> → F1/F6 remediated, F2→ITM-032, F3/F4/F5 already ITM-027/030/028/029. HEAD `adb3cf8`.
+> **Remaining (lower priority):** B6 supporting screens (Reports/Dictionary/Connections/Settings are
+> placeholders) + B7 broader acceptance; deferred lint debt (ITM-031) + UX nits (ITM-026..032).
+> **Phase 8 (email) CLOSED 2026-06-13.** Everything in §0–§7 below is **v1 history on `main`**.
 > ---
 
 ## 0. How to work here (operating model)

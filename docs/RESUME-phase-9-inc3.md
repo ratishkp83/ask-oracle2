@@ -1,5 +1,10 @@
 # Resume — Phase 9 B5b-3 Increment 3: live Query Builder wiring (split into packets)
 
+> **✅ COMPLETE (2026-06-14).** Increments 3, 4 (incl. the owner-requested Auto-run toggle + F3),
+> and 5 (docs + ADR-019..022 + independent exit-gate review r1 = **PASS**) are all done and committed
+> locally (HEAD `adb3cf8`; 427 backend / 69 frontend green). For current state read
+> [HANDOFF.md](HANDOFF.md) → the Phase-9 banner. This doc is kept as the build record.
+
 > Paste the **RESUME PROMPT** block into a new Claude Code session. It is self-contained.
 > Saved 2026-06-14 after **Increment 1** (multi-level cascading drill-down) and
 > **Increment 2** (backend `schema_id` on `POST /nl2sql`) were built, internally
