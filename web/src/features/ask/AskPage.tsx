@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { ResultsView } from "@/components/exec/ResultsView";
+import { SchemaPicker } from "./SchemaPicker";
 import { SAMPLE_QUESTION, SAMPLE_RESULT, SAMPLE_SQL } from "./sampleResult";
 
 // First-run lands here (B-5): ask a question, not admin setup. The live
@@ -46,6 +47,9 @@ export function AskPage() {
         </p>
 
         <div className="mt-5 rounded-card border border-hairline bg-surface p-3 shadow-e1">
+          <div className="mb-1 border-b border-hairline px-2 pb-2">
+            <SchemaPicker />
+          </div>
           <textarea
             value={q}
             onChange={(e) => setQ(e.target.value)}

@@ -5,6 +5,7 @@ import {
   HealthSchema,
   Nl2SqlSchema,
   ProfileListSchema,
+  SchemaSummaryListSchema,
 } from "./schemas";
 
 export async function getHealth() {
@@ -17,7 +18,17 @@ export async function getProfiles() {
   return ProfileListSchema.parse(await get("/profiles"));
 }
 
-export async function nl2sql(body: { natural_language: string; ebs_modules?: string[] }) {
+// Saved schema snapshots (data dictionaries). Names/metadata only — used as
+// NL→SQL context by id; never carries row data (invariant 3).
+export async function getSchemas() {
+  return SchemaSummaryListSchema.parse(await get("/schemas"));
+}
+
+export async function nl2sql(body: {
+  natural_language: string;
+  schema_id?: string;
+  ebs_modules?: string[];
+}) {
   return Nl2SqlSchema.parse(await post("/nl2sql", body));
 }
 
@@ -28,6 +39,7 @@ export async function execute(body: {
   profile_id?: string;
   connection?: unknown;
   max_rows?: number;
+  binds?: Record<string, unknown>; // Phase 4 server contract; used by Inc 4 Pull-detail.
 }) {
   return ExecuteSchema.parse(await post("/execute", body));
 }

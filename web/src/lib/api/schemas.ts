@@ -25,6 +25,23 @@ export type ProfilePublic = z.infer<typeof ProfilePublicSchema>;
 
 export const ProfileListSchema = z.array(ProfilePublicSchema);
 
+// Saved schema snapshots — mirrors SchemaSummary (src/core/schema_store.py).
+// Names/metadata only; no row data ever (invariant 3).
+export const SchemaSourceSchema = z.enum(["upload", "introspection"]);
+
+export const SchemaSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  source: SchemaSourceSchema,
+  profile_id: z.string().nullable().optional(),
+  table_count: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type SchemaSummary = z.infer<typeof SchemaSummarySchema>;
+
+export const SchemaSummaryListSchema = z.array(SchemaSummarySchema);
+
 export const ConfidenceSchema = z
   .object({ level: z.string(), reasons: z.array(z.string()).default([]) })
   .nullable();
