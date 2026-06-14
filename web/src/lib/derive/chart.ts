@@ -19,32 +19,56 @@ const MAX_POINTS = 60;
 // Dimensions come from the SQL when known (GROUP BY keys, including numeric ones
 // like FISCAL_YEAR) via ColumnMeta.isMeasure; otherwise from the name+value
 // heuristics. date dimension + measure → trend line; other dimension + measure →
-// top-N bar. `exclude` skips dimension columns already drilled into.
-export function pickChart(rows: unknown[][], cols: ColumnMeta[], exclude: number[] = []): ChartSpec | null {
+// top-N bar. `exclude` skips dimension columns already drilled into. `order`, when
+// supplied (multi-level cascade), descends in that order: the breakdown is the
+// first ordered, non-excluded dimension — its type still decides the visual.
+export function pickChart(
+  rows: unknown[][],
+  cols: ColumnMeta[],
+  exclude: number[] = [],
+  order?: number[],
+): ChartSpec | null {
   if (rows.length < 2) return null;
   const measure = rankMeasures(cols)[0];
   if (!measure) return null;
   const agg: Agg = measure.agg ?? "sum";
 
   const dims = cols.filter((c) => !c.isMeasure && c.type !== "id" && !exclude.includes(c.index));
+  if (dims.length === 0) return null;
+
+  if (order && order.length) {
+    const targetIdx = order.find((i) => dims.some((d) => d.index === i));
+    if (targetIdx == null) return null;
+    const dim = dims.find((d) => d.index === targetIdx)!;
+    return chartForDim(rows, dim, measure, agg);
+  }
 
   const dateDim = dims.find((c) => c.type === "date");
   if (dateDim) {
-    const data = aggregate(rows, dateDim.index, measure.index, agg).slice(0, MAX_POINTS);
-    if (data.length >= 2) {
-      return spec("line", data, measure, dateDim, 0);
-    }
+    const lineSpec = chartForDim(rows, dateDim, measure, agg);
+    if (lineSpec) return lineSpec; // else fall through to a categorical driver
   }
 
   const catDim = dims.find((c) => c.type !== "date");
-  if (catDim) {
-    const all = aggregate(rows, catDim.index, measure.index, agg).sort((a, b) => b.value - a.value);
-    const top = all.slice(0, MAX_BARS);
-    if (top.length >= 2) {
-      return spec("bar", top, measure, catDim, Math.max(0, all.length - top.length));
-    }
-  }
+  if (catDim) return chartForDim(rows, catDim, measure, agg);
   return null;
+}
+
+// Render one chosen dimension against the measure: a date → trend line, anything
+// else → top-N bar. Returns null when fewer than 2 points/bars survive.
+function chartForDim(
+  rows: unknown[][],
+  dim: ColumnMeta,
+  measure: ColumnMeta,
+  agg: Agg,
+): ChartSpec | null {
+  if (dim.type === "date") {
+    const data = aggregate(rows, dim.index, measure.index, agg).slice(0, MAX_POINTS);
+    return data.length >= 2 ? spec("line", data, measure, dim, 0) : null;
+  }
+  const all = aggregate(rows, dim.index, measure.index, agg).sort((a, b) => b.value - a.value);
+  const top = all.slice(0, MAX_BARS);
+  return top.length >= 2 ? spec("bar", top, measure, dim, Math.max(0, all.length - top.length)) : null;
 }
 
 function spec(
