@@ -8,7 +8,7 @@ import { parseSelectMeta } from "@/lib/derive/sql";
 import { deriveKpis } from "@/lib/derive/kpis";
 import { pickChart } from "@/lib/derive/chart";
 import { downloadCsv, slugify } from "@/lib/export";
-import { humanize } from "@/lib/format";
+import { formatCompact, formatNumber, formatPercent, humanize, toNumber } from "@/lib/format";
 import { SummaryBand } from "./SummaryBand";
 import { KpiCard } from "./KpiCard";
 import { DriverChart } from "./DriverChart";
@@ -46,6 +46,24 @@ export function ResultsView({
     [result, sqlMeta],
   );
   const [drill, setDrill] = useState<Drill | null>(null);
+
+  // E1 — empty result: a calm "no rows" state with the SQL disclosure and a way
+  // to refine. Never the bare grid; derivation already returns []/null for 0 rows.
+  if (result.rows.length === 0) {
+    return (
+      <EmptyResult
+        question={question}
+        sql={sql}
+        result={result}
+        onRefine={onPullQuery ? () => onPullQuery(question) : onBack}
+      />
+    );
+  }
+
+  // E2 — single value (1×1): promote the one figure to a hero rather than a 1-cell grid.
+  if (result.columns.length === 1 && result.rows.length === 1) {
+    return <HeroResult question={question} sql={sql} result={result} col={cols[0]} onBack={onBack} />;
+  }
 
   if (drill) {
     const dimName = result.columns[drill.dimIndex];
@@ -210,6 +228,94 @@ function ResultScope({
         </div>
         <div className="min-h-0 flex-1">
           <ResultGrid columns={columns} rows={rows} cols={cols} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyResult({
+  question,
+  sql,
+  result,
+  onRefine,
+}: {
+  question: string;
+  sql: string;
+  result: ExecuteResult;
+  onRefine?: () => void;
+}) {
+  return (
+    <div className="flex h-full flex-col gap-3.5 px-6 py-5">
+      <SummaryBand question={question} sql={sql} result={result} />
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-sunken text-ink-faint">
+          <SearchX className="h-5 w-5" />
+        </div>
+        <div className="mt-3 font-display text-[18px] font-semibold text-ink">No rows matched</div>
+        <div className="mt-1.5 max-w-md text-[13px] leading-relaxed text-ink-muted">
+          The query ran successfully but returned no rows. Open “View SQL” above to check the
+          filters, then refine your question.
+        </div>
+        {onRefine && (
+          <button
+            type="button"
+            onClick={onRefine}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-control bg-brand px-3.5 py-2 text-[12.5px] font-medium text-white"
+          >
+            Refine the question
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Format the single figure for the 1×1 hero, honouring inferred currency/percent.
+function heroValue(v: unknown, c: ColumnMeta): string {
+  if (v === null || v === undefined || v === "") return "—";
+  const n = toNumber(v);
+  if (Number.isFinite(n)) {
+    if (c.type === "percent") return formatPercent(n);
+    if (c.type === "currency") return formatCompact(n, true);
+    if (c.numericAligned) return formatNumber(n);
+  }
+  return String(v);
+}
+
+function HeroResult({
+  question,
+  sql,
+  result,
+  col,
+  onBack,
+}: {
+  question: string;
+  sql: string;
+  result: ExecuteResult;
+  col: ColumnMeta;
+  onBack?: () => void;
+}) {
+  return (
+    <div className="flex h-full flex-col gap-3.5 px-6 py-5">
+      <div className="flex shrink-0 items-start justify-between gap-4">
+        <SummaryBand question={question} sql={sql} result={result} />
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-control border border-hairline bg-surface px-2.5 py-1.5 text-[12px] font-medium text-ink-muted hover:bg-surface-sunken"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> New question
+          </button>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+          {humanize(col.name)}
+        </div>
+        <div className="num mt-2 font-display text-[64px] font-semibold leading-none tracking-[-0.02em] text-ink">
+          {heroValue(result.rows[0][0], col)}
         </div>
       </div>
     </div>
