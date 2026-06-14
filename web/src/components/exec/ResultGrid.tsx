@@ -1,28 +1,35 @@
 import { useMemo, useRef } from "react";
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ExecuteResult } from "@/lib/api/schemas";
 import { ColumnMeta } from "@/lib/derive/columns";
 import { formatCell } from "@/lib/format";
 
 // Band 4 (B-3/B-6): the detail grid — the ONLY scroll region. Fixed height from
 // the parent, sticky header, virtualized rows (spacer pattern keeps a single
 // <table> so columns stay aligned). Numeric columns right-aligned + tabular.
-export function ResultGrid({ result, cols }: { result: ExecuteResult; cols: ColumnMeta[] }) {
+export function ResultGrid({
+  columns: cnames,
+  rows: data,
+  cols,
+}: {
+  columns: string[];
+  rows: unknown[][];
+  cols: ColumnMeta[];
+}) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const columns = useMemo(
     () =>
-      result.columns.map((name, i) => ({
+      cnames.map((name, i) => ({
         id: String(i),
         header: name,
         accessorFn: (row: unknown[]) => row[i],
         meta: { numeric: cols[i]?.numericAligned ?? false },
       })),
-    [result.columns, cols],
+    [cnames, cols],
   );
 
-  const table = useReactTable({ data: result.rows, columns, getCoreRowModel: getCoreRowModel() });
+  const table = useReactTable({ data, columns, getCoreRowModel: getCoreRowModel() });
   const rows = table.getRowModel().rows;
 
   const virt = useVirtualizer({
@@ -34,7 +41,7 @@ export function ResultGrid({ result, cols }: { result: ExecuteResult; cols: Colu
   const items = virt.getVirtualItems();
   const padTop = items.length ? items[0].start : 0;
   const padBottom = items.length ? virt.getTotalSize() - items[items.length - 1].end : 0;
-  const colCount = result.columns.length;
+  const colCount = cnames.length;
 
   return (
     <div ref={parentRef} className="h-full overflow-auto rounded-b-card">

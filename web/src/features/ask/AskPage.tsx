@@ -17,7 +17,18 @@ export function AskPage() {
   const [demo, setDemo] = useState(false);
 
   if (demo) {
-    return <ResultsView question={SAMPLE_QUESTION} sql={SAMPLE_SQL} result={SAMPLE_RESULT} onBack={() => setDemo(false)} />;
+    return (
+      <ResultsView
+        question={SAMPLE_QUESTION}
+        sql={SAMPLE_SQL}
+        result={SAMPLE_RESULT}
+        onBack={() => setDemo(false)}
+        onPullQuery={(query) => {
+          setDemo(false);
+          setQ(query);
+        }}
+      />
+    );
   }
 
   return (

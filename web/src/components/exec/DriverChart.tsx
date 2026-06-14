@@ -18,8 +18,9 @@ const GRID = "#EDEAE3";
 const TICK = "#8A9099";
 const INK = "#16191F";
 
-export function DriverChart({ spec }: { spec: ChartSpec }) {
+export function DriverChart({ spec, onBarClick }: { spec: ChartSpec; onBarClick?: (label: string) => void }) {
   const fmt = (v: number) => formatCompact(v, spec.currency);
+  const drillable = spec.type === "bar" && !!onBarClick;
   const title =
     spec.type === "line"
       ? `${humanize(spec.measureName)} over ${humanize(spec.dimensionName)}`
@@ -34,7 +35,11 @@ export function DriverChart({ spec }: { spec: ChartSpec }) {
           {title}
           {spec.type === "bar" && spec.data.length > 1 ? " — top " + spec.data.length : ""}
         </span>
-        {spec.extra > 0 && <span className="text-[11px] text-ink-faint">+{spec.extra} more</span>}
+        {drillable ? (
+          <span className="text-[11px] text-ink-faint">Select a bar to drill in</span>
+        ) : (
+          spec.extra > 0 && <span className="text-[11px] text-ink-faint">+{spec.extra} more</span>
+        )}
       </div>
       <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -51,8 +56,15 @@ export function DriverChart({ spec }: { spec: ChartSpec }) {
                 tickLine={false}
                 tickFormatter={(v: string) => (v.length > 16 ? v.slice(0, 15) + "…" : v)}
               />
-              <Tooltip cursor={{ fill: "#F1EFEA" }} content={<ChartTip fmt={fmt} />} />
-              <Bar dataKey="value" fill={PETROL} radius={[0, 4, 4, 0]} barSize={16} />
+              <Tooltip cursor={{ fill: "#F1EFEA" }} content={<ChartTip fmt={fmt} drill={drillable} />} />
+              <Bar
+                dataKey="value"
+                fill={PETROL}
+                radius={[0, 4, 4, 0]}
+                barSize={16}
+                cursor={drillable ? "pointer" : undefined}
+                onClick={drillable ? (d: any) => onBarClick?.(d?.label ?? d?.payload?.label) : undefined}
+              />
             </BarChart>
           ) : (
             <LineChart data={spec.data} margin={{ top: 4, right: 12, bottom: 0, left: 0 }}>
@@ -69,12 +81,13 @@ export function DriverChart({ spec }: { spec: ChartSpec }) {
   );
 }
 
-function ChartTip({ active, payload, label, fmt }: any) {
+function ChartTip({ active, payload, label, fmt, drill }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-control border border-hairline bg-surface px-2.5 py-1.5 shadow-e2">
       <div className="text-[11px] text-ink-muted">{label}</div>
       <div className="num text-[13px] font-medium text-ink">{fmt(payload[0].value)}</div>
+      {drill && <div className="mt-0.5 text-[10.5px] text-brand">Click to drill in →</div>}
     </div>
   );
 }

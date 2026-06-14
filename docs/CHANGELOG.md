@@ -23,6 +23,12 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   new auth-gated `POST /reports/export` builds CSV/xlsx server-side via openpyxl
   (no spreadsheet lib in the browser; filename sanitized; same row cap; no LLM,
   no re-query), `tests/test_export_api.py` (8 tests). Suite **414 → 422**.
+- **Drill-down (owner):** clicking a chart bar scopes the whole view — KPIs +
+  an auto-picked **breakdown chart** (the next dimension) + the filtered grid +
+  export/email — to that value, with a **Back to report** button. A value with
+  no further breakdown shows a clear "no breakdown" state + a **Pull [value]
+  data** action that seeds a live query (B5b). Local filtering only — no new
+  query, no LLM. The sample is category-level so the drill has real sub-data.
 
 - **B3 — `web/` scaffold (ADR-019):** the React app now lives under `web/`; the
   generic Lovable mock components were removed and the 49 shadcn/ui primitives

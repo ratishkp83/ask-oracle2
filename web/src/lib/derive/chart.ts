@@ -6,6 +6,7 @@ export interface ChartSpec {
   data: { label: string; value: number }[];
   measureName: string;
   dimensionName: string;
+  dimensionIndex: number; // the column the chart groups by (for drill-down)
   currency: boolean;
   extra: number; // count folded out of a top-N bar chart ("+N more")
 }
@@ -15,12 +16,13 @@ const MAX_POINTS = 60;
 
 // Pick a sensible driver chart from the result shape, or null (band hides).
 // date dimension + measure → trend line; category + measure → top-N bar.
-export function pickChart(rows: unknown[][], cols: ColumnMeta[]): ChartSpec | null {
+// `exclude` skips dimension columns already drilled into.
+export function pickChart(rows: unknown[][], cols: ColumnMeta[], exclude: number[] = []): ChartSpec | null {
   if (rows.length < 2) return null;
   const measure = rankMeasures(cols)[0];
   if (!measure) return null;
 
-  const dateCol = cols.find((c) => c.type === "date");
+  const dateCol = cols.find((c) => c.type === "date" && !exclude.includes(c.index));
   if (dateCol) {
     const data = aggregate(rows, dateCol.index, measure.index).slice(0, MAX_POINTS);
     if (data.length >= 2) {
@@ -28,7 +30,7 @@ export function pickChart(rows: unknown[][], cols: ColumnMeta[]): ChartSpec | nu
     }
   }
 
-  const catCol = cols.find((c) => c.type === "category");
+  const catCol = cols.find((c) => c.type === "category" && !exclude.includes(c.index));
   if (catCol) {
     const all = aggregate(rows, catCol.index, measure.index).sort((a, b) => b.value - a.value);
     const top = all.slice(0, MAX_BARS);
@@ -46,7 +48,15 @@ function spec(
   dim: ColumnMeta,
   extra: number,
 ): ChartSpec {
-  return { type, data, measureName: measure.name, dimensionName: dim.name, currency: measure.type === "currency", extra };
+  return {
+    type,
+    data,
+    measureName: measure.name,
+    dimensionName: dim.name,
+    dimensionIndex: dim.index,
+    currency: measure.type === "currency",
+    extra,
+  };
 }
 
 function aggregate(rows: unknown[][], dimIdx: number, measIdx: number): { label: string; value: number }[] {
