@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyColumns } from "./columns";
 import { parseSelectMeta } from "./sql";
-import { NULL_KEY, dimKey, dimensionOrder, filterRows, nextDimension } from "./cascade";
+import { NULL_KEY, dimKey, dimensionOrder, filterRows } from "./cascade";
 
 // The drill-stack model: dimension ordering (GROUP BY-aware), row filtering down
 // the stack, and choosing the next dimension to descend into. All pure.
@@ -72,22 +72,3 @@ describe("dimKey", () => {
   });
 });
 
-describe("nextDimension", () => {
-  const order = [0, 1, 2];
-
-  it("returns the first un-drilled dimension", () => {
-    expect(nextDimension(order, [])).toBe(0);
-    expect(nextDimension(order, [{ dimIndex: 0, value: "x" }])).toBe(1);
-    expect(
-      nextDimension(order, [
-        { dimIndex: 0, value: "x" },
-        { dimIndex: 1, value: "y" },
-      ]),
-    ).toBe(2);
-  });
-
-  it("returns null once every dimension is drilled (the cascade leaf)", () => {
-    const full = order.map((dimIndex) => ({ dimIndex, value: "x" }));
-    expect(nextDimension(order, full)).toBeNull();
-  });
-});

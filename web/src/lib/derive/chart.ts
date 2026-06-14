@@ -38,10 +38,17 @@ export function pickChart(
   if (dims.length === 0) return null;
 
   if (order && order.length) {
-    const targetIdx = order.find((i) => dims.some((d) => d.index === i));
-    if (targetIdx == null) return null;
-    const dim = dims.find((d) => d.index === targetIdx)!;
-    return chartForDim(rows, dim, measure, agg);
+    // Descend in cascade order, skipping any dimension that's constant in the
+    // current scope (one value → not a useful breakdown, and it's already implied
+    // by the active filters). Return the first dimension that actually splits the
+    // data, so the cascade reaches real detail instead of dead-ending early.
+    for (const idx of order) {
+      const dim = dims.find((d) => d.index === idx);
+      if (!dim) continue;
+      const c = chartForDim(rows, dim, measure, agg);
+      if (c) return c;
+    }
+    return null;
   }
 
   const dateDim = dims.find((c) => c.type === "date");

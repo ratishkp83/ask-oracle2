@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyColumns } from "./columns";
 import { parseSelectMeta } from "./sql";
+import { dimensionOrder } from "./cascade";
 import { deriveKpis } from "./kpis";
 import { pickChart } from "./chart";
 import { formatCell } from "@/lib/format";
@@ -99,5 +100,25 @@ describe("E8 — pre-aggregated AVG is never summed in the chart", () => {
     const cols = classifyColumns(["REGION", "SCORE"], rows, parseSelectMeta(sql));
     const chart = pickChart(rows, cols)!;
     expect(chart.data.find((d) => d.label === "N")!.value).toBe(90); // avg(80,100), not 180
+  });
+});
+
+describe("E9 — cascade skips a dimension that is constant in the drilled scope", () => {
+  it("breaks down by the next dimension that actually splits the data", () => {
+    // GROUP BY region, customer, product. After drilling region (excluded), this
+    // slice has one customer but two products — the chart must descend to product,
+    // not dead-end on the constant customer.
+    const sql =
+      "SELECT region, customer, product, SUM(amt) amt FROM t GROUP BY region, customer, product";
+    const meta = parseSelectMeta(sql);
+    const rows: unknown[][] = [
+      ["X", "Acme", "P1", 10],
+      ["X", "Acme", "P2", 20],
+    ];
+    const cols = classifyColumns(["region", "customer", "product", "amt"], rows, meta);
+    const order = dimensionOrder(cols, meta); // [0, 1, 2]
+    const chart = pickChart(rows, cols, [0], order)!; // region drilled
+    expect(chart.dimensionName).toBe("product");
+    expect(chart.data.map((d) => d.label).sort()).toEqual(["P1", "P2"]);
   });
 });

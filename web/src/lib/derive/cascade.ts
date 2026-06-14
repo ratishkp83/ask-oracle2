@@ -50,17 +50,10 @@ export function dimKey(value: unknown): string {
 }
 
 // Rows matching every active drill level (AND down the stack), using the shared
-// dimension key so the match lines up with the chart bar that was clicked.
+// dimension key so the match lines up with the chart bar that was clicked. When a
+// scope has no further dimension that splits the data, pickChart returns null and
+// the view shows the "pull live detail" leaf.
 export function filterRows(rows: unknown[][], stack: DrillLevel[]): unknown[][] {
   if (stack.length === 0) return rows;
   return rows.filter((r) => stack.every((d) => dimKey(r[d.dimIndex]) === d.value));
-}
-
-// The next breakdown dimension to descend into: the first ordered dimension not
-// already drilled. null when the stack has exhausted every dimension — the leaf
-// of the cascade, where "pull live detail" takes over.
-export function nextDimension(order: number[], stack: DrillLevel[]): number | null {
-  const used = new Set(stack.map((d) => d.dimIndex));
-  for (const idx of order) if (!used.has(idx)) return idx;
-  return null;
 }
