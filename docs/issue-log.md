@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.2 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (ITM-022/023 closed)
+> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (ITM-024 closed)
 
 ## Bug workflow (mandatory)
 
@@ -84,6 +84,28 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   `email_to`/`email_cc`/`email_subject`/`email_body` are popped from `st.session_state`; on the
   next render the fields reset to their defaults (blank To/Cc, date-stamped Subject, default Body).
   401 tests pass.
+
+- ITM-024: (v2 UX review 2026-06-14 — S3/UX) **Every screen required vertical page scroll.** All
+  seven pages in `src/app.py` stacked controls + content vertically, so any non-trivial interaction
+  (e.g. typing a question, generating SQL, viewing results, browsing a template) required scrolling.
+  The sidebar also spilled into scroll when the manual-connection form was open.
+  **✅ CLOSED:** Full two-panel layout (`st.columns([1, 2])` or `[1, 1]`) applied to every screen:
+  controls/inputs in the left panel, content/results in the right panel. Key changes:
+  (a) **Query Builder** — NL prompt/EBS-mods/Generate in left; SQL editor + Run SQL (primary) +
+  Results/Explanation tabs in right; results at `height=220` (no page push).
+  (b) **Connections** — add-profile form left, saved-profiles table + test/delete right.
+  (c) **Schema Sources** — Upload/Introspect/Library tabs left, active-schema table browser right.
+  (d) **Data Dictionary** — Search/EBS-packs tabs + export buttons left, table detail + FK refs right.
+  (e) **Reports** — saved-report selector left, Run/Save-new tabs right.
+  (f) **Templates** — module + radio list left, SQL preview + Load/Save right.
+  (g) **Settings** — LLM form left, active-config + email/safety status right.
+  (h) **Email action** migrated from inline `st.expander` to `@st.dialog` — opens as a modal
+  overlay so it never adds page height.
+  (i) **Sidebar** — manual-entry form wrapped in `st.expander(expanded=False)`; sidebar never
+  scrolls in the default (profile-selected) state.
+  `_run_and_display` refactored into `_execute_query` (stores to `session_state`) +
+  `_render_results` (renders in calling context); `_render_email_action` removed (superseded by
+  `@st.dialog`). 401 tests pass (no logic change).
 
 ## Phase 8 (v2) — independent review findings & remediation (r1)
 

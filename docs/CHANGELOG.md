@@ -4,6 +4,26 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Changed (ITM-024 — No-scroll two-panel UI redesign, v2 UX)
+- **All seven screens** rewritten to a two-panel (`st.columns`) layout: controls/inputs in the
+  left panel, content/results in the right panel. Page-level scroll eliminated on every screen.
+- **Query Builder:** NL prompt + EBS-module multiselect + Generate SQL in left panel; SQL editor +
+  primary "Run SQL" button + Results/Explanation tabs (results at fixed `height=220`) in right
+  panel. The Explanation is now a tab beside Results, not a full-page expander.
+- **Connections:** add-profile form left, scrollable profiles table + test/delete right.
+- **Schema Sources:** Upload/Introspect/Library tabs left, active-schema table browser right.
+- **Data Dictionary:** Search/EBS-packs tabs + export buttons left, table detail + FK refs right.
+- **Reports:** saved-report selector left, Run/Save-new tabs right.
+- **Templates:** module + radio list left, SQL preview + Load/Save buttons right.
+- **Settings:** LLM form left, active-config + email/safety status right.
+- **Email action** moved from `st.expander` (inline page height) to `@st.dialog` (modal overlay)
+  — the dialog never contributes to page scroll; form fields cleared on successful send (ITM-023).
+- **Sidebar** manual-entry form wrapped in `st.expander(expanded=False)` — sidebar does not scroll
+  when a saved profile is selected.
+- `_run_and_display` refactored into `_execute_query` (stores result in `session_state`) +
+  `_render_results` (renders in calling context); `_render_email_action` removed (superseded by
+  `@st.dialog`). 401 tests pass; no security-path changes.
+
 ### Fixed (ITM-022 — Query Builder layout, v2 UX polish)
 - **NL mode:** removed the `col1`/`col2` split that placed "Run SQL" above the SQL editor.
   "Generate SQL" is now a standalone button at the top; "Run SQL" (`type="primary"`) moves to
