@@ -1,6 +1,6 @@
 # Phase 9 Charter — React CXO Executive UI (v2)
 
-> **Document:** Phase Charter · **Version:** 1.1 · **Status:** 🟢 Approved (owner, 2026-06-14) — Build in progress · **Owner:** Product/Engineering · **Last updated:** 2026-06-14
+> **Document:** Phase Charter · **Version:** 1.2 · **Status:** 🟢 Approved — Build well advanced (B1–B5 + B5b live wiring/cascade/pull/auto-run all done; B8 docs + exit-gate in progress) · **Owner:** Product/Engineering · **Last updated:** 2026-06-14
 
 > **One-line scope:** A bespoke, premium **React** executive surface for the CXO user, built against the existing `/v1` FastAPI — replacing Streamlit *as the executive face* while keeping Streamlit as the internal admin/power-user tool through beta. **No code until this charter is approved.**
 
@@ -206,6 +206,21 @@ Email exists only in `src/core/mailer/` (Streamlit-wired). Phase 9 exposes it so
 6. **B6 — Reports + Data Dictionary** read views; light **Connections + Settings**.
 7. **B7 — Frontend tests** (Vitest/RTL: client, KPI/chart derivation, results hierarchy) + **owner acceptance review** against the bar.
 8. **B8 — Docs + exit-gate:** ADR-019/020, RISK-22, tracker/CHANGELOG/HANDOFF; independent exit-gate review (reviewer ≠ author).
+
+### Build progress (2026-06-14, local commits, NO PUSH)
+- **B1–B5a ✓** (charter, email endpoint, `web/` scaffold, shell + typed client, executive Results view).
+- **B5b ✓** — live Query Builder wiring + intelligent cascading, delivered as increments with a review
+  gate at every packet:
+  - **B5b-1/2 ✓** SQL-aware deterministic derivation ([ADR-021](../adr/ADR-021-sql-aware-derivation-and-cascade.md)) + edge-case hardening.
+  - **Inc 1 ✓** multi-level cascading drill-down. **Inc 2 ✓** `schema_id` on `/nl2sql`.
+  - **Inc 3 ✓** session + connection/schema pickers (E10/E11), Ask state machine + editable proposed-SQL
+    review (invariant 2), `nl2sql(schema_id)→review→execute(profile_id)→Results`, E9 errors; **BUG-008**
+    fixed (profile `current_schema` applied at execution). Verified live vs XE.
+  - **Inc 4 ✓** Decision-3 live Pull-detail wrap; **Auto-run** toggle ([ADR-022](../adr/ADR-022-auto-run-mode.md), default-off, owner-requested) + Edit-&-rerun; **F3** trend path-to-detail.
+  - Gate at close: **427 backend / 69 frontend / tsc clean / vite build green.**
+- **B6 (supporting screens), B7 (broader acceptance)** — placeholders present; remaining for a later pass.
+- **B8 — in progress:** ADR-019..022 + RISK-22 + CHANGELOG/issue-log done; **independent exit-gate review
+  (reviewer ≠ author) pending** (ADR-006, owner-supplied reviewer).
 
 ## 15. Success criteria (phase exit)
 

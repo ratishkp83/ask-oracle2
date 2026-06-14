@@ -4,6 +4,55 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 9 — React CXO executive UI; B5b — live Query Builder + intelligent cascading)
+- **B5b-1 — SQL-aware deterministic derivation ([ADR-021](adr/ADR-021-sql-aware-derivation-and-cascade.md)):**
+  `web/src/lib/derive/sql.ts` reads the proposed `SELECT` (GROUP BY → dimensions; SUM/AVG/COUNT/MIN/MAX →
+  measures + exact aggregation) and overrides the name heuristics in `columns.ts`/`kpis.ts`/`chart.ts`;
+  falls back to name+value heuristics on `SELECT *`/CTE/set-ops/window-aggs/count-mismatch (never throws).
+  **Reads SQL only — never row data to any LLM** (invariant 3). Fixed a real bug (AVG/MIN/MAX were summed
+  across groups).
+- **B5b-2 — edge-case hardening:** E1 empty (calm "No rows matched" + SQL disclosure + Refine), E2 1×1
+  hero, E3 single row, E4 50k rows (O(n), chart cap), E5 300 cols, E6 nulls/mixed (`formatCell`→"—"),
+  E7 all-null, E8 AVG/MIN/MAX-not-summed. Vitest + RTL set up.
+- **Inc 1 — multi-level cascading drill-down:** pure drill-stack model `web/src/lib/derive/cascade.ts`
+  (`dimensionOrder` = GROUP BY order; `filterRows` ANDs the stack; shared `dimKey`/`NULL_KEY` so a NULL/"—"
+  bucket drills correctly). `pickChart` skips a dimension constant in the drilled scope so 3+ dim cascades
+  reach detail. `ResultsView` holds a `DrillLevel[]` stack: every breakdown chart is clickable, the view
+  re-scopes at each level, a clickable breadcrumb walks back up, the deepest dim / single record reaches a
+  pull-detail leaf. All local/deterministic.
+- **Inc 2 — `schema_id` on `POST /nl2sql`:** the handler loads a saved schema (unknown id → clean 404),
+  rebuilds it via `schema_from_dict` (**names only**), `schema_csv` still wins; chokepoint untouched.
+- **Inc 3 — live Query Builder wiring ([ADR-019](adr/ADR-019-react-cxo-surface.md)):** `SessionProvider`
+  (profile + schema persisted to localStorage — **ids only, never a secret**); **TopBar connection picker**
+  (`GET /profiles`, default remembered→first, **E10** zero-profiles → admin); **inline schema picker**
+  (`GET /schemas`, default-to-sole, **E11** no-schema notice); typed clients + Zod (`getProfiles`,
+  `getSchemas`, `schema_id` on nl2sql, `binds` on execute). **Ask state machine** `idle → proposing →
+  review → running → results`: the editable **proposed-SQL review** is the approve-before-run gate
+  (invariant 2) with a collapsible confidence chip + explanation; wires `nl2sql(schema_id) → review →
+  execute(profile_id) → ResultsView`. **E9** per-step sanitized `error_id` banners. "See a sample result"
+  demo preserved. Verified live against XE end-to-end.
+- **Inc 4 — live Pull-detail + Auto-run + F3:**
+  - **Decision 3 — live "Pull <value> data":** `web/src/lib/derive/pullDetail.ts` deterministically wraps
+    the approved SQL — `SELECT * FROM (<approved>) WHERE <dim> = :v [AND …]` over the active drill stack
+    (binds, `IS NULL` for the NULL bucket) — routed through the review step for **re-approval** before
+    `/execute`. A fresh, un-truncated, server-side fetch of that slice; **no new LLM call**; still a SELECT
+    (chokepoint re-validates).
+  - **Auto-run toggle ([ADR-022](adr/ADR-022-auto-run-mode.md), owner-requested):** persisted, **default
+    OFF**. When on, asking converts + fetches in the background via a seamless loader (no review flash);
+    falls back to the review when no connection is set. An **"Edit SQL"** action on results pulls the query
+    up to edit + re-run. Reframes Invariant 2 (human chooses the mode; chokepoint never bypassed).
+  - **F3:** a date dimension renders a non-drillable trend line; it now shows a **Pull-live-detail**
+    affordance beside it (pulls the current scope), so a trailing/standalone date dim has a path to detail.
+- **Tests:** 27 new frontend tests this phase (cascade, pull wrap, live wiring, auto-run, F3, pickers) →
+  **69 frontend** green; backend **427** (incl. BUG-008 regression); `tsc` clean; `vite build` green.
+
+### Fixed (Phase 9 — BUG-008, profile current_schema dropped at execution)
+- `_resolve_target` + `test_profile` built `OracleConnectionConfig` **without** `current_schema`, so
+  [ADR-018](adr/ADR-018-per-profile-default-schema.md)'s `ALTER SESSION SET CURRENT_SCHEMA` never ran on
+  the API path — the AI's unqualified SQL hit **ORA-00942** (the field was inert outside Streamlit).
+  **Fixed:** pass `current_schema=resolved.current_schema` in both; SELECT-only chokepoint untouched;
+  2 regression tests. Found in the Inc-3 live e2e; verified live (unqualified SQL now runs).
+
 ### Added (Phase 9 — React CXO executive UI; B1–B5a)
 - **B5a — executive Results view (the core, ADR-019):** the four-band hierarchy
   built as real components — **summary band** (question headline + deterministic

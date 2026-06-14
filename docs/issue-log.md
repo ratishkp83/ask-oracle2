@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (BUG-008 logged + FIXED — profile current_schema dropped at execution; found in Inc 3 live e2e)
+> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (Phase-9 B5b exit gate: F3 RESOLVED in Inc 4c; ITM-025 re-confirmed closed; BUG-008 fixed)
 
 ## Bug workflow (mandatory)
 
@@ -147,6 +147,16 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   fallback, or suppress E11 when `schemaId` is set-but-unresolved. (The same strict-enum parse class as
   ITM-027 also applies to `SchemaSummarySchema.source` — covered by ITM-027's remedy.) Owner-approved
   deferral (2026-06-14). File: `web/src/features/ask/SchemaPicker.tsx`.
+
+- **F3** (Phase 9 — B5b-3 Inc 1 internal review, Low → **RESOLVED in Inc 4 / Packet 4c**, 2026-06-14):
+  a **date-dimension cascade level** rendered a non-clickable Recharts trend line and, because the chart
+  was non-null, the "Pull live detail" leaf never appeared — so a trailing/standalone date dimension had
+  **no path to detail**. **Fixed:** `ResultsView` now renders a compact **Pull-live-detail** affordance
+  beside any trend line (pulls the current drill scope via the Decision-3 wrap), and passes the leaf
+  context at the top level too (`NoBreakdown` stays drilled-only). 3 RTL tests
+  (`web/src/components/exec/ResultsView.f3.test.tsx`); verified live with a crafted date-aliased query.
+
+- ITM-025: **confirmed CLOSED** (B2 — `POST /reports/email`); re-verified at the Phase-9 B5b exit gate.
 
 ## Phase 8 (v2) — independent review findings & remediation (r1)
 
