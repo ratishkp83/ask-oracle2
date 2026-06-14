@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (ITM-027/028/029 logged — Inc 3 Packet 3a review notes, owner-approved deferral)
+> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (ITM-030 logged — Inc 3 Packet 3b review note, owner-approved deferral)
 
 ## Bug workflow (mandatory)
 
@@ -135,7 +135,17 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   roving arrow-key navigation.** Options are focusable buttons (Tab/Enter/Escape + outside-click all
   work), but there is no ↑/↓ roving-tabindex pattern within the `listbox`. Functional for beta.
   Fix-when-it-fits: add arrow-key navigation (or adopt the shadcn/Radix `Select` if its jsdom friction is
-  resolved). Owner-approved deferral (2026-06-14). File: `web/src/app/ConnectionPicker.tsx`.
+  resolved). Owner-approved deferral (2026-06-14). Files: `web/src/app/ConnectionPicker.tsx`,
+  `web/src/features/ask/SchemaPicker.tsx` (same pattern).
+
+- ITM-030: (Phase 9 — Inc 3 Packet 3b internal review, OPEN/UX, Low/cosmetic) **Schema picker shows the
+  E11 "no schema selected" notice on a transient `/schemas` list-fetch error even when a valid `schemaId`
+  is remembered.** The remembered id is still in session and is sent to `nl2sql` (so SQL accuracy is
+  unaffected — the id is valid), but the name can't be resolved without the list, so the calm E11 notice
+  appears. Error edge only; non-blocking. Fix-when-it-fits: resolve the active name via a `/schemas/{id}`
+  fallback, or suppress E11 when `schemaId` is set-but-unresolved. (The same strict-enum parse class as
+  ITM-027 also applies to `SchemaSummarySchema.source` — covered by ITM-027's remedy.) Owner-approved
+  deferral (2026-06-14). File: `web/src/features/ask/SchemaPicker.tsx`.
 
 ## Phase 8 (v2) — independent review findings & remediation (r1)
 
