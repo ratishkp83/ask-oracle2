@@ -1,18 +1,22 @@
 import { isNumeric, toNumber } from "@/lib/format";
+import { Agg, SqlMeta } from "./sql";
 
 // Local column classification over the result set — used to derive KPIs, pick a
-// chart, and align the grid. Pure heuristics on column-name *tokens* + sampled
-// values; never sends data anywhere. Tokenizing (not substring) avoids false
-// positives like "overdue" matching the currency word "due".
+// chart, and align the grid. Heuristics on column-name *tokens* + sampled values,
+// overridden by the proposed SQL when it reads cleanly (the SQL knows the real
+// dimensions and aggregations; the heuristics only guess). Never sends data
+// anywhere. Tokenizing (not substring) avoids false positives like "overdue"
+// matching the currency word "due".
 export type ColType = "number" | "currency" | "percent" | "date" | "id" | "category" | "text";
 
 export interface ColumnMeta {
   name: string;
   index: number;
   type: ColType;
-  isMeasure: boolean; // numeric & not an id → can be aggregated
+  isMeasure: boolean; // can be aggregated into a KPI / chart measure
   isInteger: boolean; // all sampled values whole → format aggregates as integers
   numericAligned: boolean; // right-align in the grid
+  agg?: Agg; // exact aggregation when known from the SQL (overrides name guesses)
 }
 
 const CURRENCY_WORDS = /^(amount|amt|total|subtotal|balance|outstanding|revenue|sales|cost|cogs|price|spend|due|paid|payment|value|charge|fee|net|gross)$/;
@@ -39,7 +43,15 @@ function sampleColumn(rows: unknown[][], index: number, limit = 60): unknown[] {
   return out;
 }
 
-export function classifyColumns(columns: string[], rows: unknown[][]): ColumnMeta[] {
+export function classifyColumns(
+  columns: string[],
+  rows: unknown[][],
+  sqlMeta?: SqlMeta | null,
+): ColumnMeta[] {
+  // Trust the SQL only when it read cleanly *and* its output count lines up with
+  // the actual columns (output order is authoritative for the index mapping).
+  const sqlOk = !!sqlMeta && sqlMeta.reliable && sqlMeta.outputs.length === columns.length;
+
   return columns.map((name, index) => {
     const sample = sampleColumn(rows, index);
     const lname = name.toLowerCase();
@@ -58,9 +70,24 @@ export function classifyColumns(columns: string[], rows: unknown[][]): ColumnMet
     else if (ID_HINT.test(lname)) type = "id";
     else type = "category";
 
-    const isMeasure = type === "number" || type === "currency" || type === "percent";
+    const baseMeasure = type === "number" || type === "currency" || type === "percent";
+    let isMeasure = baseMeasure;
+    let agg: Agg | undefined;
+    if (sqlOk) {
+      const out = sqlMeta!.outputs[index];
+      if (out.role === "dimension") {
+        // A GROUP BY key is never a KPI measure, even when it's numeric
+        // (FISCAL_YEAR, ORG_ID). The name heuristics would wrongly aggregate it.
+        isMeasure = false;
+      } else if (out.role === "measure" && baseMeasure) {
+        // Carry the exact aggregation. A MIN/MAX over a date keeps its date type
+        // (baseMeasure is false) and stays out of the KPI math.
+        agg = out.agg;
+      }
+    }
+
     const isInteger = allNumeric && sample.every((v) => Number.isInteger(toNumber(v)));
-    return { name, index, type, isMeasure, isInteger, numericAligned: isMeasure || type === "id" };
+    return { name, index, type, isMeasure, isInteger, numericAligned: baseMeasure || type === "id", agg };
   });
 }
 

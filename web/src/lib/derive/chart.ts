@@ -1,4 +1,5 @@
 import { ColumnMeta, rankMeasures } from "./columns";
+import { Agg } from "./sql";
 import { toNumber } from "@/lib/format";
 
 export interface ChartSpec {
@@ -15,27 +16,32 @@ const MAX_BARS = 6;
 const MAX_POINTS = 60;
 
 // Pick a sensible driver chart from the result shape, or null (band hides).
-// date dimension + measure → trend line; category + measure → top-N bar.
-// `exclude` skips dimension columns already drilled into.
+// Dimensions come from the SQL when known (GROUP BY keys, including numeric ones
+// like FISCAL_YEAR) via ColumnMeta.isMeasure; otherwise from the name+value
+// heuristics. date dimension + measure → trend line; other dimension + measure →
+// top-N bar. `exclude` skips dimension columns already drilled into.
 export function pickChart(rows: unknown[][], cols: ColumnMeta[], exclude: number[] = []): ChartSpec | null {
   if (rows.length < 2) return null;
   const measure = rankMeasures(cols)[0];
   if (!measure) return null;
+  const agg: Agg = measure.agg ?? "sum";
 
-  const dateCol = cols.find((c) => c.type === "date" && !exclude.includes(c.index));
-  if (dateCol) {
-    const data = aggregate(rows, dateCol.index, measure.index).slice(0, MAX_POINTS);
+  const dims = cols.filter((c) => !c.isMeasure && c.type !== "id" && !exclude.includes(c.index));
+
+  const dateDim = dims.find((c) => c.type === "date");
+  if (dateDim) {
+    const data = aggregate(rows, dateDim.index, measure.index, agg).slice(0, MAX_POINTS);
     if (data.length >= 2) {
-      return spec("line", data, measure, dateCol, 0);
+      return spec("line", data, measure, dateDim, 0);
     }
   }
 
-  const catCol = cols.find((c) => c.type === "category" && !exclude.includes(c.index));
-  if (catCol) {
-    const all = aggregate(rows, catCol.index, measure.index).sort((a, b) => b.value - a.value);
+  const catDim = dims.find((c) => c.type !== "date");
+  if (catDim) {
+    const all = aggregate(rows, catDim.index, measure.index, agg).sort((a, b) => b.value - a.value);
     const top = all.slice(0, MAX_BARS);
     if (top.length >= 2) {
-      return spec("bar", top, measure, catCol, Math.max(0, all.length - top.length));
+      return spec("bar", top, measure, catDim, Math.max(0, all.length - top.length));
     }
   }
   return null;
@@ -59,13 +65,31 @@ function spec(
   };
 }
 
-function aggregate(rows: unknown[][], dimIdx: number, measIdx: number): { label: string; value: number }[] {
-  const map = new Map<string, number>();
+// Roll the measure up per dimension value using its aggregation (so a chart of an
+// AVG/MIN/MAX column isn't silently summed). Single pass, O(n).
+function aggregate(
+  rows: unknown[][],
+  dimIdx: number,
+  measIdx: number,
+  agg: Agg,
+): { label: string; value: number }[] {
+  const acc = new Map<string, number>();
+  const counts = new Map<string, number>();
   for (const r of rows) {
     const key = r[dimIdx] == null || r[dimIdx] === "" ? "—" : String(r[dimIdx]);
     const v = toNumber(r[measIdx]);
     if (!Number.isFinite(v)) continue;
-    map.set(key, (map.get(key) ?? 0) + v);
+    if (agg === "min") {
+      acc.set(key, acc.has(key) ? Math.min(acc.get(key)!, v) : v);
+    } else if (agg === "max") {
+      acc.set(key, acc.has(key) ? Math.max(acc.get(key)!, v) : v);
+    } else {
+      acc.set(key, (acc.get(key) ?? 0) + v);
+    }
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  return Array.from(map, ([label, value]) => ({ label, value }));
+  return Array.from(acc, ([label, value]) => ({
+    label,
+    value: agg === "avg" ? value / (counts.get(label) || 1) : value,
+  }));
 }

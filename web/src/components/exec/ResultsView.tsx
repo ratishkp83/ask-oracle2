@@ -4,6 +4,7 @@ import { ExecuteResult } from "@/lib/api/schemas";
 import { ApiError } from "@/lib/api/client";
 import { downloadXlsx } from "@/lib/api/endpoints";
 import { classifyColumns, ColumnMeta } from "@/lib/derive/columns";
+import { parseSelectMeta } from "@/lib/derive/sql";
 import { deriveKpis } from "@/lib/derive/kpis";
 import { pickChart } from "@/lib/derive/chart";
 import { downloadCsv, slugify } from "@/lib/export";
@@ -36,7 +37,14 @@ export function ResultsView({
   onBack?: () => void;
   onPullQuery?: (q: string) => void;
 }) {
-  const cols = useMemo(() => classifyColumns(result.columns, result.rows), [result]);
+  // The proposed SQL drives classification (GROUP BY → dimensions, aggregate
+  // funcs → measures + their exact aggregation); the name heuristics are the
+  // fallback. Parsed once and reused across drill scopes (same columns/SQL).
+  const sqlMeta = useMemo(() => parseSelectMeta(sql), [sql]);
+  const cols = useMemo(
+    () => classifyColumns(result.columns, result.rows, sqlMeta),
+    [result, sqlMeta],
+  );
   const [drill, setDrill] = useState<Drill | null>(null);
 
   if (drill) {
