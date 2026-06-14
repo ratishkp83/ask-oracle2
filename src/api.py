@@ -210,6 +210,14 @@ class NL2SQLRequest(BaseModel):
     natural_language: str = Field(..., description="User phrasing to convert to SQL")
     schema_csv: Optional[str] = Field(None, description="Schema CSV content as string")
     relationships_csv: Optional[str] = Field(None, description="Relationships CSV content as string")
+    schema_id: Optional[str] = Field(
+        None,
+        description=(
+            "Id of a saved schema to use as NL→SQL context. Loaded server-side via "
+            "schema_from_dict (table/column names only — no row data); ignored when "
+            "schema_csv is supplied."
+        ),
+    )
     model: Optional[str] = None
     llm: Optional[LLMSettings] = Field(None, description="Per-user LLM provider/model/key override")
     ebs_modules: Optional[List[str]] = Field(
@@ -462,6 +470,14 @@ def test_connection(conn: ConnectionConfig) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 @router.post("/nl2sql")
 def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
+    # Resolve a saved schema before the try so an unknown id returns a clean 404
+    # (a sanitized 400 would otherwise swallow it). schema_csv, when present, wins.
+    saved_definition: Optional[Dict[str, Any]] = None
+    if req.schema_id and not req.schema_csv:
+        record = _schema_store.get(req.schema_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Schema not found.")
+        saved_definition = record.definition
     try:
         schema = Schema()
         if req.schema_csv:
@@ -469,6 +485,10 @@ def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
             from io import StringIO
 
             schema = parse_schema_dataframe(pd.read_csv(StringIO(req.schema_csv)))
+        elif saved_definition is not None:
+            # Names-only reconstruction (schema_from_dict drops anything that isn't
+            # a known table/column/relationship field) — invariant 3 holds.
+            schema = schema_from_dict(saved_definition)
         if req.relationships_csv:
             import pandas as pd
             from io import StringIO
