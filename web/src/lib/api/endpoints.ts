@@ -1,4 +1,4 @@
-import { get, post } from "./client";
+import { downloadPost, get, post } from "./client";
 import {
   EmailResultSchema,
   ExecuteSchema,
@@ -23,6 +23,11 @@ export async function execute(body: {
   max_rows?: number;
 }) {
   return ExecuteSchema.parse(await post("/execute", body));
+}
+
+// Download the shown result as a server-built Excel file (no re-query, no LLM).
+export async function downloadXlsx(body: { columns: string[]; rows: unknown[][]; filename: string }) {
+  return downloadPost("/reports/export", { ...body, format: "xlsx" }, `${body.filename}.xlsx`);
 }
 
 // Email the already-fetched result (no re-query, no LLM). The body is user-typed.

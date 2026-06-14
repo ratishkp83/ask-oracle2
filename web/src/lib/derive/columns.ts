@@ -1,4 +1,4 @@
-import { isNumeric } from "@/lib/format";
+import { isNumeric, toNumber } from "@/lib/format";
 
 // Local column classification over the result set — used to derive KPIs, pick a
 // chart, and align the grid. Pure heuristics on column-name *tokens* + sampled
@@ -11,6 +11,7 @@ export interface ColumnMeta {
   index: number;
   type: ColType;
   isMeasure: boolean; // numeric & not an id → can be aggregated
+  isInteger: boolean; // all sampled values whole → format aggregates as integers
   numericAligned: boolean; // right-align in the grid
 }
 
@@ -58,7 +59,8 @@ export function classifyColumns(columns: string[], rows: unknown[][]): ColumnMet
     else type = "category";
 
     const isMeasure = type === "number" || type === "currency" || type === "percent";
-    return { name, index, type, isMeasure, numericAligned: isMeasure || type === "id" };
+    const isInteger = allNumeric && sample.every((v) => Number.isInteger(toNumber(v)));
+    return { name, index, type, isMeasure, isInteger, numericAligned: isMeasure || type === "id" };
   });
 }
 

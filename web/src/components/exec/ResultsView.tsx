@@ -1,6 +1,8 @@
-import { useMemo } from "react";
-import { ArrowLeft, Download } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import { ExecuteResult } from "@/lib/api/schemas";
+import { ApiError } from "@/lib/api/client";
+import { downloadXlsx } from "@/lib/api/endpoints";
 import { classifyColumns } from "@/lib/derive/columns";
 import { deriveKpis } from "@/lib/derive/kpis";
 import { pickChart } from "@/lib/derive/chart";
@@ -29,6 +31,21 @@ export function ResultsView({
   const kpis = useMemo(() => deriveKpis(result.rows, cols), [result, cols]);
   const chart = useMemo(() => pickChart(result.rows, cols), [result, cols]);
   const filename = useMemo(() => slugify(question) || "result", [question]);
+
+  const [xlsxBusy, setXlsxBusy] = useState(false);
+  const [exportErr, setExportErr] = useState<string | null>(null);
+
+  async function exportXlsx() {
+    setExportErr(null);
+    setXlsxBusy(true);
+    try {
+      await downloadXlsx({ columns: result.columns, rows: result.rows, filename });
+    } catch (e) {
+      setExportErr(e instanceof ApiError ? e.message : "Excel export failed.");
+    } finally {
+      setXlsxBusy(false);
+    }
+  }
 
   return (
     <div className="flex h-full flex-col gap-3.5 px-6 py-5">
@@ -68,12 +85,26 @@ export function ResultsView({
             Detail · {result.row_count.toLocaleString()} rows
           </span>
           <div className="flex items-center gap-2">
+            {exportErr && <span className="text-[11.5px] text-loss">{exportErr}</span>}
             <button
               type="button"
               onClick={() => downloadCsv(filename, result.columns, result.rows)}
               className="inline-flex items-center gap-1.5 rounded-control border border-hairline bg-surface px-2.5 py-1.5 text-[12px] font-medium text-ink hover:bg-surface-sunken"
             >
               <Download className="h-3.5 w-3.5 text-ink-muted" /> CSV
+            </button>
+            <button
+              type="button"
+              onClick={exportXlsx}
+              disabled={xlsxBusy}
+              className="inline-flex items-center gap-1.5 rounded-control border border-hairline bg-surface px-2.5 py-1.5 text-[12px] font-medium text-ink hover:bg-surface-sunken disabled:opacity-50"
+            >
+              {xlsxBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-muted" />
+              ) : (
+                <FileSpreadsheet className="h-3.5 w-3.5 text-ink-muted" />
+              )}
+              Excel
             </button>
             <EmailDialog question={question} columns={result.columns} rows={result.rows} filename={filename} />
           </div>

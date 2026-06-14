@@ -17,6 +17,12 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   viewport, premium tokens render. Two derivation bugs caught + fixed on review
   (currency-hint `due` matched `overdue`; chart picked the first measure not the
   priority one) → fixed by tokenized name classification + a shared `rankMeasures`.
+- **B5a review fixes (owner):** integer columns (days, counts) now format their
+  averages as **whole numbers** (`isInteger` flag → `Days overdue 24`, not 23.60).
+  Added a direct **Excel download** alongside CSV (for sharing outside email) —
+  new auth-gated `POST /reports/export` builds CSV/xlsx server-side via openpyxl
+  (no spreadsheet lib in the browser; filename sanitized; same row cap; no LLM,
+  no re-query), `tests/test_export_api.py` (8 tests). Suite **414 → 422**.
 
 - **B3 — `web/` scaffold (ADR-019):** the React app now lives under `web/`; the
   generic Lovable mock components were removed and the 49 shadcn/ui primitives

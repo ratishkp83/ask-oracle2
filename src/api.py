@@ -54,6 +54,7 @@ _EBS_MODULES = set(get_args(Module))  # {"GL","AP","AR","PO","OM"}
 from src.schema import schema_from_dict, schema_to_dict
 from src.db import OracleClient, OracleConnectionConfig
 from src.nl2sql import LLMConfig, generate_sql_from_nl
+from src.utils import dataframe_to_csv_bytes, dataframe_to_excel_bytes
 from src.schema import (
     Schema,
     attach_relationships,
@@ -279,6 +280,25 @@ class EmailReportRequest(BaseModel):
     columns: List[str]
     rows: List[List[Any]]
     cc: str = ""
+    filename: Optional[str] = None
+
+    @field_validator("columns")
+    @classmethod
+    def _require_columns(cls, value: List[str]) -> List[str]:
+        if not value:
+            raise ValueError("columns must be a non-empty list.")
+        return value
+
+
+class ExportRequest(BaseModel):
+    """Download an already-fetched result as a CSV/Excel file (Phase 9). Like the
+    email path: no LLM, no re-query — the file is built from the shown result.
+    Excel is generated server-side (openpyxl) so no spreadsheet library ships to
+    the browser. ``format`` is ``"csv"`` or ``"xlsx"``."""
+
+    columns: List[str]
+    rows: List[List[Any]]
+    format: str = "xlsx"
     filename: Optional[str] = None
 
     @field_validator("columns")
@@ -730,6 +750,45 @@ def email_report(req: EmailReportRequest):
     return JSONResponse(
         status_code=502,
         content={"detail": result.message, "error_id": result.error_id},
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Export a result (Phase 9): downloadable CSV/Excel of the shown result. Excel is
+# built server-side via openpyxl (no browser spreadsheet lib). No LLM, no re-query.
+# --------------------------------------------------------------------------- #
+@router.post("/reports/export")
+def export_report(req: ExportRequest) -> Response:
+    MAX_EXPORT_ROWS, MAX_EXPORT_COLS = 100_000, 1_000
+    if len(req.rows) > MAX_EXPORT_ROWS or len(req.columns) > MAX_EXPORT_COLS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Result too large to export (limit {MAX_EXPORT_ROWS:,} rows × {MAX_EXPORT_COLS:,} columns).",
+        )
+
+    import pandas as pd
+
+    try:
+        df = pd.DataFrame(req.rows, columns=req.columns)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Result does not match columns: {exc}")
+
+    fmt = (req.format or "xlsx").strip().lower()
+    # Sanitize the filename before it reaches the Content-Disposition header.
+    safe = "".join(c for c in (req.filename or "report") if c.isalnum() or c in "._-")[:64] or "report"
+    if fmt in ("xlsx", "xls", "excel"):
+        content, media, ext = dataframe_to_excel_bytes(df), (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ), "xlsx"
+    elif fmt == "csv":
+        content, media, ext = dataframe_to_csv_bytes(df), "text/csv; charset=utf-8", "csv"
+    else:
+        raise HTTPException(status_code=400, detail="format must be 'csv' or 'xlsx'.")
+
+    return Response(
+        content=content,
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{safe}.{ext}"'},
     )
 
 

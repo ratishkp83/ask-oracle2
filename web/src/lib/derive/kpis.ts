@@ -1,5 +1,5 @@
 import { ColumnMeta, rankMeasures } from "./columns";
-import { formatCompact, formatNumber, formatPercent, humanize, toNumber } from "@/lib/format";
+import { formatCompact, formatInt, formatNumber, formatPercent, humanize, toNumber } from "@/lib/format";
 
 export interface Kpi {
   label: string;
@@ -34,7 +34,9 @@ export function deriveKpis(rows: unknown[][], cols: ColumnMeta[]): Kpi[] {
         : c.type === "currency"
           ? formatCompact(raw, true)
           : avg
-            ? formatNumber(Math.round(raw * 10) / 10)
+            ? c.isInteger
+              ? formatInt(raw) // whole-number columns (days, counts) stay whole
+              : formatNumber(Math.round(raw * 10) / 10)
             : formatCompact(raw, false);
     return {
       label: humanize(c.name),
