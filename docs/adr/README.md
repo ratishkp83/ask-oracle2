@@ -1,6 +1,6 @@
 # D9 — Architecture Decision Records (ADR)
 
-> **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-11
+> **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14
 
 Each significant decision is recorded as an immutable ADR: context, the decision,
 consequences, and alternatives considered. Superseding a decision means adding a
@@ -24,5 +24,11 @@ new ADR that references the old one (don't rewrite history).
 | [ADR-014](ADR-014-file-store-durability.md) | File-store durability (atomic JSON writes; corrupt-record quarantine) | Accepted |
 | [ADR-015](ADR-015-ebs-metadata-packs.md) | EBS metadata packs as curated, redaction-safe NL→SQL overlays | Accepted |
 | [ADR-016](ADR-016-defer-23ai-vector-track.md) | Defer the Oracle 23ai vector track (record direction; ITM-018) | Accepted |
+| [ADR-017](ADR-017-email-report-via-gmail-smtp.md) | Email a report follow-up action via Gmail SMTP (opt-in, user-approved, no LLM) | Accepted |
+| [ADR-018](ADR-018-per-profile-default-schema.md) | Per-profile default schema (`ALTER SESSION SET CURRENT_SCHEMA`) | Accepted |
+| [ADR-019](ADR-019-react-cxo-surface.md) | Bespoke React CXO executive surface (against the existing `/v1` API) | Accepted |
+| [ADR-020](ADR-020-result-export-and-email-api.md) | Result export & email over HTTP (post-the-shown-result, no re-query, no LLM) | Accepted |
+| [ADR-021](ADR-021-sql-aware-derivation-and-cascade.md) | SQL-aware deterministic derivation + cascading drill-down (no row data to any LLM) | Accepted |
+| [ADR-022](ADR-022-auto-run-mode.md) | Auto-run mode + the reframing of Invariant 2 (chokepoint never bypassed) | Accepted |
 
 Template: [ADR-template.md](ADR-template.md).
