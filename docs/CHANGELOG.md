@@ -19,6 +19,11 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   Vite pinned to `^5.4.20` (the `^5.4.1` dev dep-optimizer crashes on the
   spaced node_modules path under Node 24); `preserveSymlinks` + `process.cwd()`
   roots keep Vite on the space-free junction.
+- **Review fixes (B2+B3 gate):** `POST /reports/email` now caps payload pre-build
+  (100k rows × 1k cols → 400) so an oversized body can't spike memory before the
+  mailer's byte-cap (414 tests). Ask landing shifted up so the input sits at
+  eye-level (~45% from top). Dynamic example chips tracked as **ITM-026** (needs
+  query history).
 
 - **Charter** `docs/charters/phase-9-react-cxo-ui.md` approved by owner (design system, executive
   results-hierarchy spec, scope, risks, build plan; D-1…D-5 resolved as recommended — Fraunces,

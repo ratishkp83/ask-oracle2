@@ -14,7 +14,7 @@ export function AskPage() {
   const [q, setQ] = useState("");
 
   return (
-    <div className="flex h-full flex-col items-center justify-center px-6">
+    <div className="flex h-full flex-col items-center justify-center px-6 pb-[16vh]">
       <div className="w-full max-w-2xl animate-fade-in">
         <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
           <Sparkles className="h-3.5 w-3.5 text-brand" /> Ask in plain English

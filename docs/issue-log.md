@@ -107,6 +107,17 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   `_render_results` (renders in calling context); `_render_email_action` removed (superseded by
   `@st.dialog`). 401 tests pass (no logic change).
 
+- ITM-025: (Phase 9 — backend gap) **Email not exposed via the API.** The Phase-8 mailer lived only
+  in the Streamlit app (`src/core/mailer/`); the React surface had no way to send. **✅ CLOSED (B2):**
+  `POST /reports/email` (root + `/v1`, auth-gated) reuses `send_report_email` unchanged — no LLM,
+  no re-query, opt-in 503; SendResult→HTTP mapping; `tests/test_email_api.py`. A pre-build row/column
+  cap (100k×1k → 400) was added on review. 414 tests pass.
+
+- ITM-026: (Phase 9 — Ask landing UX, OPEN/enhancement) **Make the example-question chips dynamic.**
+  The three chips under the Ask box are currently static placeholders; per owner request (2026-06-14)
+  they should reflect the user's **recent / most-run questions** instead. Blocked on query-history
+  persistence (not yet built). Deferred to a later increment; wire the chips to history once it exists.
+
 ## Phase 8 (v2) — independent review findings & remediation (r1)
 
 Source: [reviews/phase-8-review-r1.md](reviews/phase-8-review-r1.md) — verdict **PASS-WITH-FIXES** (no S1/S2; all 8 security invariants hold). Package: [reviews/phase-8-review-package.md](reviews/phase-8-review-package.md). Remediated post-review; **371 tests green**.

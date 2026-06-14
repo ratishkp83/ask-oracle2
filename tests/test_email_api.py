@@ -143,6 +143,16 @@ def test_email_empty_columns_returns_422(email_on):
     assert resp.status_code == 422  # pydantic field validator
 
 
+def test_email_too_many_rows_returns_400(email_on):
+    # Oversized payload is rejected pre-build (no DataFrame, no SMTP).
+    big = [["x", i] for i in range(100_001)]
+    with patch("smtplib.SMTP") as mock_smtp:
+        resp = client.post("/reports/email", json=_payload(rows=big))
+    assert resp.status_code == 400
+    assert "too large" in resp.json()["detail"].lower()
+    mock_smtp.assert_not_called()
+
+
 # --- /v1 mount is auth-gated --------------------------------------------- #
 def test_v1_email_requires_auth(monkeypatch, email_on):
     monkeypatch.setenv(API_KEY_ENV, "k")

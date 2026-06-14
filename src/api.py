@@ -683,6 +683,17 @@ def email_report(req: EmailReportRequest):
             detail="Email is not configured — set SMTP_USER and SMTP_PASSWORD on the server.",
         )
 
+    # Bound the in-memory DataFrame build before the mailer's byte-cap can reject
+    # it (review finding #2): a shown result is already row-capped by /execute, so
+    # an oversized payload here is abuse — reject cheaply, pre-build.
+    MAX_EMAIL_ROWS, MAX_EMAIL_COLS = 100_000, 1_000
+    if len(req.rows) > MAX_EMAIL_ROWS or len(req.columns) > MAX_EMAIL_COLS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Result too large to email (limit {MAX_EMAIL_ROWS:,} rows × "
+            f"{MAX_EMAIL_COLS:,} columns). Narrow the query first.",
+        )
+
     import pandas as pd
 
     try:
