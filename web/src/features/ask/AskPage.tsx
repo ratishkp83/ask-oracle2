@@ -163,7 +163,7 @@ export function AskPage() {
         eyebrow: "Edit & re-run SQL",
         sql: from.sql,
         explanation: "Edit the query and re-run it. Read-only — nothing runs until you approve.",
-        confidence: undefined,
+        confidence: null,
         returnResults: from,
       },
     });

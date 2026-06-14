@@ -11,6 +11,9 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: { "@": path.join(ROOT, "web", "src") },
+    // Mirror vite.config: keep Vite on the space-free junction so the dev
+    // dep-optimizer doesn't canonicalize to the %20 spaced path (P9B-R1-F1).
+    preserveSymlinks: true,
   },
   test: {
     environment: "jsdom",

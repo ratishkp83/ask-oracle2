@@ -158,6 +158,43 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 
 - ITM-025: **confirmed CLOSED** (B2 — `POST /reports/email`); re-verified at the Phase-9 B5b exit gate.
 
+- ITM-031: (Phase 9 — B5b exit-gate complete product test, OPEN/lint-debt, Low) **Frontend ESLint shows
+  21 findings** (`eslint web/src`): 8 `react-refresh/only-export-components` warnings + 2
+  `no-empty-object-type` errors are all in **vendored shadcn `components/ui/*`** primitives; the 11
+  `no-explicit-any` errors are in pre-existing `lib/api/client.ts` + `components/exec/DriverChart.tsx`
+  and in test-mock signatures (`({...}: any)`) that follow the repo's established cascade-test pattern.
+  **ESLint is not a configured CI gate** (the gates are pytest/vitest/tsc/vite build — all green), and
+  none of the findings are in new production logic. Fix-when-it-fits: type the test mocks + `client.ts`
+  helpers, and either relocate shared exports or accept the vendored-primitive warnings (or scope ESLint
+  to exclude `components/ui`). Logged at the B5b close (2026-06-14).
+
+- ITM-032: (Phase 9 — B5b exit-gate review r1 / P9B-R1-F2, OPEN/robustness, Low) **Pull-detail wrap can be
+  ambiguous on a duplicate or unaliased output column.** `buildPullDetailSql` wraps as
+  `SELECT * FROM (<approved>) WHERE "COL" = :p`; if the approved `SELECT` has two output columns with the
+  same name (or a colliding unaliased expression), the inline view raises **ORA-00918/-00960**. **Not a
+  security issue** — stays a bound SELECT, chokepoint-revalidated, surfaces as a sanitized E9 the user can
+  edit. Pre-noted in the 4a internal review. Fix-when-it-fits: alias-dedupe the wrapped projection or
+  detect collisions client-side. File: `web/src/lib/derive/pullDetail.ts`.
+
+## Phase 9 (v2) — B5b-3 exit-gate review & remediation (r1)
+
+Source: [reviews/phase-9-b5b-review-r1.md](reviews/phase-9-b5b-review-r1.md) — **independent** reviewer
+(reviewer ≠ author, ADR-006; owner chose a spawned reviewer). Verdict **PASS** (no S1/S2 blocking). The
+reviewer independently re-ran all four gates (**427 backend / 69 frontend / tsc clean / vite build green**,
+all matching) and adversarially verified all 5 invariants HOLD (SELECT-only chokepoint incl. the
+pull-detail wrap; AI-proposes/approve + auto-run read-only-safe & default-off; schema-names-only/no rows to
+LLM; no client DB secrets; sanitized `error_id`). BUG-008 + the pull wrap confirmed injection-safe; docs
+accurate. Six non-blocking findings:
+
+| ID | Sev | Finding | Disposition |
+|----|-----|---------|-------------|
+| P9B-R1-F1 | S3 | `vitest run` gate brittle on the junction/spaced path (Vite `%20` canonicalization) | **Fixed** — `preserveSymlinks: true` added to `vitest.config.ts` (mirrors `vite.config.ts`) |
+| P9B-R1-F2 | S4 | Pull-detail wrap ambiguous on duplicate/unaliased output column (not security) | **Logged** → ITM-032 |
+| P9B-R1-F3 | S4 | Strict Zod enums fail whole-list parse on drift | Already **ITM-027/030** |
+| P9B-R1-F4 | S4 | `ADMIN_URL` hardcoded default in bundle | Already **ITM-028** |
+| P9B-R1-F5 | S4 | Listbox dropdowns lack arrow-key roving nav | Already **ITM-029** |
+| P9B-R1-F6 | S4 | Cosmetic `confidence: undefined` vs `null` in AskPage review entries | **Fixed** — `editSql` now uses `null` |
+
 ## Phase 8 (v2) — independent review findings & remediation (r1)
 
 Source: [reviews/phase-8-review-r1.md](reviews/phase-8-review-r1.md) — verdict **PASS-WITH-FIXES** (no S1/S2; all 8 security invariants hold). Package: [reviews/phase-8-review-package.md](reviews/phase-8-review-package.md). Remediated post-review; **371 tests green**.
