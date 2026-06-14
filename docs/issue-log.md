@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.1 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-13 (v2 Phase 8: ITM-020/021 added)
+> **Document:** Issue Log · **Version:** 1.2 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (ITM-022/023 closed)
 
 ## Bug workflow (mandatory)
 
@@ -73,15 +73,17 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 
 - ITM-022: (v2 Phase-8 UI demo — S4/UX) **Query Builder requires scrolling to run a query.** In
   `draw_query_builder` (NL mode, `src/app.py`), the Generate/Run controls and the results sit far
-  apart, forcing the user to scroll to run and again to see output. Tighten the layout (keep the
-  action buttons near the editable SQL + results, and/or use columns) to cut the scrolling.
-  Non-blocking. **Next-session task.**
+  apart, forcing the user to scroll to run and again to see output. **✅ CLOSED:** removed the
+  `col1`/`col2` split — "Generate SQL" is now a standalone button above the SQL editor; "Run SQL"
+  (`type="primary"`) moved to below the SQL text area and explanation, directly above results. No
+  logic change; 401 tests pass.
 
 - ITM-023: (v2 Phase-8 UI demo — S4/UX) **Email form not cleared after a successful send.** After
   "Send email" succeeds in `_render_email_action` (`src/app.py`), the To/Cc/Subject/Body values
-  persist in `st.session_state`, so the recipient stays filled. On success, reset the form fields
-  (clear `email_to`/`email_cc`/`email_subject`/`email_body`) so the next send starts clean.
-  Non-blocking. **Next-session task.**
+  persist in `st.session_state`, so the recipient stays filled. **✅ CLOSED:** on `result.ok`,
+  `email_to`/`email_cc`/`email_subject`/`email_body` are popped from `st.session_state`; on the
+  next render the fields reset to their defaults (blank To/Cc, date-stamped Subject, default Body).
+  401 tests pass.
 
 ## Phase 8 (v2) — independent review findings & remediation (r1)
 

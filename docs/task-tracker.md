@@ -1,6 +1,6 @@
 # D11 — Task Tracker
 
-> **Document:** Task Tracker · **Version:** 1.49 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-13
+> **Document:** Task Tracker · **Version:** 1.50 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-14
 
 Status: Planned · In Progress · Blocked · Completed.
 
@@ -253,6 +253,8 @@ No app-code or chokepoint changes; 293 tests remain green. Committed `f353ebc` (
 | ITM-019 | Render persistent storage → Render Disk | Ops | ✅ Resolved (Render Disk; render.yaml disk blocks + D7 §5 runbook; no code change) |
 | ITM-020 | Gmail API (OAuth2) + per-user sender | Feature (v2) | 📋 Deferred (ADR-017; SMTP+App Password ships now; OAuth pairs with multi-tenant identity) |
 | ITM-021 | AI-drafted email body | Feature (v2) | 📋 Deferred (ADR-017; would send row data to the LLM — needs an explicit opt-in / local summary) |
+| ITM-022 | Query Builder NL mode layout: scrolling to run | UX (v2) | ✅ Closed (2026-06-14; "Run SQL" moved below SQL editor + confidence/explanation; 401 tests) |
+| ITM-023 | Email form not cleared after successful send | UX (v2) | ✅ Closed (2026-06-14; form fields popped from session_state on `result.ok`; 401 tests) |
 
 ## Dependencies & critical path
 

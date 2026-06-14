@@ -671,6 +671,8 @@ def _render_email_action(df: Optional[pd.DataFrame]) -> None:
             )
             if result.ok:
                 st.success(result.message)
+                for _k in ("email_to", "email_cc", "email_subject", "email_body"):
+                    st.session_state.pop(_k, None)
             elif result.kind == "rejected":
                 st.warning(result.message)
             else:
@@ -692,28 +694,24 @@ def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optio
             key="nl_ebs_modules",
             help="Adds curated EBS table descriptions + glossary so the model can map business terms to EBS tables.",
         )
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            if st.button("Generate SQL"):
-                if not schema:
-                    st.error("Upload schema first.")
-                else:
-                    try:
-                        result = generate_sql_from_nl(
-                            prompt, schema, llm=st.session_state.llm_config, ebs_modules=ebs_mods or None
-                        )
-                        st.session_state.generated_sql = result.sql
-                        st.session_state.nl_explanation = result.explanation
-                        st.session_state.nl_confidence = (
-                            {"level": result.confidence.level, "reasons": result.confidence.reasons}
-                            if result.confidence
-                            else None
-                        )
-                        st.success("SQL generated. Review it below before running.")
-                    except Exception as e:  # noqa: BLE001
-                        st.error(f"Failed to generate SQL: {e}")
-        with col2:
-            run_clicked = st.button("Run SQL")
+        if st.button("Generate SQL"):
+            if not schema:
+                st.error("Upload schema first.")
+            else:
+                try:
+                    result = generate_sql_from_nl(
+                        prompt, schema, llm=st.session_state.llm_config, ebs_modules=ebs_mods or None
+                    )
+                    st.session_state.generated_sql = result.sql
+                    st.session_state.nl_explanation = result.explanation
+                    st.session_state.nl_confidence = (
+                        {"level": result.confidence.level, "reasons": result.confidence.reasons}
+                        if result.confidence
+                        else None
+                    )
+                    st.success("SQL generated. Review it below before running.")
+                except Exception as e:  # noqa: BLE001
+                    st.error(f"Failed to generate SQL: {e}")
 
         sql_box_val = st.text_area("Generated SQL (editable)", value=st.session_state.generated_sql, height=200)
         st.session_state.generated_sql = sql_box_val
@@ -727,8 +725,11 @@ def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optio
             with st.expander("Explanation", expanded=True):
                 st.write(st.session_state.nl_explanation)
 
-        if run_clicked and client and sql_box_val.strip():
-            _run_and_display(client, sql_box_val)
+        if st.button("Run SQL", type="primary"):
+            if not client:
+                st.error("Configure a connection first.")
+            elif sql_box_val.strip():
+                _run_and_display(client, sql_box_val)
 
     else:  # Raw SQL
         sql = st.text_area("SQL", placeholder="SELECT * FROM some_table WHERE ROWNUM <= 100")

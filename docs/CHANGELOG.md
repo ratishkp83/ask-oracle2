@@ -4,6 +4,18 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Fixed (ITM-022 — Query Builder layout, v2 UX polish)
+- **NL mode:** removed the `col1`/`col2` split that placed "Run SQL" above the SQL editor.
+  "Generate SQL" is now a standalone button at the top; "Run SQL" (`type="primary"`) moves to
+  just below the SQL text area and confidence/explanation expander — directly above results.
+  Users no longer need to scroll up to run or down to see output. No logic change; 401 tests
+  unchanged.
+
+### Fixed (ITM-023 — Email form cleared after successful send, v2 UX polish)
+- After `send_report_email` returns `result.ok`, the four session-state fields
+  (`email_to`, `email_cc`, `email_subject`, `email_body`) are cleared so the next time
+  the "Send as email" expander is opened the form starts blank.
+
 ### Added (Phase 8 / v2 — Email a report follow-up action)
 - **`src/core/mailer/` package (stdlib SMTP, no new dependency):** after a report runs, a user
   can email the result with the output attached. Modules: `config` (opt-in `email_enabled` gate
