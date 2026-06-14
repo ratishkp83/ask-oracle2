@@ -25,6 +25,12 @@ function quoteIdent(name: string): string {
 // bound (never interpolated); a NULL bucket becomes `IS NULL`. The result is still
 // a plain SELECT, so the SELECT-only chokepoint keeps enforcing read-only. The user
 // re-approves it in the review step before it runs (invariant 2).
+//
+// Type assumption (load-bearing): `filters` only ever carry CATEGORICAL or NUMERIC
+// drill dimensions, so binding a stringified value works (Oracle implicit-converts
+// for NUMBER). DATE dimensions render as non-drillable trend lines and never enter
+// the drill stack, so a string value is never bound against a DATE column (which
+// would mismatch the NLS format). If dates ever become drillable, bind them typed.
 export function buildPullDetailSql(approvedSql: string, filters: PullFilter[]): PullDetailQuery {
   // Drop a trailing statement terminator so it nests cleanly as an inline view.
   const inner = approvedSql.replace(/[;\s]+$/, "");
