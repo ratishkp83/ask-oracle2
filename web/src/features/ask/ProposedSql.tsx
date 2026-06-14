@@ -1,19 +1,24 @@
 import { useState } from "react";
 import { AlertTriangle, ArrowLeft, ChevronDown, Loader2, Play, ShieldCheck } from "lucide-react";
-import type { Confidence, Nl2SqlResult } from "@/lib/api/schemas";
+import type { Confidence } from "@/lib/api/schemas";
 
 export interface StepError {
   message: string;
   errorId?: string;
 }
 
-// The approve-before-run gate (invariant 2): the AI proposes read-only SQL and the
-// user reviews — and may edit — it before anything executes. Confidence + the
-// explanation are advisory; the editable SQL is the contract. "Run query" is the
-// only path to /execute and is disabled until a connection is chosen (E10).
+// The approve-before-run gate (invariant 2): the AI proposes (or we deterministically
+// build a pull-detail wrap) read-only SQL and the user reviews — and may edit — it
+// before anything executes. Confidence + the explanation are advisory; the editable
+// SQL is the contract. "Run query" is the only path to /execute and is disabled until
+// a connection is chosen (E10). `binds` (pull-detail) are shown read-only so the user
+// sees what the :pN placeholders resolve to.
 export function ProposedSql({
   question,
-  proposal,
+  eyebrow = "Review proposed SQL",
+  confidence,
+  explanation,
+  binds,
   sql,
   onSqlChange,
   onRun,
@@ -23,7 +28,10 @@ export function ProposedSql({
   error,
 }: {
   question: string;
-  proposal: Nl2SqlResult;
+  eyebrow?: string;
+  confidence?: Confidence;
+  explanation?: string | null;
+  binds?: Record<string, unknown>;
   sql: string;
   onSqlChange: (v: string) => void;
   onRun: () => void;
@@ -33,6 +41,7 @@ export function ProposedSql({
   error: StepError | null;
 }) {
   const runnable = canRun && !running && sql.trim().length > 0;
+  const bindEntries = binds ? Object.entries(binds) : [];
 
   return (
     <div className="flex h-full flex-col px-6 py-5">
@@ -41,7 +50,7 @@ export function ProposedSql({
         <div className="flex shrink-0 items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
-              Review proposed SQL
+              {eyebrow}
             </div>
             <h2 className="mt-1 truncate font-display text-[20px] font-semibold tracking-[-0.01em] text-ink">
               {question}
@@ -52,11 +61,11 @@ export function ProposedSql({
             onClick={onBack}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-control border border-hairline bg-surface px-2.5 py-1.5 text-[12px] font-medium text-ink-muted hover:bg-surface-sunken"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Edit question
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
           </button>
         </div>
 
-        <ConfidenceBlock confidence={proposal.confidence ?? null} explanation={proposal.explanation} />
+        <ConfidenceBlock confidence={confidence ?? null} explanation={explanation} />
 
         {/* The editable SQL — the deliberate human gate. Only the textarea scrolls. */}
         <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-card border border-hairline bg-surface">
@@ -77,6 +86,17 @@ export function ProposedSql({
             className="min-h-0 flex-1 resize-none bg-transparent p-3.5 font-mono text-[13px] leading-relaxed text-ink outline-none disabled:opacity-60"
           />
         </div>
+
+        {bindEntries.length > 0 && (
+          <div className="mt-2 flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-ink-faint">
+            <span className="font-medium uppercase tracking-[0.06em]">Bound values</span>
+            {bindEntries.map(([k, v]) => (
+              <span key={k} className="num rounded-control border border-hairline bg-surface px-2 py-0.5 text-ink-muted">
+                :{k} = {String(v)}
+              </span>
+            ))}
+          </div>
+        )}
 
         {error && (
           <div

@@ -15,8 +15,19 @@ vi.mock("@/lib/api/endpoints", () => ({
   downloadXlsx: vi.fn(),
   emailReport: vi.fn(),
 }));
-// Recharts doesn't lay out in jsdom — stub the chart (same approach as the cascade test).
-vi.mock("@/components/exec/DriverChart", () => ({ DriverChart: () => <div data-testid="chart" /> }));
+// Recharts doesn't lay out in jsdom — stub the chart with a clickable button per bar
+// (same approach as the cascade test) so drill-down can be exercised.
+vi.mock("@/components/exec/DriverChart", () => ({
+  DriverChart: ({ spec, onBarClick }: any) => (
+    <div data-testid="chart">
+      {spec.data.map((d: any) => (
+        <button key={d.label} type="button" onClick={() => onBarClick?.(d.label)}>
+          {d.label}
+        </button>
+      ))}
+    </div>
+  ),
+}));
 
 import { nl2sql, execute, getSchemas } from "@/lib/api/endpoints";
 
@@ -151,6 +162,43 @@ describe("AskPage state machine", () => {
     expect(screen.getByText(/select a connection above to run/i)).toBeInTheDocument();
     await user.click(runBtn);
     expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("pulls live detail: drill to a leaf → review the wrapped SQL + binds → execute", async () => {
+    window.localStorage.setItem("aor.profileId", "p1");
+    window.localStorage.setItem("aor.schemaId", "s1");
+    vi.mocked(nl2sql).mockResolvedValue(PROPOSAL);
+    vi.mocked(execute).mockResolvedValue(RESULT); // aggregated result, then the detail
+    const user = userEvent.setup();
+    renderAsk();
+
+    // Ask → review → run → aggregated results.
+    await user.type(screen.getByPlaceholderText(/Top 10 customers/i), "Revenue by region");
+    await user.click(screen.getByRole("button", { name: /generate sql/i }));
+    await user.click(await screen.findByRole("button", { name: /run query/i }));
+
+    // Drill the only dimension to a leaf, then pull its live detail.
+    await user.click(await screen.findByRole("button", { name: "North" }));
+    await user.click(await screen.findByRole("button", { name: /pull north data/i }));
+
+    // Re-approval review for the deterministic wrap: wrapped SQL + bound value shown.
+    const sqlBox = (await screen.findByRole("textbox", { name: /proposed sql/i })) as HTMLTextAreaElement;
+    expect(sqlBox.value).toContain("SELECT * FROM (");
+    expect(sqlBox.value).toContain('WHERE "REGION" = :p0');
+    expect(screen.getByText(/bound values/i)).toBeInTheDocument();
+    expect(screen.getByText(/:p0 = North/)).toBeInTheDocument();
+    expect(screen.getByText(/review live-detail query/i)).toBeInTheDocument();
+
+    // Approve → /execute runs the wrapped SQL with the bound value + session profile.
+    vi.mocked(execute).mockClear();
+    await user.click(screen.getByRole("button", { name: /run query/i }));
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profile_id: "p1",
+        binds: { p0: "North" },
+        sql: expect.stringContaining('WHERE "REGION" = :p0'),
+      }),
+    );
   });
 
   it("still shows the no-DB sample result on demand", async () => {

@@ -3,7 +3,8 @@ import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { ResultsView } from "@/components/exec/ResultsView";
 import { nl2sql, execute } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
-import type { ExecuteResult, Nl2SqlResult } from "@/lib/api/schemas";
+import type { Confidence, ExecuteResult } from "@/lib/api/schemas";
+import { buildPullDetailSql, PullFilter } from "@/lib/derive/pullDetail";
 import { useSession } from "@/app/session";
 import { SchemaPicker } from "./SchemaPicker";
 import { ProposedSql, StepError } from "./ProposedSql";
@@ -11,20 +12,40 @@ import { SAMPLE_QUESTION, SAMPLE_RESULT, SAMPLE_SQL } from "./sampleResult";
 
 // First-run lands here (B-5): ask a question, not admin setup. The live flow is a
 // small state machine — idle → proposing → review → running → results — gated by a
-// human SQL approval in the middle (invariant 2). "See a sample result" previews
-// the executive Results design with no DB.
+// human SQL approval in the middle (invariant 2). The same review gate is reused for
+// the deterministic live "Pull <value> data" wrap (Inc 4). "See a sample result"
+// previews the executive Results design with no DB.
 const EXAMPLES = [
   "Top customers by outstanding AR this year",
   "Monthly AP spend by supplier, last 12 months",
   "Overdue invoices over 30 days, by org",
 ];
 
+type ResultsState = {
+  kind: "results";
+  question: string;
+  sql: string;
+  result: ExecuteResult;
+  pullable: boolean; // false once we're already viewing a pulled detail (no nested wrap)
+};
+
+// What the review step shows/edits — shared by an LLM proposal and a pull-detail wrap.
+type ReviewData = {
+  question: string;
+  eyebrow: string;
+  sql: string;
+  confidence?: Confidence;
+  explanation?: string | null;
+  binds?: Record<string, unknown>; // present only for pull-detail
+  returnResults?: ResultsState; // a pull review's "Back" returns here
+};
+
 type AskState =
   | { kind: "idle" }
   | { kind: "proposing"; question: string }
-  | { kind: "review"; question: string; proposal: Nl2SqlResult; sql: string }
-  | { kind: "running"; question: string; proposal: Nl2SqlResult; sql: string }
-  | { kind: "results"; question: string; sql: string; result: ExecuteResult }
+  | { kind: "review"; data: ReviewData }
+  | { kind: "running"; data: ReviewData }
+  | ResultsState
   | { kind: "demo" };
 
 type PhaseError = (StepError & { phase: "propose" | "run" }) | null;
@@ -46,17 +67,31 @@ export function AskPage() {
     setState({ kind: "idle" });
   }
 
+  // Review "Back": a pull-detail review returns to the result it came from; an LLM
+  // proposal returns to the ask form to edit the question.
+  function back() {
+    setError(null);
+    if (state.kind === "review" && state.data.returnResults) setState(state.data.returnResults);
+    else setState({ kind: "idle" });
+  }
+
   async function generate() {
     const question = q.trim();
     if (!question) return;
     setError(null);
     setState({ kind: "proposing", question });
     try {
-      const proposal = await nl2sql({
-        natural_language: question,
-        schema_id: schemaId ?? undefined,
+      const proposal = await nl2sql({ natural_language: question, schema_id: schemaId ?? undefined });
+      setState({
+        kind: "review",
+        data: {
+          question,
+          eyebrow: "Review proposed SQL",
+          sql: proposal.sql,
+          confidence: proposal.confidence ?? null,
+          explanation: proposal.explanation,
+        },
       });
-      setState({ kind: "review", question, proposal, sql: proposal.sql });
     } catch (e) {
       setError({ ...toStepError(e), phase: "propose" });
       setState({ kind: "idle" });
@@ -65,16 +100,45 @@ export function AskPage() {
 
   async function run() {
     if (state.kind !== "review" || !profileId) return;
-    const { question, proposal, sql } = state;
+    const { data } = state;
     setError(null);
-    setState({ kind: "running", question, proposal, sql });
+    setState({ kind: "running", data });
     try {
-      const result = await execute({ sql, profile_id: profileId });
-      setState({ kind: "results", question, sql, result });
+      const result = await execute({ sql: data.sql, profile_id: profileId, binds: data.binds });
+      setState({
+        kind: "results",
+        question: data.question,
+        sql: data.sql,
+        result,
+        // A first (non-pull) run yields the aggregated result the user can pull from;
+        // a pulled detail is terminal (no nested wrap).
+        pullable: data.binds === undefined,
+      });
     } catch (e) {
       setError({ ...toStepError(e), phase: "run" });
-      setState({ kind: "review", question, proposal, sql });
+      setState({ kind: "review", data });
     }
+  }
+
+  // Decision 3 — deterministically wrap the approved SQL, scoped to the drill path,
+  // and route it through the review step for re-approval before it runs live.
+  function enterPullDetail(from: ResultsState, filters: PullFilter[]) {
+    const { sql, binds } = buildPullDetailSql(from.sql, filters);
+    const label = filters.length ? filters.map((f) => f.value).join(" · ") : "Full result";
+    setError(null);
+    setState({
+      kind: "review",
+      data: {
+        question: `Live detail · ${label}`,
+        eyebrow: "Review live-detail query",
+        sql,
+        explanation:
+          "Re-runs your approved query live, scoped to this selection. Read-only — nothing runs until you approve.",
+        confidence: null,
+        binds,
+        returnResults: from,
+      },
+    });
   }
 
   if (state.kind === "demo") {
@@ -93,20 +157,33 @@ export function AskPage() {
   }
 
   if (state.kind === "results") {
-    return <ResultsView question={state.question} sql={state.sql} result={state.result} onBack={reset} />;
+    const s = state;
+    return (
+      <ResultsView
+        question={s.question}
+        sql={s.sql}
+        result={s.result}
+        onBack={reset}
+        onPullDetail={s.pullable ? (filters) => enterPullDetail(s, filters) : undefined}
+      />
+    );
   }
 
   if (state.kind === "review" || state.kind === "running") {
+    const { data } = state;
     return (
       <ProposedSql
-        question={state.question}
-        proposal={state.proposal}
-        sql={state.sql}
+        question={data.question}
+        eyebrow={data.eyebrow}
+        confidence={data.confidence}
+        explanation={data.explanation}
+        binds={data.binds}
+        sql={data.sql}
         onSqlChange={(v) =>
-          setState((s) => (s.kind === "review" ? { ...s, sql: v } : s))
+          setState((s) => (s.kind === "review" ? { ...s, data: { ...s.data, sql: v } } : s))
         }
         onRun={run}
-        onBack={reset}
+        onBack={back}
         running={state.kind === "running"}
         canRun={!!profileId}
         error={error?.phase === "run" ? error : null}

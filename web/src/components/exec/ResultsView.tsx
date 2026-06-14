@@ -6,6 +6,7 @@ import { downloadXlsx } from "@/lib/api/endpoints";
 import { classifyColumns, ColumnMeta } from "@/lib/derive/columns";
 import { parseSelectMeta } from "@/lib/derive/sql";
 import { DrillLevel, dimensionOrder, filterRows } from "@/lib/derive/cascade";
+import { PullFilter } from "@/lib/derive/pullDetail";
 import { deriveKpis } from "@/lib/derive/kpis";
 import { pickChart } from "@/lib/derive/chart";
 import { downloadCsv, slugify } from "@/lib/export";
@@ -15,11 +16,6 @@ import { KpiCard } from "./KpiCard";
 import { DriverChart } from "./DriverChart";
 import { ResultGrid } from "./ResultGrid";
 import { EmailDialog } from "./EmailDialog";
-
-export interface PullFilter {
-  column: string;
-  value: string;
-}
 
 interface LeafContext {
   filters: PullFilter[]; // the active drill path, outermost → deepest
