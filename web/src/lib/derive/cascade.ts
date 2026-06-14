@@ -40,12 +40,20 @@ export function dimensionOrder(cols: ColumnMeta[], sqlMeta?: SqlMeta | null): nu
     .map((c) => c.index);
 }
 
-// Rows matching every active drill level (AND down the stack). Compares the
-// stringified cell to the level's value, matching how the chart derives its
-// group-key labels (see chart.ts `aggregate`).
+// The canonical string key for a dimension value. Shared with the chart (its bar
+// labels ARE drill keys) so a drilled bar always matches the rows behind it.
+// null/undefined/"" collapse to the same "—" bucket the chart renders, so
+// drilling that bucket filters correctly instead of to zero rows.
+export const NULL_KEY = "—";
+export function dimKey(value: unknown): string {
+  return value == null || value === "" ? NULL_KEY : String(value);
+}
+
+// Rows matching every active drill level (AND down the stack), using the shared
+// dimension key so the match lines up with the chart bar that was clicked.
 export function filterRows(rows: unknown[][], stack: DrillLevel[]): unknown[][] {
   if (stack.length === 0) return rows;
-  return rows.filter((r) => stack.every((d) => String(r[d.dimIndex]) === d.value));
+  return rows.filter((r) => stack.every((d) => dimKey(r[d.dimIndex]) === d.value));
 }
 
 // The next breakdown dimension to descend into: the first ordered dimension not

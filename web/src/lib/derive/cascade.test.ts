@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyColumns } from "./columns";
 import { parseSelectMeta } from "./sql";
-import { dimensionOrder, filterRows, nextDimension } from "./cascade";
+import { NULL_KEY, dimKey, dimensionOrder, filterRows, nextDimension } from "./cascade";
 
 // The drill-stack model: dimension ordering (GROUP BY-aware), row filtering down
 // the stack, and choosing the next dimension to descend into. All pure.
@@ -52,6 +52,23 @@ describe("filterRows", () => {
   it("matches on stringified cell values (chart group keys)", () => {
     const numRows = [[2026, "Q1"], [2025, "Q1"]];
     expect(filterRows(numRows, [{ dimIndex: 0, value: "2026" }])).toEqual([[2026, "Q1"]]);
+  });
+
+  it("matches the '—' bucket so drilling a null/empty bar isn't a dead end", () => {
+    const nullRows = [[null, 1], ["", 2], ["X", 3]];
+    // The chart renders null and "" together as one "—" bar; drilling it must
+    // return both, not zero rows.
+    expect(filterRows(nullRows, [{ dimIndex: 0, value: NULL_KEY }])).toEqual([[null, 1], ["", 2]]);
+  });
+});
+
+describe("dimKey", () => {
+  it("collapses null/undefined/empty to the shared '—' bucket, else stringifies", () => {
+    expect(dimKey(null)).toBe(NULL_KEY);
+    expect(dimKey(undefined)).toBe(NULL_KEY);
+    expect(dimKey("")).toBe(NULL_KEY);
+    expect(dimKey("North")).toBe("North");
+    expect(dimKey(2026)).toBe("2026");
   });
 });
 

@@ -1,5 +1,6 @@
 import { ColumnMeta, rankMeasures } from "./columns";
 import { Agg } from "./sql";
+import { dimKey } from "./cascade";
 import { toNumber } from "@/lib/format";
 
 export interface ChartSpec {
@@ -100,7 +101,7 @@ function aggregate(
   const acc = new Map<string, number>();
   const counts = new Map<string, number>();
   for (const r of rows) {
-    const key = r[dimIdx] == null || r[dimIdx] === "" ? "—" : String(r[dimIdx]);
+    const key = dimKey(r[dimIdx]);
     const v = toNumber(r[measIdx]);
     if (!Number.isFinite(v)) continue;
     if (agg === "min") {
