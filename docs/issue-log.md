@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (ITM-030 logged — Inc 3 Packet 3b review note, owner-approved deferral)
+> **Document:** Issue Log · **Version:** 1.3 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-14 (BUG-008 logged + FIXED — profile current_schema dropped at execution; found in Inc 3 live e2e)
 
 ## Bug workflow (mandatory)
 
@@ -20,6 +20,7 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 | BUG-006 | `Dockerfile.api.local` and `Dockerfile.local` excluded from git tracking by the `*.local` glob in `.gitignore` (a Vite-generated catch-all pattern) | S3 | Anyone cloning the repo had no Dockerfiles — `docker compose up` would fail immediately; deploy artifacts silently missing since repo init | **Fixed** — added negation exceptions `!Dockerfile.local` + `!Dockerfile.*.local` to `.gitignore`; both files committed for the first time in `f353ebc` (2026-06-12 deployment hardening). |
 
 | BUG-007 | NL→SQL emitted non-Oracle SQL — a trailing `;` (and `LIMIT` for top-N), both rejected by Oracle as **ORA-00933** at execution (surfaced in the v2 Phase-8 UI demo) | S3 | NL→SQL unusable for top-N and for any query the model terminated with `;`; the generic sanitized error gave no hint | **Fixed** — `_parse_sql_and_explanation` strips a trailing statement terminator (`re.sub(r"[;\s]+\Z", "", sql)`); `SYSTEM_PROMPT` now mandates `FETCH FIRST n ROWS ONLY`/`ROWNUM` (never `LIMIT`) and no trailing semicolon. 7 tests (`tests/test_nl2sql_sql_cleanup.py`); SELECT-only chokepoint untouched. Pre-existing (shared with v1). |
+| BUG-008 | A saved profile's `current_schema` was silently dropped at execution: `_resolve_target` + `test_profile` built `OracleConnectionConfig` without it, so `db.py`'s `ALTER SESSION SET CURRENT_SCHEMA` never ran. Surfaced in the Phase-9 Inc-3 live e2e — the AI's natural **unqualified** SQL (`FROM EMPLOYEES`) hit **ORA-00942** while schema-qualified SQL worked. | S3 | The AI's own proposed SQL wouldn't run without manual schema-qualification, undercutting propose→approve→run; ADR-018's per-profile default schema was inert on the API path (only the Streamlit path applied it). | **Fixed** — pass `current_schema=resolved.current_schema` into the `OracleConnectionConfig` in both `_resolve_target` (profile branch) and `test_profile`; value still validated by `validate_schema_name`; SELECT-only chokepoint untouched. Regression: `tests/test_execute_endpoint.py::test_execute_via_profile_applies_current_schema` (+ `_without_schema_passes_none`); 427 tests. Verified live vs XE: unqualified `SELECT COUNT(*) FROM EMPLOYEES` 200, and the full ask→run happy-path now succeeds on the model's unqualified SQL. |
 
 ## Open items (non-defect, tracked)
 

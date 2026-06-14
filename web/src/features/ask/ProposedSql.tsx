@@ -72,8 +72,9 @@ export function ProposedSql({
             aria-label="Proposed SQL"
             value={sql}
             onChange={(e) => onSqlChange(e.target.value)}
+            disabled={running}
             spellCheck={false}
-            className="min-h-0 flex-1 resize-none bg-transparent p-3.5 font-mono text-[13px] leading-relaxed text-ink outline-none"
+            className="min-h-0 flex-1 resize-none bg-transparent p-3.5 font-mono text-[13px] leading-relaxed text-ink outline-none disabled:opacity-60"
           />
         </div>
 

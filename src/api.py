@@ -435,6 +435,7 @@ def test_profile(profile_id: str) -> Dict[str, Any]:
             sid=resolved.sid,
             username=resolved.username,
             password=resolved.password,
+            current_schema=resolved.current_schema,
         )
     )
     try:
@@ -538,6 +539,10 @@ def _resolve_target(
                 sid=resolved.sid,
                 username=resolved.username,
                 password=resolved.password,
+                # Apply the saved schema so the AI's unqualified table names resolve
+                # to it (db.py runs ALTER SESSION SET CURRENT_SCHEMA, validated). Without
+                # this the field is silently dropped and unqualified SQL hits ORA-00942.
+                current_schema=resolved.current_schema,
             ),
             resolved.username,
             profile_id,
