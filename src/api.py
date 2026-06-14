@@ -48,6 +48,7 @@ from src.core.introspection import introspect_schema
 from src.core.sql_safety import SqlSafetyError, assert_safe_select
 from src.core.templates import Module, Template, get_template, list_templates
 from src.core.ebs_packs import EbsPack, get_pack, list_packs
+from src.core.mailer import email_enabled, send_report_email
 
 _EBS_MODULES = set(get_args(Module))  # {"GL","AP","AR","PO","OM"}
 from src.schema import schema_from_dict, schema_to_dict
@@ -260,6 +261,32 @@ class RunReportRequest(BaseModel):
     connection: Optional[ConnectionConfig] = None
     binds: Optional[Dict[str, Any]] = None
     max_rows: Optional[int] = None
+
+
+class EmailReportRequest(BaseModel):
+    """Email an already-fetched result as a CSV/Excel attachment (Phase 9, ADR-020).
+
+    The client passes back the *exact result already shown* (``columns`` + ``rows``)
+    — no re-query, no extra DB hit. **No LLM touches this path**; ``body`` is
+    user-typed. The send reuses the Phase-8 mailer chokepoint unchanged (header-
+    injection guard, allow-list, size cap, audit log). ``attachment_format`` is
+    ``"csv"`` or ``"xlsx"``."""
+
+    to: str
+    subject: str
+    body: str = ""
+    attachment_format: str = "csv"
+    columns: List[str]
+    rows: List[List[Any]]
+    cc: str = ""
+    filename: Optional[str] = None
+
+    @field_validator("columns")
+    @classmethod
+    def _require_columns(cls, value: List[str]) -> List[str]:
+        if not value:
+            raise ValueError("columns must be a non-empty list.")
+        return value
 
 
 class SchemaCreate(BaseModel):
@@ -638,6 +665,60 @@ def run_report(report_id: str, req: RunReportRequest) -> Dict[str, Any]:
         profile_id=profile_id,
         binds=binds,
         max_rows=req.max_rows,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Email a result (Phase 9, ADR-020): a sibling to CSV/Excel export. Reuses the
+# Phase-8 mailer unchanged — no LLM and no re-query: the DataFrame is rebuilt
+# from the result the client already holds, then sent through send_report_email
+# (header-injection guard, allow-list, size cap, audit log all apply).
+# --------------------------------------------------------------------------- #
+@router.post("/reports/email")
+def email_report(req: EmailReportRequest):
+    # Opt-in: inert unless SMTP_USER + SMTP_PASSWORD are configured server-side.
+    if not email_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Email is not configured — set SMTP_USER and SMTP_PASSWORD on the server.",
+        )
+
+    import pandas as pd
+
+    try:
+        df = pd.DataFrame(req.rows, columns=req.columns)
+    except ValueError as exc:
+        # Ragged rows / column-count mismatch — a client error, not a server fault.
+        raise HTTPException(status_code=400, detail=f"Result does not match columns: {exc}")
+
+    result = send_report_email(
+        to=req.to,
+        subject=req.subject,
+        body=req.body,
+        df=df,
+        attachment_format=req.attachment_format,
+        cc=req.cc,
+        filename=req.filename,
+    )
+
+    if result.kind == "ok":
+        return {
+            "status": "ok",
+            "message": result.message,
+            "recipients": result.recipients,
+            "attachment_bytes": result.attachment_bytes,
+        }
+    if result.kind == "rejected":
+        # User-actionable (bad recipient/domain/format/oversize) — safe verbatim.
+        raise HTTPException(status_code=400, detail=result.message)
+    # Transport/auth failure: the mailer already logged full detail under its own
+    # error_id and returned only a generic message. Surface that exact id (not the
+    # request-scoped one) so the client's reference matches the server log line —
+    # returned explicitly because a contextvar set in the sync-route threadpool
+    # would not reach the async exception handler. 502: the upstream send failed.
+    return JSONResponse(
+        status_code=502,
+        content={"detail": result.message, "error_id": result.error_id},
     )
 
 

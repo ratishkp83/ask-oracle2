@@ -4,6 +4,21 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 9 — React CXO executive UI; B1–B2)
+- **Charter** `docs/charters/phase-9-react-cxo-ui.md` approved by owner (design system, executive
+  results-hierarchy spec, scope, risks, build plan; D-1…D-5 resolved as recommended — Fraunces,
+  deep petrol `#0E5C63`, `POST /reports/email`, light-only beta, core-first phasing). Streamlit
+  stays as the admin/power-user tool during beta; the React surface is built against the `/v1` API.
+- **Backend gap closed (ITM-025): `POST /reports/email`** (mounted at root **and** `/v1`, auth-gated)
+  — exposes the Phase-8 mailer over HTTP. The client posts the *exact result already shown*
+  (`columns` + `rows`); the handler rebuilds the DataFrame and calls `send_report_email` unchanged.
+  **No LLM on this path**, no re-query; header-injection guard, allow-list, size cap, and audit log
+  all apply. Opt-in (`email_enabled`): `503` when unconfigured. SendResult→HTTP mapping: `ok`→200,
+  `rejected`→400 (safe verbatim), transport/auth `error`→502 with the mailer's `error_id`.
+- **Tests:** `tests/test_email_api.py` (12 tests, SMTP fully mocked) — gating, mapping,
+  allow-list / newline-injection / bad-format rejections, ragged-result 400, `/v1` auth gate.
+  Suite **401 → 413 green**.
+
 ### Changed (ITM-024 — No-scroll two-panel UI redesign, v2 UX)
 - **All seven screens** rewritten to a two-panel (`st.columns`) layout: controls/inputs in the
   left panel, content/results in the right panel. Page-level scroll eliminated on every screen.
