@@ -15,14 +15,20 @@ import {
 type SessionState = {
   profileId: string | null;
   schemaId: string | null;
+  // Auto-run: when on, asking a question converts to SQL and fetches results in
+  // the background (skips the manual approve step). The SELECT-only chokepoint
+  // (invariant 1) still applies; the SQL stays reviewable/editable/re-runnable.
+  autoRun: boolean;
   setProfileId: (id: string | null) => void;
   setSchemaId: (id: string | null) => void;
+  setAutoRun: (on: boolean) => void;
 };
 
 const SessionContext = createContext<SessionState | null>(null);
 
 const PROFILE_KEY = "aor.profileId";
 const SCHEMA_KEY = "aor.schemaId";
+const AUTORUN_KEY = "aor.autoRun";
 
 function readStored(key: string): string | null {
   try {
@@ -45,6 +51,7 @@ function writeStored(key: string, value: string | null) {
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [profileId, setProfileIdState] = useState<string | null>(() => readStored(PROFILE_KEY));
   const [schemaId, setSchemaIdState] = useState<string | null>(() => readStored(SCHEMA_KEY));
+  const [autoRun, setAutoRunState] = useState<boolean>(() => readStored(AUTORUN_KEY) === "1");
 
   const setProfileId = useCallback((id: string | null) => {
     setProfileIdState(id);
@@ -56,9 +63,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     writeStored(SCHEMA_KEY, id);
   }, []);
 
+  const setAutoRun = useCallback((on: boolean) => {
+    setAutoRunState(on);
+    writeStored(AUTORUN_KEY, on ? "1" : null);
+  }, []);
+
   const value = useMemo<SessionState>(
-    () => ({ profileId, schemaId, setProfileId, setSchemaId }),
-    [profileId, schemaId, setProfileId, setSchemaId],
+    () => ({ profileId, schemaId, autoRun, setProfileId, setSchemaId, setAutoRun }),
+    [profileId, schemaId, autoRun, setProfileId, setSchemaId, setAutoRun],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

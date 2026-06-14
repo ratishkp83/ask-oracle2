@@ -1,5 +1,5 @@
 import { ReactNode, useMemo, useState } from "react";
-import { ArrowLeft, ChevronRight, Download, FileSpreadsheet, Loader2, SearchX } from "lucide-react";
+import { ArrowLeft, ChevronRight, Code2, Download, FileSpreadsheet, Loader2, SearchX } from "lucide-react";
 import { ExecuteResult } from "@/lib/api/schemas";
 import { ApiError } from "@/lib/api/client";
 import { downloadXlsx } from "@/lib/api/endpoints";
@@ -36,6 +36,7 @@ export function ResultsView({
   onBack,
   onPullQuery,
   onPullDetail,
+  onEditSql,
 }: {
   question: string;
   sql: string;
@@ -43,6 +44,7 @@ export function ResultsView({
   onBack?: () => void;
   onPullQuery?: (q: string) => void;
   onPullDetail?: (filters: PullFilter[]) => void;
+  onEditSql?: () => void; // pull the query up to edit + re-run
 }) {
   // The proposed SQL drives classification (GROUP BY → dimensions, aggregate
   // funcs → measures + their exact aggregation) and the cascade order; the name
@@ -86,7 +88,7 @@ export function ResultsView({
             {rows.length.toLocaleString()} of {result.row_count.toLocaleString()} rows
           </div>
         </div>
-        {onBack && <NewQuestionButton onBack={onBack} />}
+        <HeaderActions onBack={onBack} onEditSql={onEditSql} />
       </div>
     );
     return (
@@ -108,7 +110,7 @@ export function ResultsView({
   const header = (
     <div className="flex shrink-0 items-start justify-between gap-4">
       <SummaryBand question={question} sql={sql} result={result} />
-      {onBack && <NewQuestionButton onBack={onBack} />}
+      <HeaderActions onBack={onBack} onEditSql={onEditSql} />
     </div>
   );
   return (
@@ -275,6 +277,25 @@ function Breadcrumb({
         );
       })}
     </nav>
+  );
+}
+
+// Result header actions: pull the query up to edit + re-run, and start over.
+function HeaderActions({ onBack, onEditSql }: { onBack?: () => void; onEditSql?: () => void }) {
+  if (!onBack && !onEditSql) return null;
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      {onEditSql && (
+        <button
+          type="button"
+          onClick={onEditSql}
+          className="inline-flex items-center gap-1.5 rounded-control border border-hairline bg-surface px-2.5 py-1.5 text-[12px] font-medium text-ink-muted hover:bg-surface-sunken"
+        >
+          <Code2 className="h-3.5 w-3.5" /> Edit SQL
+        </button>
+      )}
+      {onBack && <NewQuestionButton onBack={onBack} />}
+    </div>
   );
 }
 

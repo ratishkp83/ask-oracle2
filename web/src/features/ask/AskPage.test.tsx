@@ -201,6 +201,77 @@ describe("AskPage state machine", () => {
     );
   });
 
+  it("auto-run: asking goes straight to results without a review step", async () => {
+    window.localStorage.setItem("aor.profileId", "p1");
+    window.localStorage.setItem("aor.schemaId", "s1");
+    window.localStorage.setItem("aor.autoRun", "1");
+    vi.mocked(nl2sql).mockResolvedValue(PROPOSAL);
+    vi.mocked(execute).mockResolvedValue(RESULT);
+    const user = userEvent.setup();
+    renderAsk();
+
+    await user.type(screen.getByPlaceholderText(/Top 10 customers/i), "Revenue by region");
+    await user.click(screen.getByRole("button", { name: /^ask$/i }));
+
+    // Seamless: results render; the manual review step was never shown.
+    expect(await screen.findByText(/Detail ·/i)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /proposed sql/i })).not.toBeInTheDocument();
+    expect(nl2sql).toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({ profile_id: "p1", sql: PROPOSAL.sql }),
+    );
+  });
+
+  it("auto-run falls back to the review step when no connection is set", async () => {
+    window.localStorage.setItem("aor.schemaId", "s1");
+    window.localStorage.setItem("aor.autoRun", "1"); // on, but no profileId
+    vi.mocked(nl2sql).mockResolvedValue(PROPOSAL);
+    const user = userEvent.setup();
+    renderAsk();
+
+    await user.type(screen.getByPlaceholderText(/Top 10 customers/i), "Revenue by region");
+    await user.click(screen.getByRole("button", { name: /^ask$/i }));
+
+    // No connection → can't auto-run; show the editable review with Run disabled.
+    expect(await screen.findByRole("textbox", { name: /proposed sql/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /run query/i })).toBeDisabled();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("Edit SQL: pull the query up from results, edit, and re-run", async () => {
+    window.localStorage.setItem("aor.profileId", "p1");
+    window.localStorage.setItem("aor.schemaId", "s1");
+    vi.mocked(nl2sql).mockResolvedValue(PROPOSAL);
+    vi.mocked(execute).mockResolvedValue(RESULT);
+    const user = userEvent.setup();
+    renderAsk();
+
+    await user.type(screen.getByPlaceholderText(/Top 10 customers/i), "Revenue by region");
+    await user.click(screen.getByRole("button", { name: /generate sql/i }));
+    await user.click(await screen.findByRole("button", { name: /run query/i }));
+
+    // From results, pull the query up to edit + re-run.
+    await user.click(await screen.findByRole("button", { name: /edit sql/i }));
+    const sqlBox = await screen.findByRole("textbox", { name: /proposed sql/i });
+    await user.clear(sqlBox);
+    await user.type(sqlBox, "SELECT region, SUM(amount) total FROM sales GROUP BY region -- v2");
+    vi.mocked(execute).mockClear();
+    await user.click(screen.getByRole("button", { name: /run query/i }));
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({ profile_id: "p1", sql: expect.stringContaining("-- v2") }),
+    );
+  });
+
+  it("the Auto-run toggle persists its state", async () => {
+    const user = userEvent.setup();
+    renderAsk();
+    const sw = screen.getByRole("switch", { name: /auto-run/i });
+    expect(sw).toHaveAttribute("aria-checked", "false");
+    await user.click(sw);
+    expect(sw).toHaveAttribute("aria-checked", "true");
+    expect(window.localStorage.getItem("aor.autoRun")).toBe("1");
+  });
+
   it("still shows the no-DB sample result on demand", async () => {
     const user = userEvent.setup();
     renderAsk();

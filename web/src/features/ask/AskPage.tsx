@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2, Sparkles, Zap } from "lucide-react";
 import { ResultsView } from "@/components/exec/ResultsView";
 import { nl2sql, execute } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
@@ -12,9 +12,11 @@ import { SAMPLE_QUESTION, SAMPLE_RESULT, SAMPLE_SQL } from "./sampleResult";
 
 // First-run lands here (B-5): ask a question, not admin setup. The live flow is a
 // small state machine — idle → proposing → review → running → results — gated by a
-// human SQL approval in the middle (invariant 2). The same review gate is reused for
-// the deterministic live "Pull <value> data" wrap (Inc 4). "See a sample result"
-// previews the executive Results design with no DB.
+// human SQL approval in the middle. The Auto-run toggle (ADR: human stays in control
+// by choosing the mode) skips that gate on the way in: ask → working → results
+// seamlessly. Either way the SELECT-only chokepoint (invariant 1) still applies and
+// the SQL stays reviewable, editable, and re-runnable. The same review step is reused
+// for the deterministic live "Pull <value> data" wrap (Inc 4) and for "Edit & re-run".
 const EXAMPLES = [
   "Top customers by outstanding AR this year",
   "Monthly AP spend by supplier, last 12 months",
@@ -26,10 +28,11 @@ type ResultsState = {
   question: string;
   sql: string;
   result: ExecuteResult;
-  pullable: boolean; // false once we're already viewing a pulled detail (no nested wrap)
+  pullable: boolean; // false once we're already viewing a pulled detail (no nested wrap / bind-free edit)
 };
 
-// What the review step shows/edits — shared by an LLM proposal and a pull-detail wrap.
+// What the review step shows/edits — shared by an LLM proposal, a pull-detail wrap,
+// and an "Edit & re-run".
 type ReviewData = {
   question: string;
   eyebrow: string;
@@ -37,14 +40,15 @@ type ReviewData = {
   confidence?: Confidence;
   explanation?: string | null;
   binds?: Record<string, unknown>; // present only for pull-detail
-  returnResults?: ResultsState; // a pull review's "Back" returns here
+  returnResults?: ResultsState; // a review opened from results returns here on Back
 };
 
 type AskState =
   | { kind: "idle" }
-  | { kind: "proposing"; question: string }
+  | { kind: "proposing"; question: string } // manual: ask form shows busy
+  | { kind: "working"; question: string } // auto-run: seamless full-screen loader
   | { kind: "review"; data: ReviewData }
-  | { kind: "running"; data: ReviewData }
+  | { kind: "running"; data: ReviewData } // manual: review + Run spinner
   | ResultsState
   | { kind: "demo" };
 
@@ -57,7 +61,7 @@ function toStepError(e: unknown): StepError {
 }
 
 export function AskPage() {
-  const { profileId, schemaId } = useSession();
+  const { profileId, schemaId, autoRun, setAutoRun } = useSession();
   const [q, setQ] = useState("");
   const [state, setState] = useState<AskState>({ kind: "idle" });
   const [error, setError] = useState<PhaseError>(null);
@@ -67,7 +71,7 @@ export function AskPage() {
     setState({ kind: "idle" });
   }
 
-  // Review "Back": a pull-detail review returns to the result it came from; an LLM
+  // A review's "Back": one opened from a result returns to that result; an LLM
   // proposal returns to the ask form to edit the question.
   function back() {
     setError(null);
@@ -75,34 +79,14 @@ export function AskPage() {
     else setState({ kind: "idle" });
   }
 
-  async function generate() {
-    const question = q.trim();
-    if (!question) return;
+  // Execute a ReviewData via the SELECT-only chokepoint. `inflight` is the loading
+  // state to show meanwhile (the review+spinner for a manual Run, or the seamless
+  // loader for auto-run). On failure we drop to the editable review so a bad query
+  // is one edit away from a re-run (E9).
+  async function runData(data: ReviewData, inflight: AskState) {
+    if (!profileId) return;
     setError(null);
-    setState({ kind: "proposing", question });
-    try {
-      const proposal = await nl2sql({ natural_language: question, schema_id: schemaId ?? undefined });
-      setState({
-        kind: "review",
-        data: {
-          question,
-          eyebrow: "Review proposed SQL",
-          sql: proposal.sql,
-          confidence: proposal.confidence ?? null,
-          explanation: proposal.explanation,
-        },
-      });
-    } catch (e) {
-      setError({ ...toStepError(e), phase: "propose" });
-      setState({ kind: "idle" });
-    }
-  }
-
-  async function run() {
-    if (state.kind !== "review" || !profileId) return;
-    const { data } = state;
-    setError(null);
-    setState({ kind: "running", data });
+    setState(inflight);
     try {
       const result = await execute({ sql: data.sql, profile_id: profileId, binds: data.binds });
       setState({
@@ -110,14 +94,42 @@ export function AskPage() {
         question: data.question,
         sql: data.sql,
         result,
-        // A first (non-pull) run yields the aggregated result the user can pull from;
-        // a pulled detail is terminal (no nested wrap).
         pullable: data.binds === undefined,
       });
     } catch (e) {
       setError({ ...toStepError(e), phase: "run" });
       setState({ kind: "review", data });
     }
+  }
+
+  async function generate() {
+    const question = q.trim();
+    if (!question) return;
+    setError(null);
+    // Auto-run only when a connection is set; otherwise fall back to the review so
+    // the user can pick a connection (Run shows the E10 hint).
+    const auto = autoRun && !!profileId;
+    setState(auto ? { kind: "working", question } : { kind: "proposing", question });
+    try {
+      const proposal = await nl2sql({ natural_language: question, schema_id: schemaId ?? undefined });
+      const data: ReviewData = {
+        question,
+        eyebrow: "Review proposed SQL",
+        sql: proposal.sql,
+        confidence: proposal.confidence ?? null,
+        explanation: proposal.explanation,
+      };
+      if (auto) await runData(data, { kind: "working", question });
+      else setState({ kind: "review", data });
+    } catch (e) {
+      setError({ ...toStepError(e), phase: "propose" });
+      setState({ kind: "idle" });
+    }
+  }
+
+  async function run() {
+    if (state.kind !== "review") return;
+    await runData(state.data, { kind: "running", data: state.data });
   }
 
   // Decision 3 — deterministically wrap the approved SQL, scoped to the drill path,
@@ -136,6 +148,22 @@ export function AskPage() {
           "Re-runs your approved query live, scoped to this selection. Read-only — nothing runs until you approve.",
         confidence: null,
         binds,
+        returnResults: from,
+      },
+    });
+  }
+
+  // Pull the query up from a result, edit it, and re-run (works in both modes).
+  function editSql(from: ResultsState) {
+    setError(null);
+    setState({
+      kind: "review",
+      data: {
+        question: from.question,
+        eyebrow: "Edit & re-run SQL",
+        sql: from.sql,
+        explanation: "Edit the query and re-run it. Read-only — nothing runs until you approve.",
+        confidence: undefined,
         returnResults: from,
       },
     });
@@ -165,7 +193,21 @@ export function AskPage() {
         result={s.result}
         onBack={reset}
         onPullDetail={s.pullable ? (filters) => enterPullDetail(s, filters) : undefined}
+        onEditSql={s.pullable ? () => editSql(s) : undefined}
       />
+    );
+  }
+
+  if (state.kind === "working") {
+    return (
+      <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+        <Loader2 className="h-7 w-7 animate-spin text-brand" />
+        <div className="mt-4 font-display text-[18px] font-semibold text-ink">Working on it…</div>
+        <p className="mt-1.5 max-w-md truncate text-[13.5px] text-ink-muted">{state.question}</p>
+        <p className="mt-0.5 text-[12px] text-ink-faint">
+          Converting your question to SQL and fetching results.
+        </p>
+      </div>
     );
   }
 
@@ -204,7 +246,7 @@ export function AskPage() {
         </h1>
         <p className="mt-2 text-[14px] leading-relaxed text-ink-muted">
           Ask a question about your Oracle data. We propose read-only SQL for your review —
-          nothing runs until you approve it.
+          nothing runs until you approve it{autoRun ? ", unless Auto-run is on" : ""}.
         </p>
 
         <div className="mt-5 rounded-card border border-hairline bg-surface p-3 shadow-e1">
@@ -218,16 +260,21 @@ export function AskPage() {
             placeholder="e.g. Top 10 customers by outstanding receivables for FY26"
             className="w-full resize-none bg-transparent px-2 py-1 text-[15px] text-ink outline-none placeholder:text-ink-faint"
           />
-          <div className="flex items-center justify-between px-2 pt-1">
-            <span className="text-[12px] text-ink-faint">AI proposes · you approve · read-only</span>
+          <div className="flex items-center justify-between gap-3 px-2 pt-1">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <AutoRunSwitch on={autoRun} onChange={setAutoRun} />
+              <span className="truncate text-[12px] text-ink-faint">
+                {autoRun ? "Converts & runs automatically · read-only" : "AI proposes · you approve · read-only"}
+              </span>
+            </div>
             <button
               type="button"
               onClick={generate}
               disabled={!q.trim() || busy}
-              className="inline-flex items-center gap-1.5 rounded-control bg-brand px-3.5 py-2 text-[13px] font-medium text-white transition-opacity disabled:opacity-40"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-control bg-brand px-3.5 py-2 text-[13px] font-medium text-white transition-opacity disabled:opacity-40"
             >
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              {busy ? "Proposing…" : "Generate SQL"}
+              {busy ? "Working…" : autoRun ? "Ask" : "Generate SQL"}
               {!busy && <ArrowRight className="h-3.5 w-3.5" />}
             </button>
           </div>
@@ -269,5 +316,38 @@ export function AskPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+// Auto-run on/off. An accessible switch (role="switch"); the choice persists in
+// session context. On → asking converts + runs in the background; off → review first.
+function AutoRunSwitch({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label="Auto-run"
+      onClick={() => onChange(!on)}
+      title="Auto-run: convert and fetch results without the review step"
+      className={`inline-flex shrink-0 items-center gap-1.5 text-[12px] font-medium ${
+        on ? "text-brand" : "text-ink-faint"
+      }`}
+    >
+      <span
+        className={`relative h-[18px] w-8 rounded-full transition-colors ${
+          on ? "bg-brand" : "bg-ink-faint/30"
+        }`}
+      >
+        <span
+          className={`absolute top-[3px] h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${
+            on ? "translate-x-[17px]" : "translate-x-[3px]"
+          }`}
+        />
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <Zap className="h-3.5 w-3.5" /> Auto-run
+      </span>
+    </button>
   );
 }
