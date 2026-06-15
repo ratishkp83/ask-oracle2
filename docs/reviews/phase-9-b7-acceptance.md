@@ -30,13 +30,13 @@ Frontend coverage spans the client/Zod (`schemas.test`, `errorMessage.test`), al
 ## 3. The CXO design bar (§5b)
 | # | Bar | Verdict | Evidence |
 |---|-----|---------|----------|
-| B-1 | Premium executive look | **Self-pass** (owner CXO review pending) | warm-paper canvas + deep-petrol brand + bespoke cards/elevation (tokens.css); screenshots in the packet history. |
+| B-1 | Premium executive look | **PASS — owner-approved (2026-06-15)** | warm-paper canvas + deep-petrol brand + bespoke cards/elevation (tokens.css); screenshots in the packet history. |
 | B-2 | Premium typography | **Pass** | Fraunces display + Inter; **tabular numerals** on every figure (`$375.0K`, `250,000`, `125,000` rendered via `.num`). |
 | B-3 | No full-page scroll @ 1366×768 (+1440×900) | **Pass** | all 5 routes `scrollHeight == clientHeight` at 1366×768; Ask + Results re-checked at 1440×900; only the detail grid scrolls. |
 | B-4 | Self-explanatory labels | **Pass w/ one nit** | "Run query/report", "Default schema", "Default connection", "Test" are plain. **Nit:** the Data Dictionary still says **"Introspect"** — charter B-4 suggests plainer wording (e.g. "Read from the database"). Logged as ITM-034. |
 | B-5 | No-brainer first run | **Pass** | app lands on **"What would you like to know?"** (Ask), not admin. |
 | B-6 | Executive hierarchy | **Pass** | live report run renders **summary band → KPI cards → driver chart → detail grid**, with the SQL disclosure + CSV/Excel/Email toolbar. |
-| B-7 | Clarity over novelty | **Self-pass** (owner CXO review pending) | calm, decisive; no experimental UI. |
+| B-7 | Clarity over novelty | **PASS — owner-approved (2026-06-15)** | calm, decisive; no experimental UI. |
 | B-8 | Beta practicality | **Pass** | runs against the real API; KPI/chart bands hide when not applicable; value-pickers + error copy degrade gracefully. |
 
 ## 4. Invariants (§4) — all hold
@@ -54,7 +54,7 @@ Frontend coverage spans the client/Zod (`schemas.test`, `errorMessage.test`), al
 ## 5. §15 success criteria
 - **#1 cold-run Ask→review→run→executive results→export/email without instruction** — ✓ (live).
 - **#2 fits 1366×768, grid the only scroll** — ✓ (verified 1366×768 + 1440×900).
-- **#3 premium typography/surfaces; owner acceptance = approved** — **author self-pass; owner CXO review pending.**
+- **#3 premium typography/surfaces; owner acceptance = approved** — ✅ **owner CXO acceptance signed off 2026-06-15.**
 - **#4 every invariant holds** — ✓ (§4 above; to be confirmed in the exit-gate).
 - **#5 `POST /reports/email` via the same mailer; mocked-SMTP tests; backend green 3.11+3.13** — email
   path unchanged + reused; backend 428 green (CI matrix per ADR-013/016 history).
@@ -69,6 +69,6 @@ Frontend coverage spans the client/Zod (`schemas.test`, `errorMessage.test`), al
 
 ## 7. Verdict
 **Acceptance-ready** against the measurable bar (gates green; B-2/B-3/B-4*/B-5/B-6/B-8 pass; all five
-invariants hold). Remaining to close Phase 9: the **owner's CXO acceptance review** (B-1/B-7 + overall
-look-and-feel) and the **independent exit-gate review** (reviewer ≠ author, ADR-006). *(B-4 has one S4
-wording nit, ITM-034.)*
+invariants hold). **Owner CXO acceptance: SIGNED OFF 2026-06-15** (B-1/B-7 + overall look-and-feel
+approved). Remaining to close Phase 9: the **independent exit-gate review** (reviewer ≠ author, ADR-006),
+now in progress → `reviews/phase-9-b6b7-review-r1.md`. *(B-4 has one S4 wording nit, ITM-034.)*

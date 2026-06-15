@@ -26,9 +26,14 @@
 > (AOR_DEMO): all four screens at 1366×768 (no full-page scroll), report run → Results, friendly DB-error
 > copy, and live FK dropdowns. **HEAD `74037d4`.** All five invariants hold (chokepoint; AI-proposes /
 > approve incl. Auto-run; schema-names-only to the LLM; no client DB secrets; sanitized `error_id` errors).
-> **Remaining:** **B7** — broader frontend acceptance + the owner's CXO review, then the independent
-> exit-gate review (reviewer ≠ author, ADR-006). Open backlog (non-blocking): **ITM-026** (dynamic Ask
-> chips, needs query history), **ITM-031** (frontend ESLint debt).
+> **B7 broader acceptance COMPLETE** ([reviews/phase-9-b7-acceptance.md](reviews/phase-9-b7-acceptance.md)) +
+> post-B7 owner-found fixes (user-readable errors [ADR-024], report value-pickers + run-time FK
+> auto-derivation [ADR-023], off-topic/missing-column/consistent-decline NL guard [ADR-025], Auto-run
+> toggle UX). **Owner CXO acceptance SIGNED OFF 2026-06-15** (criterion #3). ~433 backend / 129 frontend.
+> **Remaining:** the **independent exit-gate review** (reviewer ≠ author, ADR-006) — IN PROGRESS. Open
+> backlog (non-blocking): **ITM-026** (dynamic Ask chips), **ITM-031** (frontend ESLint debt), **ITM-034**
+> (rename "Introspect"). Ops: backend on **8010** (coexists with sentinel on 8000) via the `ask-oracle-api`
+> launch entry; dev servers proxy via `AOR_API_TARGET`.
 > **Phase 8 (email) CLOSED 2026-06-13.** Everything in §0–§7 below is **v1 history on `main`**.
 > ---
 
