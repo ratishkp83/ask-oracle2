@@ -1,6 +1,8 @@
 # D11 — Task Tracker
 
-> **Document:** Task Tracker · **Version:** 1.50 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-14
+> **Document:** Task Tracker · **Version:** 1.52 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-15
+>
+> **Phase 9 (React CXO UI) is tracked in its [charter](charters/phase-9-react-cxo-ui.md) §14 build plan**, not in the task table below. As of 2026-06-15: B5b + **B6 (the four supporting screens) COMPLETE**; B7 (broader acceptance + owner CXO review) remains.
 
 Status: Planned · In Progress · Blocked · Completed.
 
@@ -323,3 +325,4 @@ No app-code or chokepoint changes; 293 tests remain green. Committed `f353ebc` (
 | 1.49 | 2026-06-13 | Delivery | **v2 Phase 8 — Email a Report follow-up action: build B1–B5 complete** (`0abbaca..53a4264` on branch `v2`; local commits only, no push). `core/mailer/` stdlib-SMTP package + UI + smoke; 58 new tests (**365 total**); ADR-017; RISK-20/21; ITM-020/021 deferred. **Live send verified end-to-end against Gmail.** Remaining: P8-6 independent exit-gate review (owner-supplied) + P8-DEMO owner live demo to an intended recipient. |
 | 1.50 | 2026-06-13 | Delivery | **v2 Phase 8 CLOSED** — exit-gate review r1 = **PASS-WITH-FIXES** (no S1/S2; all 8 security invariants hold). Remediated: F1 (size cap default 20→17 MB for base64 headroom under Gmail 25 MB), F2 (`_CONTROL_RE` widened to `[\x00-\x1f\x7f]`), F3 (subject-wording doc), F4 (From control-strip); **+6 → 371 tests**. Remaining: **P8-DEMO** owner live demo (path already proven). |
 | 1.51 | 2026-06-13 | Delivery | **v2 Phase-8 UI demo — DONE** (owner: NL→SQL → review → run → email with attachment, end-to-end). Two demo-surfaced fixes committed: **BUG-007** (NL→SQL emitted `;`/`LIMIT` → ORA-00933; trailing-terminator strip + Oracle-dialect prompt; +7 → 378) and **[ADR-018](adr/ADR-018-per-profile-default-schema.md)** — per-profile **default schema** (`ALTER SESSION SET CURRENT_SCHEMA`) so unqualified names resolve under the ADR-009 grant-based read-only account; injection-safe `validate_schema_name`; chokepoint untouched; verified live vs XE; +23 → **401 tests**. |
+| 1.52 | 2026-06-15 | Delivery | **v2 Phase 9 B6 — supporting screens COMPLETE** (Connections/Dictionary/Reports/Settings), tracked in the [charter](charters/phase-9-react-cxo-ui.md) §14. Owner-requested extras: user-readable errors ([ADR-024](adr/ADR-024-user-readable-error-presentation.md), BUG-009), shared ConfirmDialog, report parameter value-pickers ([ADR-023](adr/ADR-023-report-parameter-value-pickers.md)). **428 backend / 128 frontend / tsc clean / vite build green;** verified live vs XE. Remaining: B7 + independent exit-gate review. |

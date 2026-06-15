@@ -4,6 +4,45 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 9 — B6 supporting screens + Reports value-pickers)
+- **The four supporting screens** replace their `PlaceholderPage` routes — each built as its own packet
+  (build → gates → internal review → HOLD for owner sign-off), bound to the existing `/v1` endpoints:
+  - **Connections** (`web/src/features/connections/*`): list / add / test / delete saved profiles
+    (`GET·POST /profiles`, `DELETE /profiles/{id}`, `POST /profiles/{id}/test`, `POST /test-connection`),
+    with the **default-schema** field ([ADR-018](adr/ADR-018-per-profile-default-schema.md)); the password
+    is posted once to create/test and **never stored client-side** (invariant 4). Closes the **E10** handoff.
+  - **Data dictionary** (`web/src/features/dictionary/*`): master-detail browser of saved schemas
+    (`GET /schemas`, `/schemas/{id}` table/column detail with **PK/FK + references**, `DELETE`) + live
+    **introspect-and-save** (`POST /schemas/introspect`, closes **E11**) + the curated **EBS packs**
+    (`GET /packs`, `/packs/{module}`) with table notes + glossary. Metadata only (invariant 3).
+  - **Reports** (`web/src/features/reports/*`): saved-report **list / run / create / edit / delete** +
+    **start-from-template** (`GET·POST·PUT·DELETE /reports`, `POST /reports/{id}/run` with binds,
+    `GET /templates`); running reuses the executive **Results view** (KPIs/chart/grid + CSV/Excel/email).
+    Rows show the bound connection; the run dialog has a **"View SQL"** peek.
+  - **Settings** (`web/src/features/settings/*`): a **per-session LLM override**
+    ([ADR-004](adr/ADR-004-per-user-llm-config.md)) — provider/model/api_key/base_url held **in memory only**
+    (never localStorage; the key is sent per-request) and **wired into the Ask `/nl2sql` call** — plus
+    honest read-only "managed on the server" status copy (no `/settings` endpoint; admin-configured).
+- **Report parameter value-pickers ([ADR-023](adr/ADR-023-report-parameter-value-pickers.md)):** a parameter
+  can carry a `lookup_sql` (additive backend field on `ReportParam`); the run dialog renders a **live
+  dropdown** by running it through the SELECT-only chokepoint (value + label), falling back to a typed input.
+  The editor offers a **"Suggest…"** that derives the lookup from a foreign key in the active dictionary, and
+  the run dialog **auto-derives** a lookup with zero setup by mapping each `:bind` to its column
+  (`web/src/lib/derive/paramLookup.ts`) and matching the dictionary's FKs. Precedence: explicit → auto → text.
+- **Shared `ConfirmDialog`** (`web/src/components/ConfirmDialog.tsx`): one destructive-confirm component
+  replaces the three near-identical delete dialogs (Connections / Dictionary / Reports).
+
+### Fixed (Phase 9 — user-readable errors, [ADR-024](adr/ADR-024-user-readable-error-presentation.md))
+- A failed report run surfaced the backend's operator-facing **"Database error — see server logs."** to the
+  end user. `_db_error`'s user-facing detail is now friendly + support-oriented (full driver detail still
+  logged server-side; `error_id` unchanged), and a single frontend policy (`friendlyError`/`errorMessage`)
+  passes safe server messages through with the reference id while substituting a generic "contact IT
+  support" message only for network/bodyless failures. Routed every error surface through it.
+
+- **Tests:** **+59 frontend** since B5b → **128 frontend** green (the 4 screens, ConfirmDialog, error
+  policy, value-pickers incl. the SQL-bind parser); backend **428** (+1 lookup round-trip). `tsc` clean;
+  `vite build` green. Verified live vs XE 21c (AOR_DEMO) at 1366×768.
+
 ### Added (Phase 9 — React CXO executive UI; B5b — live Query Builder + intelligent cascading)
 - **B5b-1 — SQL-aware deterministic derivation ([ADR-021](adr/ADR-021-sql-aware-derivation-and-cascade.md)):**
   `web/src/lib/derive/sql.ts` reads the proposed `SELECT` (GROUP BY → dimensions; SUM/AVG/COUNT/MIN/MAX →

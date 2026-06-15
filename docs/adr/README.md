@@ -30,5 +30,7 @@ new ADR that references the old one (don't rewrite history).
 | [ADR-020](ADR-020-result-export-and-email-api.md) | Result export & email over HTTP (post-the-shown-result, no re-query, no LLM) | Accepted |
 | [ADR-021](ADR-021-sql-aware-derivation-and-cascade.md) | SQL-aware deterministic derivation + cascading drill-down (no row data to any LLM) | Accepted |
 | [ADR-022](ADR-022-auto-run-mode.md) | Auto-run mode + the reframing of Invariant 2 (chokepoint never bypassed) | Accepted |
+| [ADR-023](ADR-023-report-parameter-value-pickers.md) | Report parameter value-pickers (lookups, FK suggest, run-time auto-derivation) | Accepted |
+| [ADR-024](ADR-024-user-readable-error-presentation.md) | User-readable error presentation (no developer text to end users; `error_id` kept) | Accepted |
 
 Template: [ADR-template.md](ADR-template.md).

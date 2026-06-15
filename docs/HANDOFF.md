@@ -1,27 +1,34 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 3.7 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-14
+> **Document:** Session Handoff · **Version:** 3.8 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-15
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 > ---
-> ### 🟢 v2 ACTIVE — Phase 9: React CXO UI · B5b-3 live wiring + intelligent cascading (2026-06-14)
+> ### 🟢 v2 ACTIVE — Phase 9: React CXO UI · B6 supporting screens COMPLETE (2026-06-15)
 > **Workspace:** `D:\Ratish\Personal\Project\ask-oracle-reports-main v2` (junction `…\aor-v2`),
 > branch **`v2`** — **local commits only; NO PUSH until the July limit reset.** Charter
 > [phase-9-react-cxo-ui.md](charters/phase-9-react-cxo-ui.md). The bespoke **React** executive surface
 > (`web/`) is built against the existing `/v1` FastAPI; Streamlit stays as the admin tool.
-> **B5b — live Query Builder + intelligent cascading — COMPLETE** as gated increments
-> ([ADR-019](adr/ADR-019-react-cxo-surface.md)/[021](adr/ADR-021-sql-aware-derivation-and-cascade.md)/[022](adr/ADR-022-auto-run-mode.md), [ADR-020](adr/ADR-020-result-export-and-email-api.md)):
-> session + connection/schema pickers (E10/E11); the **Ask state machine** with the editable
-> proposed-SQL **approve-before-run gate** (invariant 2); `nl2sql(schema_id) → review →
-> execute(profile_id) → ResultsView`; multi-level **cascade**; Decision-3 live **Pull-detail** wrap;
-> an owner-requested **Auto-run** toggle (default-off; reframes Inv 2 — chokepoint never bypassed) +
-> Edit-&-rerun; **F3** trend path-to-detail; **BUG-008** fixed (profile `current_schema` applied at
-> execution). **427 backend / 69 frontend / tsc clean / vite build green; OpenAPI 3.1.0 generates.**
-> Verified live end-to-end against XE 21c (AOR_DEMO). **Independent exit-gate review r1 = PASS** (no
-> S1/S2; reviewer ≠ author; all 5 invariants hold; [reviews/phase-9-b5b-review-r1.md](reviews/phase-9-b5b-review-r1.md))
-> → F1/F6 remediated, F2→ITM-032, F3/F4/F5 already ITM-027/030/028/029. HEAD `adb3cf8`.
-> **Remaining (lower priority):** B6 supporting screens (Reports/Dictionary/Connections/Settings are
-> placeholders) + B7 broader acceptance; deferred lint debt (ITM-031) + UX nits (ITM-026..032).
+> **B5b** (live Query Builder + intelligent cascading) closed earlier — exit-gate r1 = PASS; details in
+> [CHANGELOG.md](CHANGELOG.md) + [reviews/phase-9-b5b-review-r1.md](reviews/phase-9-b5b-review-r1.md).
+> **B6 — the four supporting screens — COMPLETE**, built one packet at a time with a review-gate +
+> HOLD-for-sign-off at every checkpoint (owner-driven): **Connections** (list/add/test/delete profiles,
+> default-schema, password posted once — closes the E10 handoff), **Data dictionary** (saved schemas with
+> table/column PK·FK detail + live introspect, and the curated EBS packs — closes E11), **Reports**
+> (saved-report list/run/create/edit/delete + start-from-template, reusing the executive Results view +
+> export/email), and **Settings** (per-session LLM override [ADR-004] wired into Ask + server-managed
+> status copy; no backend change). Cross-cutting: **user-readable errors everywhere**
+> ([ADR-024](adr/ADR-024-user-readable-error-presentation.md) — no developer text to users; `error_id`
+> kept), a shared **ConfirmDialog**, and **report parameter value-pickers**
+> ([ADR-023](adr/ADR-023-report-parameter-value-pickers.md) — explicit lookup + FK "Suggest" + **run-time
+> auto-derivation** from SQL binds × dictionary FKs, all via the SELECT-only chokepoint).
+> **428 backend / 128 frontend / tsc clean / vite build green.** Verified live end-to-end vs XE 21c
+> (AOR_DEMO): all four screens at 1366×768 (no full-page scroll), report run → Results, friendly DB-error
+> copy, and live FK dropdowns. **HEAD `74037d4`.** All five invariants hold (chokepoint; AI-proposes /
+> approve incl. Auto-run; schema-names-only to the LLM; no client DB secrets; sanitized `error_id` errors).
+> **Remaining:** **B7** — broader frontend acceptance + the owner's CXO review, then the independent
+> exit-gate review (reviewer ≠ author, ADR-006). Open backlog (non-blocking): **ITM-026** (dynamic Ask
+> chips, needs query history), **ITM-031** (frontend ESLint debt).
 > **Phase 8 (email) CLOSED 2026-06-13.** Everything in §0–§7 below is **v1 history on `main`**.
 > ---
 

@@ -218,9 +218,19 @@ Email exists only in `src/core/mailer/` (Streamlit-wired). Phase 9 exposes it so
     fixed (profile `current_schema` applied at execution). Verified live vs XE.
   - **Inc 4 ✓** Decision-3 live Pull-detail wrap; **Auto-run** toggle ([ADR-022](../adr/ADR-022-auto-run-mode.md), default-off, owner-requested) + Edit-&-rerun; **F3** trend path-to-detail.
   - Gate at close: **427 backend / 69 frontend / tsc clean / vite build green.**
-- **B6 (supporting screens), B7 (broader acceptance)** — placeholders present; remaining for a later pass.
-- **B8 — in progress:** ADR-019..022 + RISK-22 + CHANGELOG/issue-log done; **independent exit-gate review
-  (reviewer ≠ author) pending** (ADR-006, owner-supplied reviewer).
+- **B6 — supporting screens ✓ (2026-06-15)** — the four `PlaceholderPage` routes are now real screens,
+  each delivered as its own packet with a review-gate + HOLD-for-sign-off:
+  - **Connections ✓** (list/add/test/delete profiles + default-schema; closes E10).
+  - **Data dictionary ✓** (saved schemas with PK/FK detail + live introspect [closes E11] + curated EBS packs).
+  - **Reports ✓** (list/run/create/edit/delete + start-from-template, reusing the Results view + export/email).
+  - **Settings ✓** (per-session LLM override [ADR-004] wired into Ask + server-managed status copy).
+  - Owner-requested extras folded in: **user-readable errors** ([ADR-024](../adr/ADR-024-user-readable-error-presentation.md)),
+    a shared **ConfirmDialog**, and **report parameter value-pickers**
+    ([ADR-023](../adr/ADR-023-report-parameter-value-pickers.md): explicit lookup + FK suggest + run-time auto).
+  - Gate at close: **428 backend / 128 frontend / tsc clean / vite build green;** verified live vs XE at 1366×768.
+- **B7 (broader acceptance + owner CXO review)** — remaining.
+- **B8 — in progress:** ADR-019..024 + RISK-22 + CHANGELOG/issue-log/HANDOFF done; **independent exit-gate
+  review (reviewer ≠ author) pending** (ADR-006, owner-supplied reviewer).
 
 ## 15. Success criteria (phase exit)
 
