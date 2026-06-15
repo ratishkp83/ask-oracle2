@@ -136,7 +136,13 @@ def _db_error(exc: Exception, context: str) -> HTTPException:
     error_id = get_request_id() or new_error_id()
     set_request_id(error_id)
     log_error(exc, context=context, error_id=error_id, event="db_error")
-    return HTTPException(status_code=400, detail="Database error — see server logs.")
+    # User-facing: friendly + support-oriented (no operator phrasing). The full
+    # driver detail is logged server-side and the error_id below is the bridge to
+    # it for support (ITM-015 / readability feedback 2026-06-15).
+    return HTTPException(
+        status_code=400,
+        detail="A database error occurred while running your request. Please try again, or contact IT support with this reference.",
+    )
 
 
 @app.exception_handler(StarletteHTTPException)

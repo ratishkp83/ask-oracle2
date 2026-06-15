@@ -79,11 +79,18 @@ describe("ConnectionsPage", () => {
     expect(screen.getAllByRole("button", { name: /add connection/i }).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("surfaces a sanitized error when the list fails to load", async () => {
-    vi.mocked(getProfiles).mockRejectedValue(new ApiError("The API is unreachable.", 0, "err_7"));
+  it("surfaces a friendly message when the list can't be reached (network)", async () => {
+    vi.mocked(getProfiles).mockRejectedValue(new ApiError("Network error — the API is unreachable.", 0));
     renderPage();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/unreachable.*ref err_7/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/reach the service.*contact it support/i);
+  });
+
+  it("surfaces a sanitized server message with a reference id when the list load errors", async () => {
+    vi.mocked(getProfiles).mockRejectedValue(new ApiError("Service temporarily unavailable.", 503, "err_7"));
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/temporarily unavailable.*ref err_7/i);
   });
 
   it("tests a saved connection and shows the elapsed time", async () => {

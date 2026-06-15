@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowRight, Loader2, Sparkles, Zap } from "lucide-react";
 import { ResultsView } from "@/components/exec/ResultsView";
 import { nl2sql, execute } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/client";
+import { friendlyError } from "@/lib/api/client";
 import type { Confidence, ExecuteResult } from "@/lib/api/schemas";
 import { buildPullDetailSql, PullFilter } from "@/lib/derive/pullDetail";
 import { useSession } from "@/app/session";
@@ -55,9 +55,9 @@ type AskState =
 type PhaseError = (StepError & { phase: "propose" | "run" }) | null;
 
 // Sanitize any failure into the E9 shape (friendly message + error_id), never raw.
+// Shares the app-wide policy: network/5xx → generic "contact IT support".
 function toStepError(e: unknown): StepError {
-  if (e instanceof ApiError) return { message: e.message, errorId: e.errorId };
-  return { message: "Something went wrong. Please try again." };
+  return friendlyError(e);
 }
 
 export function AskPage() {

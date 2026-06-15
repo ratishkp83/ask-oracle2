@@ -13,12 +13,37 @@ export class ApiError extends Error {
   }
 }
 
-// Friendly, sanitized message for any failure (+ a support reference id when the
-// server returned one) — never raw driver text. The single place the UI turns a
-// thrown error into copy (invariant 5).
-export function errorMessage(e: unknown, fallback = "Something went wrong. Please try again."): string {
-  if (e instanceof ApiError) return e.errorId ? `${e.message} (ref ${e.errorId})` : e.message;
-  return fallback;
+// The single place the UI turns a thrown error into user-facing copy (invariant 5).
+// The server already makes every `detail` it returns user-safe (it sanitizes raw
+// driver/infra errors and only exposes intentional, readable messages), so those
+// pass through verbatim with the support reference id. We only substitute a generic
+// "contact IT support" message for the two cases with no usable server message: a
+// network failure (the API is unreachable) and a bodyless HTTP failure where the
+// client synthesised a "Request failed (NNN)" placeholder. Raw driver text never
+// reaches here.
+const DEFAULT_FALLBACK = "Something went wrong. Please try again — if it continues, contact IT support.";
+const SUPPORT_GENERIC = "Something went wrong. Please try again, or contact IT support with this reference.";
+// Client-synthesised placeholders from apiFetch/downloadPost (no server detail).
+const OPAQUE_FALLBACK = /(?:Request|Export) failed \(\d{3}\)\.?$/i;
+
+export function friendlyError(e: unknown, fallback = DEFAULT_FALLBACK): { message: string; errorId?: string } {
+  if (e instanceof ApiError) {
+    if (e.status === 0) {
+      return { message: "Can’t reach the service. Check your connection, or contact IT support if this continues." };
+    }
+    if (!e.message || OPAQUE_FALLBACK.test(e.message)) {
+      return { message: SUPPORT_GENERIC, errorId: e.errorId };
+    }
+    // A safe, user-facing server message (the server sanitises anything sensitive).
+    return { message: e.message, errorId: e.errorId };
+  }
+  return { message: fallback };
+}
+
+// Convenience: a single-line message with the support reference appended.
+export function errorMessage(e: unknown, fallback = DEFAULT_FALLBACK): string {
+  const { message, errorId } = friendlyError(e, fallback);
+  return errorId ? `${message} (ref ${errorId})` : message;
 }
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {

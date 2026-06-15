@@ -98,11 +98,11 @@ describe("ReportsPage", () => {
     expect(screen.getAllByRole("button", { name: /new report/i }).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("surfaces a sanitized error when the list fails to load", async () => {
-    vi.mocked(getReports).mockRejectedValue(new ApiError("The API is unreachable.", 0, "err_3"));
+  it("surfaces a sanitized server message with a reference id when the list fails to load", async () => {
+    vi.mocked(getReports).mockRejectedValue(new ApiError("Service temporarily unavailable.", 503, "err_3"));
     renderPage();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/unreachable.*ref err_3/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/temporarily unavailable.*ref err_3/i);
   });
 
   it("runs a no-parameter report and shows the executive Results view", async () => {

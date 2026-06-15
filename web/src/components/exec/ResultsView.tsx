@@ -1,7 +1,7 @@
 import { ReactNode, useMemo, useState } from "react";
 import { ArrowLeft, ChevronRight, Code2, Download, FileSpreadsheet, Loader2, SearchX } from "lucide-react";
 import { ExecuteResult } from "@/lib/api/schemas";
-import { ApiError } from "@/lib/api/client";
+import { errorMessage } from "@/lib/api/client";
 import { downloadXlsx } from "@/lib/api/endpoints";
 import { classifyColumns, ColumnMeta } from "@/lib/derive/columns";
 import { parseSelectMeta } from "@/lib/derive/sql";
@@ -178,7 +178,7 @@ function ResultScope({
     try {
       await downloadXlsx({ columns, rows, filename });
     } catch (e) {
-      setExportErr(e instanceof ApiError ? e.message : "Excel export failed.");
+      setExportErr(errorMessage(e, "Couldn’t export to Excel. Please try again, or contact IT support."));
     } finally {
       setXlsxBusy(false);
     }

@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { emailReport } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/client";
+import { errorMessage } from "@/lib/api/client";
 
 type Status = { kind: "idle" | "sending" | "ok" | "error"; message?: string };
 
@@ -48,9 +48,10 @@ export function EmailDialog({
       const res = await emailReport({ to, cc, subject, body, attachment_format: format, columns, rows, filename });
       setStatus({ kind: "ok", message: res.message });
     } catch (e) {
-      const msg =
-        e instanceof ApiError ? (e.errorId ? `${e.message} (ref ${e.errorId})` : e.message) : "Send failed.";
-      setStatus({ kind: "error", message: msg });
+      setStatus({
+        kind: "error",
+        message: errorMessage(e, "Couldn’t send the email. Please try again, or contact IT support."),
+      });
     }
   }
 

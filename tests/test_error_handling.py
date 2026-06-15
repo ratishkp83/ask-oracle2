@@ -64,7 +64,7 @@ def test_db_error_is_sanitized_but_logged_server_side(monkeypatch, server_logs):
 
     assert resp.status_code == 400
     body = resp.json()
-    assert body["detail"] == "Database error — see server logs."
+    assert body["detail"] == "A database error occurred while running your request. Please try again, or contact IT support with this reference."
     assert body["error_id"]
     # No infrastructure detail leaks to the client — body OR headers (F-5).
     assert "dbhost.internal" not in resp.text
@@ -89,7 +89,7 @@ def test_introspect_db_error_is_sanitized(monkeypatch, server_logs):
 
     assert resp.status_code == 400
     body = resp.json()
-    assert body["detail"] == "Database error — see server logs."
+    assert body["detail"] == "A database error occurred while running your request. Please try again, or contact IT support with this reference."
     assert body["error_id"]
     assert "dbhost.internal" not in resp.text and "SCOTT" not in resp.text
     header_blob = " ".join(f"{k}:{v}" for k, v in resp.headers.items())
@@ -123,7 +123,7 @@ def test_other_db_endpoints_are_also_sanitized(monkeypatch, path):
         resp = client.post(f"/profiles/{public.id}/test")
 
     assert resp.status_code == 400
-    assert resp.json()["detail"] == "Database error — see server logs."
+    assert resp.json()["detail"] == "A database error occurred while running your request. Please try again, or contact IT support with this reference."
     assert "dbhost.internal" not in resp.text and "SCOTT" not in resp.text
 
 
@@ -163,7 +163,7 @@ def test_safety_rejection_reason_stays_verbatim():
     assert resp.status_code == 400
     body = resp.json()
     # The safety reason is user-actionable and must NOT be replaced by the generic DB message.
-    assert body["detail"] != "Database error — see server logs."
+    assert body["detail"] != "A database error occurred while running your request. Please try again, or contact IT support with this reference."
     assert body["error_id"]
 
 
