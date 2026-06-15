@@ -12,13 +12,20 @@ check. So an off-topic prompt like **"how to swim"** still produced a query agai
 no notion of "this isn't a question about the data." The owner asked that such requests be **ignored with
 a friendly notice** instead of fabricating and running SQL.
 
+A second manifestation surfaced in testing: **"what is count of woman"** against a schema with **no gender
+column** produced a fabricated proxy (`WHERE SUBSTR(EMAIL, LENGTH(EMAIL)-1, 1) = 'a'`) and ran it — a
+data-*shaped* question that needs a column the schema lacks. The guard must also cover this: decline rather
+than invent a proxy / substitute a different metric.
+
 ## Decision
 A **conservative, LLM-signaled refusal**, layered on top of (never replacing) the chokepoint:
 
-1. **Prompt.** `SYSTEM_PROMPT` instructs the model: if the request is **not answerable from the provided
-   schema** (small talk, general knowledge, unrelated topics), respond with a single line
-   `CANNOT_ANSWER: <one short sentence>` and nothing else — *only* when clearly off-topic; if plausibly a
-   data question, attempt the SQL.
+1. **Prompt.** `SYSTEM_PROMPT` instructs the model to use **only tables/columns that exist** and to
+   **never invent a column or fabricate a proxy** for a concept the schema doesn't contain. It responds
+   `CANNOT_ANSWER: <one short sentence>` (and nothing else) in either case: (a) the request isn't about the
+   data at all (small talk / general knowledge), or (b) answering needs information the schema lacks (e.g.
+   counting "women" with no gender column) — decline, don't substitute a different metric. Otherwise, if it
+   maps to existing tables/columns, attempt the SQL.
 2. **Generator** (`src/nl2sql.py`). Detects the sentinel **only when there is no SQL fence** (if the model
    returns both, prefer the SQL — never block a real question) and returns
    `NLSQLResult(sql="", answerable=False, message=<reason>)`.
@@ -40,7 +47,9 @@ A **conservative, LLM-signaled refusal**, layered on top of (never replacing) th
 - Off-topic prompts get a friendly notice instead of a bogus result; fewer wasted live runs.
 - Small, defaulted contract addition (`answerable`, `message`).
 - Depends on model compliance with the sentinel instruction; verified live (Groq `llama-3.3-70b`) —
-  "how to swim" → declined, "headcount by department" → SQL. The chokepoint is the backstop regardless.
+  "how to swim" → declined, **"count of women" → declined** ("no column … to determine gender"; no proxy),
+  and "count of employees" / "headcount by department" / "average salary" → SQL. The chokepoint is the
+  backstop regardless.
 
 ## Alternatives considered
 - **Heuristic pre-filter (no LLM):** rejected — can't judge relevance to a schema without the model.

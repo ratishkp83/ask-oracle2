@@ -10,8 +10,12 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   when a request isn't answerable from the schema; the generator returns `NLSQLResult(answerable=False,
   message=…)` (only when no SQL fence is present — prefer SQL if both), `POST /nl2sql` returns
   `answerable`+`message` (additive, defaulted), and the Ask page shows a calm notice while **proposing/
-  running nothing — including under Auto-run**. The SELECT-only chokepoint is unchanged. Verified live
-  (Groq `llama-3.3-70b`): "how to swim" declined, "headcount by department" still answered. (BUG-010.)
+  running nothing — including under Auto-run**. The SELECT-only chokepoint is unchanged. The guard also
+  covers **data-shaped questions that need a column the schema lacks** — e.g. "count of women" with no
+  gender column previously produced a fabricated proxy (`SUBSTR(EMAIL …) = 'a'`); the prompt now forbids
+  inventing columns / proxies and declines instead. Verified live (Groq `llama-3.3-70b`): "how to swim" and
+  "count of women" declined; "count of employees" / "headcount by department" / "average salary" answered.
+  (BUG-010.)
 
 ### Added (Phase 9 — B6 supporting screens + Reports value-pickers)
 - **The four supporting screens** replace their `PlaceholderPage` routes — each built as its own packet

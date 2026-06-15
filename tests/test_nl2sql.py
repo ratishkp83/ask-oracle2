@@ -64,6 +64,15 @@ def test_off_topic_returns_not_answerable(monkeypatch):
     assert result.confidence is None
 
 
+def test_system_prompt_forbids_proxy_for_missing_columns():
+    # The guard must also cover data-shaped questions needing a column the schema
+    # lacks (e.g. 'women' with no gender column) — decline, never fabricate a proxy.
+    p = nl2sql.SYSTEM_PROMPT.lower()
+    assert nl2sql.CANNOT_ANSWER_PREFIX.lower() in p
+    assert "proxy" in p
+    assert "gender" in p  # the canonical missing-attribute example
+
+
 def test_off_topic_sentinel_ignored_when_sql_present(monkeypatch):
     # Conservative: if the model returns BOTH a SQL fence and the sentinel, prefer
     # the SQL so a real question is never blocked.
