@@ -4,6 +4,7 @@ import { PlaceholderPage } from "./app/PlaceholderPage";
 import { AskPage } from "./features/ask/AskPage";
 import { ConnectionsPage } from "./features/connections/ConnectionsPage";
 import { DataDictionaryPage } from "./features/dictionary/DataDictionaryPage";
+import { ReportsPage } from "./features/reports/ReportsPage";
 
 export const router = createBrowserRouter([
   {
@@ -12,10 +13,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/ask" replace /> },
       { path: "ask", element: <AskPage /> },
-      {
-        path: "reports",
-        element: <PlaceholderPage title="Reports" subtitle="Saved reports — run, refine, and re-share." />,
-      },
+      { path: "reports", element: <ReportsPage /> },
       { path: "dictionary", element: <DataDictionaryPage /> },
       { path: "connections", element: <ConnectionsPage /> },
       {

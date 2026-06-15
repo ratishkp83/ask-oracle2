@@ -72,6 +72,9 @@ export function get<T>(path: string) {
 export function post<T>(path: string, body?: unknown) {
   return apiFetch<T>(path, body === undefined ? { method: "POST" } : { method: "POST", body: JSON.stringify(body) });
 }
+export function put<T>(path: string, body: unknown) {
+  return apiFetch<T>(path, { method: "PUT", body: JSON.stringify(body) });
+}
 export function del<T = void>(path: string) {
   return apiFetch<T>(path, { method: "DELETE" });
 }

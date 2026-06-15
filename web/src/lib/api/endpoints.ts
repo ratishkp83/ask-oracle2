@@ -1,4 +1,4 @@
-import { del, downloadPost, get, post } from "./client";
+import { del, downloadPost, get, post, put } from "./client";
 import {
   ConnectionTestSchema,
   EbsPackListSchema,
@@ -10,8 +10,12 @@ import {
   Nl2SqlSchema,
   ProfileListSchema,
   ProfilePublicSchema,
+  ReportListSchema,
+  ReportSchema,
   SchemaRecordSchema,
   SchemaSummaryListSchema,
+  TemplateListSchema,
+  type ReportParam,
 } from "./schemas";
 
 export async function getHealth() {
@@ -125,6 +129,47 @@ export async function execute(body: {
   binds?: Record<string, unknown>; // Phase 4 server contract; used by Inc 4 Pull-detail.
 }) {
   return ExecuteSchema.parse(await post("/execute", body));
+}
+
+// Saved reports (CRUD). A report is a saved SELECT/CTE + optional typed params.
+export type ReportCreateBody = {
+  name: string;
+  description?: string;
+  sql?: string;
+  parameters?: ReportParam[];
+  default_profile_id?: string | null;
+  template_id?: string | null;
+};
+
+export async function getReports() {
+  return ReportListSchema.parse(await get("/reports"));
+}
+
+export async function createReport(body: ReportCreateBody) {
+  return ReportSchema.parse(await post("/reports", body));
+}
+
+export async function updateReport(id: string, body: ReportCreateBody) {
+  return ReportSchema.parse(await put(`/reports/${encodeURIComponent(id)}`, body));
+}
+
+export async function deleteReport(id: string) {
+  await del(`/reports/${encodeURIComponent(id)}`);
+}
+
+// Run a saved report through the same SELECT-only chokepoint as /execute, with
+// typed binds coerced server-side from the report's parameters (ADR-007). The
+// connection is by id (session override or the report's bound profile).
+export async function runReport(
+  id: string,
+  body: { profile_id?: string; binds?: Record<string, unknown>; max_rows?: number },
+) {
+  return ExecuteSchema.parse(await post(`/reports/${encodeURIComponent(id)}/run`, body));
+}
+
+// Curated EBS report templates (read-only) — starting points for a new report.
+export async function getTemplates() {
+  return TemplateListSchema.parse(await get("/templates"));
 }
 
 // Download the shown result as a server-built Excel file (no re-query, no LLM).

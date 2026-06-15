@@ -130,6 +130,49 @@ export type EbsPack = z.infer<typeof EbsPackSchema>;
 
 export const EbsPackListSchema = z.array(EbsPackSchema);
 
+// Saved reports — mirrors Report/ReportParam (src/core/reports.py). A report is a
+// saved SELECT/CTE plus optional typed parameters bound as :name at run time
+// (ADR-007); the SQL still only runs through the server chokepoint (invariant 1).
+export const ParamTypeSchema = z.enum(["string", "number", "date", "list"]).catch("string");
+
+export const ReportParamSchema = z.object({
+  name: z.string(),
+  label: z.string().default(""),
+  type: ParamTypeSchema,
+  required: z.boolean().default(true),
+  default: z.any().optional(),
+});
+export type ReportParam = z.infer<typeof ReportParamSchema>;
+
+export const ReportSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().default(""),
+  sql: z.string().default(""),
+  parameters: z.array(ReportParamSchema).default([]),
+  default_profile_id: z.string().nullable().optional(),
+  template_id: z.string().nullable().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type Report = z.infer<typeof ReportSchema>;
+
+export const ReportListSchema = z.array(ReportSchema);
+
+// Curated EBS report templates (read-only starting points). Carry full SQL +
+// parameters so a template flows straight into the report editor.
+export const TemplateSchema = z.object({
+  id: z.string(),
+  module: z.string(),
+  name: z.string(),
+  description: z.string().default(""),
+  sql: z.string().default(""),
+  parameters: z.array(ReportParamSchema).default([]),
+});
+export type Template = z.infer<typeof TemplateSchema>;
+
+export const TemplateListSchema = z.array(TemplateSchema);
+
 export const ConfidenceSchema = z
   .object({ level: z.string(), reasons: z.array(z.string()).default([]) })
   .nullable();
