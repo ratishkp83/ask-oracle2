@@ -115,6 +115,8 @@ export async function nl2sql(body: {
   natural_language: string;
   schema_id?: string;
   ebs_modules?: string[];
+  // Per-session model override (ADR-004); omitted → server's configured model.
+  llm?: { provider?: string; model?: string; api_key?: string; base_url?: string };
 }) {
   return Nl2SqlSchema.parse(await post("/nl2sql", body));
 }

@@ -12,6 +12,17 @@ import {
 // server-side (invariant 4: the React app holds no DB passwords). The selection
 // is persisted to localStorage so a reload keeps the chosen connection/schema.
 
+// Per-session LLM override (ADR-004): sent with /nl2sql to override the server's
+// configured provider/model for this user's requests only. Held in memory only —
+// never written to localStorage — so the optional api_key never lands in browser
+// storage (it's also used transiently and never persisted server-side).
+export type LlmOverride = {
+  provider?: string;
+  model?: string;
+  api_key?: string;
+  base_url?: string;
+};
+
 type SessionState = {
   profileId: string | null;
   schemaId: string | null;
@@ -19,9 +30,12 @@ type SessionState = {
   // the background (skips the manual approve step). The SELECT-only chokepoint
   // (invariant 1) still applies; the SQL stays reviewable/editable/re-runnable.
   autoRun: boolean;
+  // Per-session model override (null = use the server's configured model).
+  llm: LlmOverride | null;
   setProfileId: (id: string | null) => void;
   setSchemaId: (id: string | null) => void;
   setAutoRun: (on: boolean) => void;
+  setLlm: (llm: LlmOverride | null) => void;
 };
 
 const SessionContext = createContext<SessionState | null>(null);
@@ -52,6 +66,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [profileId, setProfileIdState] = useState<string | null>(() => readStored(PROFILE_KEY));
   const [schemaId, setSchemaIdState] = useState<string | null>(() => readStored(SCHEMA_KEY));
   const [autoRun, setAutoRunState] = useState<boolean>(() => readStored(AUTORUN_KEY) === "1");
+  // In-memory only (never persisted): keeps the optional api_key out of storage.
+  const [llm, setLlmState] = useState<LlmOverride | null>(null);
 
   const setProfileId = useCallback((id: string | null) => {
     setProfileIdState(id);
@@ -68,9 +84,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     writeStored(AUTORUN_KEY, on ? "1" : null);
   }, []);
 
+  const setLlm = useCallback((next: LlmOverride | null) => {
+    // Drop empty fields; collapse an all-empty override to null (= server default).
+    if (next) {
+      const cleaned: LlmOverride = {};
+      if (next.provider) cleaned.provider = next.provider;
+      if (next.model) cleaned.model = next.model;
+      if (next.api_key) cleaned.api_key = next.api_key;
+      if (next.base_url) cleaned.base_url = next.base_url;
+      setLlmState(Object.keys(cleaned).length ? cleaned : null);
+    } else {
+      setLlmState(null);
+    }
+  }, []);
+
   const value = useMemo<SessionState>(
-    () => ({ profileId, schemaId, autoRun, setProfileId, setSchemaId, setAutoRun }),
-    [profileId, schemaId, autoRun, setProfileId, setSchemaId, setAutoRun],
+    () => ({ profileId, schemaId, autoRun, llm, setProfileId, setSchemaId, setAutoRun, setLlm }),
+    [profileId, schemaId, autoRun, llm, setProfileId, setSchemaId, setAutoRun, setLlm],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

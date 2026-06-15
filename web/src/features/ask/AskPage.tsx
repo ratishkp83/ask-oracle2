@@ -61,7 +61,7 @@ function toStepError(e: unknown): StepError {
 }
 
 export function AskPage() {
-  const { profileId, schemaId, autoRun, setAutoRun } = useSession();
+  const { profileId, schemaId, autoRun, llm, setAutoRun } = useSession();
   const [q, setQ] = useState("");
   const [state, setState] = useState<AskState>({ kind: "idle" });
   const [error, setError] = useState<PhaseError>(null);
@@ -111,7 +111,11 @@ export function AskPage() {
     const auto = autoRun && !!profileId;
     setState(auto ? { kind: "working", question } : { kind: "proposing", question });
     try {
-      const proposal = await nl2sql({ natural_language: question, schema_id: schemaId ?? undefined });
+      const proposal = await nl2sql({
+        natural_language: question,
+        schema_id: schemaId ?? undefined,
+        llm: llm ?? undefined,
+      });
       const data: ReviewData = {
         question,
         eyebrow: "Review proposed SQL",

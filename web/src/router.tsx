@@ -5,6 +5,7 @@ import { AskPage } from "./features/ask/AskPage";
 import { ConnectionsPage } from "./features/connections/ConnectionsPage";
 import { DataDictionaryPage } from "./features/dictionary/DataDictionaryPage";
 import { ReportsPage } from "./features/reports/ReportsPage";
+import { SettingsPage } from "./features/settings/SettingsPage";
 
 export const router = createBrowserRouter([
   {
@@ -16,10 +17,7 @@ export const router = createBrowserRouter([
       { path: "reports", element: <ReportsPage /> },
       { path: "dictionary", element: <DataDictionaryPage /> },
       { path: "connections", element: <ConnectionsPage /> },
-      {
-        path: "settings",
-        element: <PlaceholderPage title="Settings" subtitle="Model and email configuration." />,
-      },
+      { path: "settings", element: <SettingsPage /> },
       { path: "*", element: <PlaceholderPage title="Not found" subtitle="That screen doesn't exist yet." /> },
     ],
   },
