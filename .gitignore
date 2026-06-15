@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+# TypeScript incremental build artifacts (the `tsc --build` typecheck gate emits these)
+*.tsbuildinfo
 # Vite's *.local pattern above would catch our Dockerfiles — un-ignore them explicitly.
 !Dockerfile.local
 !Dockerfile.*.local

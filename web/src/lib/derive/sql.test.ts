@@ -95,7 +95,8 @@ describe("parseSelectMeta", () => {
   it("returns null for empty or non-SELECT input", () => {
     expect(parseSelectMeta("")).toBeNull();
     expect(parseSelectMeta("   ")).toBeNull();
-    // @ts-expect-error guard against non-string at runtime
-    expect(parseSelectMeta(null)).toBeNull();
+    // Guard against a non-string at runtime (null is accepted by the loose null
+    // settings, so no @ts-expect-error here — the call must still return null).
+    expect(parseSelectMeta(null as unknown as string)).toBeNull();
   });
 });

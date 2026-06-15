@@ -14,7 +14,10 @@
 > invariants hold). **OUT/deferred:** conversational Ask, semantic layer, scheduling, LLM-phrased insight,
 > PDF/Excel, query history. Build plan B1 charter ✓ → **B2 design + ADR-026/027 = NEXT** (second sign-off
 > before feature code) → B3 insight engine → B4 fan-out + bundle + download → B5 email + "Save as cascading
-> report" → B6 docs + exit-gate. **Local commits only; NO PUSH until the July reset.**
+> report" → B6 docs + exit-gate. **Typecheck gate = `tsc --build`** (BUG-013: the previously-used
+> `tsc --noEmit -p tsconfig.json` is a **no-op** — root `tsconfig.json` has `files:[]` + project
+> references, so without `--build` it checks **zero** files; verified by a deliberate type error passing
+> it while `tsc --build` caught it). `*.tsbuildinfo` is git-ignored. **Local commits only; NO PUSH until the July reset.**
 >
 > ### Phase 9: React CXO UI · B6 supporting screens COMPLETE (2026-06-15)
 > **Workspace:** `D:\Ratish\Personal\Project\ask-oracle-reports-main v2` (junction `…\aor-v2`),

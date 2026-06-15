@@ -4,6 +4,30 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added (Phase 10 — cascading report deliverables + local insight; B3–B4, in progress)
+- **B3 — local insight narration ([ADR-027](adr/ADR-027-local-insight-narration.md)):**
+  `web/src/lib/derive/insight.ts` `deriveInsights()` emits a ranked, threshold-gated set of
+  deterministic facts (total / top+concentration / date-trend / spread / coverage) from the
+  already-fetched result — **no LLM, no row egress**. Rendered as a brand-tinted **Insight band**
+  (`web/src/components/exec/InsightBand.tsx`) above the KPI cards, recomputed per drill level.
+- **B4 — cascading report deliverable ([ADR-026](adr/ADR-026-cascading-report-deliverable.md)):**
+  `web/src/lib/cascade/{spec,bundle,renderHtml}.ts` — client-orchestrated fan-out that descends the
+  auto-derived dimension order (top-N per level + a local "Others" rollup, bounded depth/queries),
+  each child a `buildPullDetailSql` derivation of the **approved** parent through the `/execute`
+  chokepoint (live mode) or a local filter (offline/demo). Renders a **self-contained, script-free,
+  inline-SVG HTML bundle** (every value HTML-escaped) downloaded client-side via `downloadHtml`. A
+  top-level **"Report"** toolbar action builds + downloads it. Tests: fan-out, renderer, full-pipeline,
+  and a component download regression. *(Live fresh-fetch fan-out + Save/run/email land in B5.)*
+
+### Fixed (BUG-013 — the `tsc` typecheck gate was a no-op)
+- The frontend typecheck gate `tsc --noEmit -p tsconfig.json` checked **zero files** (root
+  `tsconfig.json` has `"files": []` + project `references`, so without `--build` nothing is compiled) —
+  proven by a deliberate `const x: number = "string"` passing it while `tsc --build` caught it. It had
+  let a missing required JSX prop reach runtime (the B4 cascade download threw). **Adopted `tsc --build`
+  as the real gate** (owner-approved), **fixed the pre-existing** `web/src/lib/derive/sql.test.ts:98`
+  (unused `@ts-expect-error`), added `*.tsbuildinfo` to `.gitignore`, and updated the gate command in
+  HANDOFF + the Phase-10 charter. `tsc --build` now exits 0.
+
 ### Changed (ITM-034 — plain-language Data dictionary wording)
 - The Data dictionary's developer term **"Introspect"** is reworded to the owner-approved **"Read from
   database"** across every user-facing surface: the trigger button, dialog title ("Read a schema from the

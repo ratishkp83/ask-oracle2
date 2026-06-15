@@ -103,7 +103,9 @@ Every SQL hop is the existing chokepoint; every child is a deterministic derivat
 2. Cascade dimension order **auto-derived (GROUP BY) with optional override**; **bounded** (depth + top-N children + "Others" + per-child row caps + total-query cap); **every child query runs through the SELECT-only chokepoint** as a deterministic derivation of the **approved** parent (no new AI proposal).
 3. **Local insight narration** appears on the live results view (D-H) and in the bundle, computed **100% locally** (no rows/aggregates to any LLM); conservative + explainable.
 4. **"Save as cascading report"** persists the cascade spec on the Report model (**additive, back-compatible**); a saved cascading report re-runs to a fresh bundle.
-5. **All five invariants hold**; gates green (**pytest · vitest · tsc · vite build**); ADR-026/027 + governed docs current; **independent exit-gate review = PASS** (reviewer ≠ author).
+5. **All five invariants hold**; gates green (**pytest · vitest · `tsc --build` · vite build** — note: the
+   bare `tsc --noEmit -p tsconfig.json` is a no-op, BUG-013); ADR-026/027 + governed docs current;
+   **independent exit-gate review = PASS** (reviewer ≠ author).
 6. Verified **live vs XE `AOR_DEMO`** end-to-end (generate → download → email a real bundle, recipient-confirmed); **no scheduling, no LLM-phrased insight, no PDF/Excel, no semantic layer** (all OUT/deferred).
 
 ## Revision history
