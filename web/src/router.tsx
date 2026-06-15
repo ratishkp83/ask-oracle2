@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppShell } from "./app/AppShell";
 import { PlaceholderPage } from "./app/PlaceholderPage";
 import { AskPage } from "./features/ask/AskPage";
+import { ConnectionsPage } from "./features/connections/ConnectionsPage";
 
 export const router = createBrowserRouter([
   {
@@ -23,10 +24,7 @@ export const router = createBrowserRouter([
           />
         ),
       },
-      {
-        path: "connections",
-        element: <PlaceholderPage title="Connections" subtitle="Pick and test the database connection." />,
-      },
+      { path: "connections", element: <ConnectionsPage /> },
       {
         path: "settings",
         element: <PlaceholderPage title="Settings" subtitle="Model and email configuration." />,

@@ -59,8 +59,13 @@ function pickDetail(data: any): string | undefined {
 export function get<T>(path: string) {
   return apiFetch<T>(path);
 }
-export function post<T>(path: string, body: unknown) {
-  return apiFetch<T>(path, { method: "POST", body: JSON.stringify(body) });
+// `body` is optional: some POSTs (e.g. POST /profiles/{id}/test) take no payload,
+// in which case we send no body so no Content-Type header is set.
+export function post<T>(path: string, body?: unknown) {
+  return apiFetch<T>(path, body === undefined ? { method: "POST" } : { method: "POST", body: JSON.stringify(body) });
+}
+export function del<T = void>(path: string) {
+  return apiFetch<T>(path, { method: "DELETE" });
 }
 
 // POST that returns a file and triggers a browser download. Used for server-side

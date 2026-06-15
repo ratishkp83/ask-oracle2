@@ -1,10 +1,12 @@
-import { downloadPost, get, post } from "./client";
+import { del, downloadPost, get, post } from "./client";
 import {
+  ConnectionTestSchema,
   EmailResultSchema,
   ExecuteSchema,
   HealthSchema,
   Nl2SqlSchema,
   ProfileListSchema,
+  ProfilePublicSchema,
   SchemaSummaryListSchema,
 } from "./schemas";
 
@@ -16,6 +18,50 @@ export async function getHealth() {
 // the UI picks a connection by id and the server resolves the secret.
 export async function getProfiles() {
   return ProfileListSchema.parse(await get("/profiles"));
+}
+
+// Create a saved connection. The password is carried here exactly once, to be
+// encrypted at rest server-side; it is never persisted in the browser (invariant
+// 4). `current_schema` is the optional default schema (ADR-018). Either
+// service_name or sid is required (enforced server-side; the form guides it).
+export type ProfileCreateBody = {
+  name: string;
+  host: string;
+  port: number;
+  service_name?: string | null;
+  sid?: string | null;
+  current_schema?: string | null;
+  username: string;
+  password: string;
+  environment: "DEV" | "TEST" | "PROD";
+};
+
+export async function createProfile(body: ProfileCreateBody) {
+  return ProfilePublicSchema.parse(await post("/profiles", body));
+}
+
+export async function deleteProfile(id: string) {
+  await del(`/profiles/${encodeURIComponent(id)}`);
+}
+
+// Test a saved profile by id (server resolves the secret). No request body.
+export async function testProfile(id: string) {
+  return ConnectionTestSchema.parse(await post(`/profiles/${encodeURIComponent(id)}/test`));
+}
+
+// Test an unsaved connection before saving it — the password is sent once and
+// not persisted anywhere (the profile isn't created).
+export type InlineConnection = {
+  host: string;
+  port: number;
+  service_name?: string | null;
+  sid?: string | null;
+  username: string;
+  password: string;
+};
+
+export async function testConnection(conn: InlineConnection) {
+  return ConnectionTestSchema.parse(await post("/test-connection", conn));
 }
 
 // Saved schema snapshots (data dictionaries). Names/metadata only — used as

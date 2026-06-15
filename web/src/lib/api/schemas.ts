@@ -28,6 +28,15 @@ export type ProfilePublic = z.infer<typeof ProfilePublicSchema>;
 
 export const ProfileListSchema = z.array(ProfilePublicSchema);
 
+// Result of a connection test (POST /profiles/{id}/test and POST /test-connection).
+// The latter also returns a probe column/row; the UI only needs ok + timing, so
+// any extra keys are ignored. A failed test surfaces as an ApiError, not ok:false.
+export const ConnectionTestSchema = z.object({
+  ok: z.boolean(),
+  elapsed_seconds: z.number(),
+});
+export type ConnectionTest = z.infer<typeof ConnectionTestSchema>;
+
 // Saved schema snapshots — mirrors SchemaSummary (src/core/schema_store.py).
 // Names/metadata only; no row data ever (invariant 3).
 export const SchemaSourceSchema = z.enum(["upload", "introspection"]).catch("upload");
