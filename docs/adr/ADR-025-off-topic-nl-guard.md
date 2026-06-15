@@ -29,6 +29,13 @@ A **conservative, LLM-signaled refusal**, layered on top of (never replacing) th
 2. **Generator** (`src/nl2sql.py`). Detects the sentinel **only when there is no SQL fence** (if the model
    returns both, prefer the SQL — never block a real question) and returns
    `NLSQLResult(sql="", answerable=False, message=<reason>)`.
+   **Consistency (BUG-012):** the model declines in many shapes — the sentinel, plain prose, or an
+   unparseable / non-SELECT reply. **All** of them now resolve to the *same* graceful
+   `answerable=False` notice. The generator no longer raises the technical
+   *"Generated SQL is not a SELECT/CTE. Aborting for safety."* to the user; any non-safe-SELECT generation
+   is logged server-side (`ask_oracle` logger) and returned as a not-answerable result (prose carries its
+   reason; a SQL-shaped non-SELECT gets a generic message). The **`/execute` chokepoint stays the hard
+   safety boundary** — nothing non-SELECT can ever run regardless.
 3. **Contract.** `NLSQLResult` + `POST /nl2sql` gain `answerable: bool` (default **True**) and
    `message: str|null` — additive, so older clients/responses keep working.
 4. **UI.** When `answerable === false`, the Ask page shows a calm `role="status"` notice ("I can only

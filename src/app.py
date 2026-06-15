@@ -721,12 +721,19 @@ def draw_query_builder(conn_cfg: Optional[OracleConnectionConfig], schema: Optio
                             llm=st.session_state.llm_config,
                             ebs_modules=ebs_mods or None,
                         )
-                        st.session_state.generated_sql = result.sql
-                        st.session_state.nl_explanation = result.explanation
-                        st.session_state.nl_confidence = (
-                            {"level": result.confidence.level, "reasons": result.confidence.reasons}
-                            if result.confidence else None
-                        )
+                        if not result.answerable:
+                            # Off-topic / unanswerable from the schema — no SQL proposed.
+                            st.session_state.generated_sql = ""
+                            st.session_state.nl_explanation = None
+                            st.session_state.nl_confidence = None
+                            st.info(result.message or "I can only answer questions about the available data.")
+                        else:
+                            st.session_state.generated_sql = result.sql
+                            st.session_state.nl_explanation = result.explanation
+                            st.session_state.nl_confidence = (
+                                {"level": result.confidence.level, "reasons": result.confidence.reasons}
+                                if result.confidence else None
+                            )
                     except Exception as e:  # noqa: BLE001
                         st.error(f"Generation failed: {e}")
 

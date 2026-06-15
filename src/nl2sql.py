@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import List, Optional, Tuple
+
+logger = logging.getLogger("ask_oracle")
 
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -90,6 +93,28 @@ def _complete_with_retry(provider: LLMProvider, system: str, user: str, model: O
     return provider.complete(system, user, model)
 
 
+_DEFAULT_DECLINE_MSG = "I can only answer questions about the available data."
+
+# A model reply is treated as an attempted SQL statement (so a non-SELECT aborts
+# for safety) when it begins with a SQL keyword. Anything else with no code fence
+# is prose — the model declined/answered in words — and is surfaced as a graceful
+# "can't answer" notice instead of the technical safety error (consistency).
+_SQL_START_RE = re.compile(
+    r"(?is)^\s*(?:with|select|insert|update|delete|merge|drop|alter|create|truncate|grant|revoke|begin|declare)\b"
+)
+
+
+def _looks_like_sql(text: str) -> bool:
+    return bool(_SQL_START_RE.match(text or ""))
+
+
+def _decline_message(text: str) -> str:
+    """A short, user-facing reason from the model's prose/sentinel; generic if empty."""
+    msg = re.sub(r"\s+", " ", (text or "").strip())
+    msg = re.sub(r"(?i)^cannot_answer\s*:?\s*", "", msg).strip()
+    return msg[:240] if msg else _DEFAULT_DECLINE_MSG
+
+
 def generate_sql_from_nl(
     natural_language: str,
     schema: Schema,
@@ -154,11 +179,20 @@ def generate_sql_from_nl(
     has_fence = re.search(r"```(?:sql)?\s", raw, re.IGNORECASE) is not None
     refusal = re.search(r"(?im)^\s*CANNOT_ANSWER\s*:\s*(.*)$", raw)
     if refusal and not has_fence:
-        reason = refusal.group(1).strip() or "I can only answer questions about your database."
-        return NLSQLResult(sql="", answerable=False, message=reason)
+        return NLSQLResult(sql="", answerable=False, message=_decline_message(refusal.group(1)))
 
     sql, explanation = _parse_sql_and_explanation(raw)
     if not sql_is_safe_select(sql):
-        raise ValueError("Generated SQL is not a SELECT/CTE. Aborting for safety.")
+        # The model didn't return a usable read-only query — whether an explicit
+        # decline (sentinel/prose), or non-SELECT / unparseable output. Always surface
+        # the SAME graceful not-answerable notice (the owner's consistency
+        # requirement) rather than a technical "not a SELECT" error: nothing is
+        # proposed or run, and the SELECT-only chokepoint at /execute stays the hard
+        # safety boundary regardless. The rejected output is logged server-side so the
+        # signal isn't lost. Prose carries a useful reason; a SQL-shaped non-SELECT
+        # (e.g. the model attempted DML) gets a generic message.
+        logger.warning("nl2sql: no usable SELECT produced; declining (preview=%r)", (sql or "")[:120])
+        message = _decline_message("" if _looks_like_sql(sql) else sql)
+        return NLSQLResult(sql="", answerable=False, message=message)
 
     return NLSQLResult(sql=sql, explanation=explanation, confidence=assess_confidence(sql, schema))

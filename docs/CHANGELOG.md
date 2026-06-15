@@ -16,6 +16,12 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   inventing columns / proxies and declines instead. Verified live (Groq `llama-3.3-70b`): "how to swim" and
   "count of women" declined; "count of employees" / "headcount by department" / "average salary" answered.
   (BUG-010.)
+  - **Consistency (BUG-012):** the model declines in different shapes (sentinel, plain prose, or an
+    unparseable/non-SELECT reply); under Auto-run the same prompt sometimes surfaced the technical
+    *"Generated SQL is not a SELECT/CTE. Aborting for safety."* error instead of the calm notice. The
+    generator now resolves **all** non-usable generations to the same `answerable=False` notice (logged
+    server-side), and **never** raises that technical error to the user. The `/execute` SELECT-only
+    chokepoint remains the hard safety boundary. Verified live: "count of women" declined cleanly 6/6.
 
 ### Added (Phase 9 — B6 supporting screens + Reports value-pickers)
 - **The four supporting screens** replace their `PlaceholderPage` routes — each built as its own packet
