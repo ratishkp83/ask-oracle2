@@ -4,7 +4,19 @@
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 > ---
-> ### 🟢 v2 ACTIVE — Phase 9: React CXO UI · B6 supporting screens COMPLETE (2026-06-15)
+> ### 🟢 v2 ACTIVE — Phase 10 Discovery OPENED (charter APPROVED 2026-06-15) · Phase 9 CLOSED
+> **Phase 10 — Cascading Report Deliverables + Local Insight Narration** ([charter](charters/phase-10-cascading-reports.md),
+> 🟢 approved). Advances the end goal "fully intelligent + cascading reporting": a **styled single-file HTML
+> bundle** (parent summary → narrated KPIs → nested per-value child sections) you can **download or email**,
+> plus **local, deterministic insight narration** (no LLM, no row egress). Decisions D-A…D-H resolved. Architecture:
+> **client-orchestrated fan-out reusing the TS `derive/*` layer**; each cascade child is a `pullDetail`-style
+> deterministic derivation of the **approved** parent through the existing `/execute` chokepoint (all five
+> invariants hold). **OUT/deferred:** conversational Ask, semantic layer, scheduling, LLM-phrased insight,
+> PDF/Excel, query history. Build plan B1 charter ✓ → **B2 design + ADR-026/027 = NEXT** (second sign-off
+> before feature code) → B3 insight engine → B4 fan-out + bundle + download → B5 email + "Save as cascading
+> report" → B6 docs + exit-gate. **Local commits only; NO PUSH until the July reset.**
+>
+> ### Phase 9: React CXO UI · B6 supporting screens COMPLETE (2026-06-15)
 > **Workspace:** `D:\Ratish\Personal\Project\ask-oracle-reports-main v2` (junction `…\aor-v2`),
 > branch **`v2`** — **local commits only; NO PUSH until the July limit reset.** Charter
 > [phase-9-react-cxo-ui.md](charters/phase-9-react-cxo-ui.md). The bespoke **React** executive surface
