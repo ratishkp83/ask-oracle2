@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.21 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-15 (**PHASE 9 CLOSED** — B6+B7 + post-B7 fixes BUG-009..012 [ADR-024/025] FIXED; owner CXO sign-off + independent exit-gate r1 = PASS-WITH-FIXES, 5 S4 findings remediated/accepted [`reviews/phase-9-b6b7-review-r1.md`]; open backlog = **ITM-026** + **ITM-031** + **ITM-034**)
+> **Document:** Issue Log · **Version:** 1.22 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-15 (**ITM-034 CLOSED** — "Introspect" → owner-approved "Read from database" across the Data dictionary, display-only; gates 433/130; open backlog now = **ITM-026** + **ITM-031**. Prior: PHASE 9 CLOSED — B6+B7 + post-B7 fixes BUG-009..012 [ADR-024/025]; owner CXO sign-off + independent exit-gate r1 = PASS-WITH-FIXES [`reviews/phase-9-b6b7-review-r1.md`])
 
 ## Bug workflow (mandatory)
 
@@ -180,11 +180,18 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   edit. Pre-noted in the 4a internal review. Fix-when-it-fits: alias-dedupe the wrapped projection or
   detect collisions client-side. File: `web/src/lib/derive/pullDetail.ts`.
 
-- ITM-034: (Phase 9 — B7 acceptance, OPEN/label-nit, S4) **"Introspect" is mild jargon.** The Data
-  Dictionary action/dialog says "Introspect schema"; charter bar B-4 suggests plainer wording (e.g.
-  "Read from the database"). No functional impact. Fix-when-it-fits: rename in `IntrospectDialog.tsx` +
-  `DataDictionaryPage.tsx`. Logged at the B7 acceptance pass (2026-06-15,
-  [reviews/phase-9-b7-acceptance.md](reviews/phase-9-b7-acceptance.md)).
+- ITM-034: (Phase 9 — B7 acceptance, **CLOSED 2026-06-15**, S4) **"Introspect" was mild jargon.** The Data
+  Dictionary action/dialog said "Introspect schema"; charter bar B-4 suggested plainer wording (e.g.
+  "Read from the database"). Logged at the B7 acceptance pass
+  ([reviews/phase-9-b7-acceptance.md](reviews/phase-9-b7-acceptance.md)). **Resolution (owner-approved
+  wording "Read from database"):** all user-facing strings reworded in `IntrospectDialog.tsx` (trigger
+  "Read from database", title "Read a schema from the database", submit "Read & save"/"Reading…",
+  placeholder "… (from database)") and `DataDictionaryPage.tsx` (empty-rail / delete-note / empty-state
+  + a display-only `sourceLabel()` mapping the `source` badge "introspection"→"From database",
+  "upload"→"Uploaded"). The code/API contract is **unchanged** — component name `IntrospectDialog`,
+  `introspectSchema`, `POST /schemas/introspect`, and the stored `source` enum all stay (display-only
+  mapping). Button-label tests updated. Gates green (pytest 433 / vitest 130 / tsc clean / vite build);
+  live-verified vs XE `AOR_DEMO` (no "introspect" text remains user-visible). Owner signed off 2026-06-15.
 
 ## Phase 9 (v2) — B5b-3 exit-gate review & remediation (r1)
 
@@ -347,3 +354,4 @@ EBS-context tripwire-safety). Two S4 observations, both remediated. Post-remedia
 | 1.3 | 2026-06-10 | Engineering | Phase 4: ITM-011 (list/multi-value binds deferred) + ITM-012 (templates not live-EBS validated) logged. |
 | 1.16 | 2026-06-15 | Engineering | Phase 9 **B6 complete** (Connections/Dictionary/Reports/Settings screens): **BUG-009** logged + FIXED (error-readability, ADR-024); report parameter value-pickers shipped (ADR-023). ITM-026 + ITM-031 remain open. |
 | 1.21 | 2026-06-15 | Engineering | Phase 9 **B7 + post-B7 fixes** (BUG-010/011/012, ADR-025) FIXED; **owner CXO sign-off** + **independent exit-gate r1 = PASS-WITH-FIXES** (reviewer ≠ author; gates 433/130; all 5 invariants hold). 5 S4 findings (F-1 stale counts, F-2 multi-bind IN, F-3 stale comment, F-4 latent effect, F-5 model-compliance) remediated/accepted. **PHASE 9 CLOSED.** Open: ITM-026/031/034. |
+| 1.22 | 2026-06-15 | Engineering | **ITM-034 CLOSED** — "Introspect" reworded to owner-approved "Read from database" across the Data dictionary (display-only; code/API/`source` enum unchanged); button-label tests updated; gates green (433/130/tsc/vite); live-verified vs XE. Open backlog now: ITM-026, ITM-031. |

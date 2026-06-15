@@ -4,6 +4,18 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Changed (ITM-034 — plain-language Data dictionary wording)
+- The Data dictionary's developer term **"Introspect"** is reworded to the owner-approved **"Read from
+  database"** across every user-facing surface: the trigger button, dialog title ("Read a schema from the
+  database"), submit button ("Read & save" / "Reading…"), the save-as placeholder, and the empty-rail /
+  delete-note / empty-state copy (`IntrospectDialog.tsx`, `DataDictionaryPage.tsx`). A new **display-only**
+  `sourceLabel()` maps the saved-schema `source` badge (`"introspection"` → "From database",
+  `"upload"` → "Uploaded"). The **code/API contract is unchanged** — the component name `IntrospectDialog`,
+  `introspectSchema`, the `POST /schemas/introspect` endpoint, and the stored `source` enum all stay; only
+  the *display* is mapped. Button-label tests updated. Gates green (**pytest 433 · vitest 130 · tsc clean ·
+  vite build**); live-verified vs XE `AOR_DEMO` (no "introspect" text remains user-visible). **Closes
+  ITM-034** (charter bar B-4). Open frontend backlog now: ITM-026 (dynamic Ask chips), ITM-031 (ESLint debt).
+
 ### Phase 9 (React CXO UI) — CLOSED (2026-06-15)
 - **Owner CXO acceptance signed off** (criterion #3) and the **independent exit-gate review r1 = PASS-WITH-FIXES**
   (reviewer ≠ author, ADR-006; [reviews/phase-9-b6b7-review-r1.md](reviews/phase-9-b6b7-review-r1.md)): all four

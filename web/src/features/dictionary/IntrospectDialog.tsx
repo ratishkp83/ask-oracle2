@@ -65,12 +65,12 @@ export function IntrospectDialog() {
     >
       <DialogTrigger asChild>
         <button className="inline-flex items-center gap-1.5 rounded-control bg-brand px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
-          <ScanLine className="h-4 w-4" /> Introspect schema
+          <ScanLine className="h-4 w-4" /> Read from database
         </button>
       </DialogTrigger>
       <DialogContent className="bg-surface sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle className="font-display text-[18px] font-semibold text-ink">Introspect a schema</DialogTitle>
+          <DialogTitle className="font-display text-[18px] font-semibold text-ink">Read a schema from the database</DialogTitle>
           <DialogDescription className="text-[13px] text-ink-muted">
             Reads table and column metadata from the live database (read-only) and saves it as a dictionary. No row
             data is read or sent to the model.
@@ -137,7 +137,7 @@ export function IntrospectDialog() {
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder={owner.trim() ? `${owner.trim().toUpperCase()} (introspected)` : "Dictionary name"}
+                  placeholder={owner.trim() ? `${owner.trim().toUpperCase()} (from database)` : "Dictionary name"}
                   className={inputCls}
                 />
               </Field>
@@ -168,7 +168,7 @@ export function IntrospectDialog() {
               className="inline-flex items-center gap-1.5 rounded-control bg-brand px-4 py-2 text-[13px] font-medium text-white disabled:opacity-40"
             >
               {run.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ScanLine className="h-3.5 w-3.5" />}
-              {run.isPending ? "Introspecting…" : "Introspect & save"}
+              {run.isPending ? "Reading…" : "Read & save"}
             </button>
           )}
         </DialogFooter>

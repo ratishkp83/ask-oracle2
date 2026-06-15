@@ -53,12 +53,12 @@ describe("IntrospectDialog", () => {
     const u = user();
     renderDialog();
 
-    await u.click(screen.getByRole("button", { name: /introspect schema/i }));
+    await u.click(screen.getByRole("button", { name: /read from database/i }));
     await screen.findByRole("dialog");
 
     expect(screen.getByText(/no active connection/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /add or select one/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /introspect & save/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /read & save/i })).toBeDisabled();
   });
 
   it("introspects + saves the schema via the active connection and shows the count", async () => {
@@ -73,13 +73,13 @@ describe("IntrospectDialog", () => {
     const u = user();
     renderDialog();
 
-    await u.click(screen.getByRole("button", { name: /introspect schema/i }));
+    await u.click(screen.getByRole("button", { name: /read from database/i }));
     await screen.findByRole("dialog");
 
     const owner = screen.getByLabelText(/schema \/ owner/i);
     await u.clear(owner);
     await u.type(owner, "AOR_DEMO");
-    await u.click(screen.getByRole("button", { name: /introspect & save/i }));
+    await u.click(screen.getByRole("button", { name: /read & save/i }));
 
     await waitFor(() =>
       expect(vi.mocked(introspectSchema)).toHaveBeenCalledWith(
@@ -97,12 +97,12 @@ describe("IntrospectDialog", () => {
     const u = user();
     renderDialog();
 
-    await u.click(screen.getByRole("button", { name: /introspect schema/i }));
+    await u.click(screen.getByRole("button", { name: /read from database/i }));
     await screen.findByRole("dialog");
     const owner = screen.getByLabelText(/schema \/ owner/i);
     await u.clear(owner);
     await u.type(owner, "AOR_DEMO");
-    await u.click(screen.getByRole("button", { name: /introspect & save/i }));
+    await u.click(screen.getByRole("button", { name: /read & save/i }));
 
     expect(await screen.findByText(/could not reach.*ref err_88/i)).toBeInTheDocument();
   });

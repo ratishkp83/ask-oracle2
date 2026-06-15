@@ -1,6 +1,6 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 3.8 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-15
+> **Document:** Session Handoff · **Version:** 3.9 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-15 (ITM-034 closed)
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 > ---
@@ -33,8 +33,10 @@
 > r1 = PASS-WITH-FIXES** (reviewer ≠ author, ADR-006; [reviews/phase-9-b6b7-review-r1.md](reviews/phase-9-b6b7-review-r1.md)):
 > all 4 gates re-run green + all 5 invariants verified; 5 findings, **all S4**, remediated/accepted →
 > **🎉 PHASE 9 CLOSED** (all §15 exit criteria met). **433 backend / 130 frontend / tsc clean / vite build.**
-> Open backlog (non-blocking): **ITM-026** (dynamic Ask chips), **ITM-031** (frontend ESLint debt),
-> **ITM-034** (rename "Introspect"). Ops: backend on **8010** (coexists with sentinel on 8000) via the
+> Open backlog (non-blocking): **ITM-026** (dynamic Ask chips), **ITM-031** (frontend ESLint debt).
+> **ITM-034 CLOSED 2026-06-15** — the Data dictionary's "Introspect" reworded to owner-approved
+> "Read from database" (display-only; code/API/`source` enum unchanged; gates 433/130; live-verified).
+> Ops: backend on **8010** (coexists with sentinel on 8000) via the
 > `ask-oracle-api` launch entry; dev servers proxy via `AOR_API_TARGET`. **All Phase-9 work is local-only
 > — still NO PUSH until the July reset.**
 > **Phase 8 (email) CLOSED 2026-06-13.** Everything in §0–§7 below is **v1 history on `main`**.

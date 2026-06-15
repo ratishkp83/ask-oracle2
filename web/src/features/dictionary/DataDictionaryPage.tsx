@@ -64,7 +64,7 @@ export function DataDictionaryPage() {
                     />
                   ))
                 ) : (
-                  <p className="px-2 py-1.5 text-[12px] text-ink-faint">None yet — introspect one.</p>
+                  <p className="px-2 py-1.5 text-[12px] text-ink-faint">None yet — read one from the database.</p>
                 )}
               </RailGroup>
 
@@ -148,7 +148,7 @@ function SchemaRailItem({
       <span className="flex min-w-0 flex-col">
         <span className="truncate font-medium">{schema.name}</span>
         <span className="truncate text-[11px] text-ink-faint">
-          {schema.table_count} {schema.table_count === 1 ? "table" : "tables"} · {schema.source}
+          {schema.table_count} {schema.table_count === 1 ? "table" : "tables"} · {sourceLabel(schema.source)}
         </span>
       </span>
     </button>
@@ -175,7 +175,7 @@ function SchemaDetail({ id }: { id: string }) {
           <div className="flex items-center gap-2">
             <h2 className="font-display text-[19px] font-semibold text-ink">{data.name}</h2>
             <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
-              {data.source}
+              {sourceLabel(data.source)}
             </span>
           </div>
           <p className="mt-0.5 text-[12.5px] text-ink-faint">
@@ -250,7 +250,7 @@ function DeleteSchemaDialog({ id, name }: { id: string; name: string }) {
       description={
         <>
           Remove the dictionary <span className="font-medium text-ink">{name}</span>? Questions will lose this schema
-          as NL→SQL context until it is re-introspected.
+          as NL→SQL context until it is read again.
         </>
       }
       onConfirm={() => deleteSchema(id)}
@@ -339,12 +339,20 @@ function PackDetail({ module }: { module: string }) {
 }
 
 // --- Shared bits ------------------------------------------------------------
+// Plain-language label for a saved schema's origin. The stored `source` enum
+// ("introspection"/"upload") stays a server contract; this is display only (ITM-034).
+function sourceLabel(source: string): string {
+  if (source === "introspection") return "From database";
+  if (source === "upload") return "Uploaded";
+  return source;
+}
+
 function EmptyDetail() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
       <BookText className="h-6 w-6 text-ink-faint" />
       <p className="text-[14px] font-semibold text-ink">Nothing to show yet</p>
-      <p className="max-w-sm text-[13px] text-ink-muted">Introspect a schema to build your first data dictionary.</p>
+      <p className="max-w-sm text-[13px] text-ink-muted">Read a schema from the database to build your first data dictionary.</p>
     </div>
   );
 }
