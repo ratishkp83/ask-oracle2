@@ -26,3 +26,15 @@ export function downloadCsv(name: string, columns: string[], rows: unknown[][]):
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// Download a prebuilt HTML document (the cascading report bundle, ADR-026) as a
+// single self-contained .html file — pure client, no server round-trip.
+export function downloadHtml(name: string, html: string): void {
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${name}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ResultsView } from "./ResultsView";
 import { ExecuteResult } from "@/lib/api/schemas";
@@ -69,5 +69,29 @@ describe("ResultsView — multi-level cascade", () => {
     await user.click(screen.getByRole("button", { name: /report/i }));
     expect(screen.getByTestId("chart-dim")).toHaveTextContent("region");
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+
+  // Regression: the top-level ResultScope must receive reportSql/reportRows so the
+  // cascading-report download builds a bundle instead of throwing on undefined rows.
+  it("downloads a cascading-report HTML bundle from the top level", async () => {
+    const user = userEvent.setup();
+    const blobs: Blob[] = [];
+    const origCreate = URL.createObjectURL;
+    const origRevoke = URL.revokeObjectURL;
+    (URL as unknown as { createObjectURL: (b: Blob) => string }).createObjectURL = (b: Blob) => {
+      blobs.push(b);
+      return "blob:x";
+    };
+    (URL as unknown as { revokeObjectURL: () => void }).revokeObjectURL = () => {};
+    try {
+      render(<ResultsView question="Sales by region" sql={SQL} result={RESULT} />);
+      await user.click(await screen.findByRole("button", { name: /^report$/i }));
+      await waitFor(() => expect(blobs.length).toBeGreaterThan(0));
+      expect(blobs[0].type).toContain("text/html");
+      expect(screen.queryByText(/please try again/i)).not.toBeInTheDocument();
+    } finally {
+      URL.createObjectURL = origCreate;
+      URL.revokeObjectURL = origRevoke;
+    }
   });
 });

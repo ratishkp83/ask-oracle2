@@ -1,5 +1,5 @@
 import { ReactNode, useMemo, useState } from "react";
-import { ArrowLeft, ChevronRight, Code2, Download, FileSpreadsheet, Loader2, SearchX } from "lucide-react";
+import { ArrowLeft, ChevronRight, Code2, Download, FileSpreadsheet, Layers, Loader2, SearchX } from "lucide-react";
 import { ExecuteResult } from "@/lib/api/schemas";
 import { errorMessage } from "@/lib/api/client";
 import { downloadXlsx } from "@/lib/api/endpoints";
@@ -10,7 +10,10 @@ import { PullFilter } from "@/lib/derive/pullDetail";
 import { deriveKpis } from "@/lib/derive/kpis";
 import { deriveInsights } from "@/lib/derive/insight";
 import { pickChart } from "@/lib/derive/chart";
-import { downloadCsv, slugify } from "@/lib/export";
+import { downloadCsv, downloadHtml, slugify } from "@/lib/export";
+import { DEFAULT_CASCADE_SPEC, resolveCascade } from "@/lib/cascade/spec";
+import { buildCascadeBundle } from "@/lib/cascade/bundle";
+import { renderBundleHtml } from "@/lib/cascade/renderHtml";
 import { formatCompact, formatNumber, formatPercent, humanize, toNumber } from "@/lib/format";
 import { SummaryBand } from "./SummaryBand";
 import { InsightBand } from "./InsightBand";
@@ -113,6 +116,9 @@ export function ResultsView({
         header={header}
         filename={`${slugify(question)}-${slugify(last.value)}`}
         subject={`${last.value} — ${question}`}
+        reportSql={sql}
+        reportRows={result.rows}
+        reportTitle={question}
         onDrill={push}
         leaf={{ filters, onPullQuery, onPullDetail: safePullDetail }}
       />
@@ -130,11 +136,15 @@ export function ResultsView({
       columns={result.columns}
       rows={result.rows}
       cols={cols}
+      sqlMeta={sqlMeta}
       order={order}
       excludeChartDims={[]}
       header={header}
       filename={slugify(question) || "result"}
       subject={question}
+      reportSql={sql}
+      reportRows={result.rows}
+      reportTitle={question}
       onDrill={push}
       // F3: a non-drillable trend (date dim) still gets a path to detail at the top
       // level — pull the whole underlying detail (filters empty).
@@ -153,6 +163,9 @@ function ResultScope({
   header,
   filename,
   subject,
+  reportSql,
+  reportRows,
+  reportTitle,
   onDrill,
   leaf,
 }: {
@@ -165,6 +178,10 @@ function ResultScope({
   header: ReactNode;
   filename: string;
   subject: string;
+  // The full (un-drilled) report, used to build a cascading-report bundle from any scope.
+  reportSql: string;
+  reportRows: unknown[][];
+  reportTitle: string;
   onDrill: (dimIndex: number, value: string) => void;
   leaf?: LeafContext;
 }) {
@@ -176,7 +193,16 @@ function ResultScope({
   );
 
   const [xlsxBusy, setXlsxBusy] = useState(false);
+  const [bundleBusy, setBundleBusy] = useState(false);
   const [exportErr, setExportErr] = useState<string | null>(null);
+
+  // A cascading report is offered only when the result has at least one dimension
+  // to fan out by (auto-derived from the SQL / column shape).
+  const resolved = useMemo(
+    () => resolveCascade(DEFAULT_CASCADE_SPEC, columns, cols, sqlMeta),
+    [columns, cols, sqlMeta],
+  );
+  const canCascade = resolved.dimIndices.length > 0;
 
   async function exportXlsx() {
     setExportErr(null);
@@ -187,6 +213,33 @@ function ResultScope({
       setExportErr(errorMessage(e, "Couldn’t export to Excel. Please try again, or contact IT support."));
     } finally {
       setXlsxBusy(false);
+    }
+  }
+
+  // Build the cascading-report bundle from the FULL report (ADR-026) and download
+  // it as a single self-contained HTML file. Local mode (no fresh fetch) here —
+  // the live un-truncated fan-out is wired with the saved-report run in B5.
+  async function downloadReport() {
+    setExportErr(null);
+    setBundleBusy(true);
+    try {
+      const bundle = await buildCascadeBundle(
+        reportSql,
+        { columns, rows: reportRows },
+        cols,
+        sqlMeta,
+        resolved,
+      );
+      const html = renderBundleHtml(bundle, {
+        title: reportTitle,
+        question: reportTitle,
+        sql: reportSql,
+      });
+      downloadHtml(`${slugify(reportTitle) || "report"}-cascading`, html);
+    } catch (e) {
+      setExportErr(errorMessage(e, "Couldn’t build the cascading report. Please try again."));
+    } finally {
+      setBundleBusy(false);
     }
   }
 
@@ -245,6 +298,22 @@ function ResultScope({
               )}
               Excel
             </button>
+            {canCascade && excludeChartDims.length === 0 && (
+              <button
+                type="button"
+                onClick={downloadReport}
+                disabled={bundleBusy}
+                title="Download a cascading report (summary → breakdowns) as a single HTML file"
+                className="inline-flex items-center gap-1.5 rounded-control border border-hairline bg-surface px-2.5 py-1.5 text-[12px] font-medium text-ink hover:bg-surface-sunken disabled:opacity-50"
+              >
+                {bundleBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-muted" />
+                ) : (
+                  <Layers className="h-3.5 w-3.5 text-ink-muted" />
+                )}
+                Report
+              </button>
+            )}
             <EmailDialog question={subject} columns={columns} rows={rows} filename={filename} />
           </div>
         </div>
