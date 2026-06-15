@@ -11,8 +11,10 @@ vi.mock("@/lib/api/endpoints", () => ({
   getProfiles: vi.fn(),
   runReport: vi.fn(),
   execute: vi.fn(),
+  getSchema: vi.fn(),
 }));
-import { execute, getProfiles, runReport } from "@/lib/api/endpoints";
+import { execute, getProfiles, getSchema, runReport } from "@/lib/api/endpoints";
+import type { SchemaRecord } from "@/lib/api/schemas";
 
 const user = () => userEvent.setup({ pointerEventsCheck: 0 });
 
@@ -74,11 +76,48 @@ const REPORT_LOOKUP: Report = {
   ],
 };
 
+// A report whose bind has NO explicit lookup, but whose column is a FK in the schema.
+const REPORT_AUTO: Report = {
+  ...REPORT,
+  sql: "SELECT employee_id, first_name FROM employees WHERE department_id = :dept_id",
+  parameters: [{ name: "dept_id", label: "Department", type: "number", required: true }],
+};
+
+const SCHEMA: SchemaRecord = {
+  id: "s1",
+  name: "AOR_DEMO",
+  source: "introspection",
+  profile_id: null,
+  table_count: 2,
+  created_at: "x",
+  updated_at: "x",
+  definition: {
+    tables: {
+      EMPLOYEES: [
+        { column_name: "EMPLOYEE_ID", is_primary_key: true, is_foreign_key: false },
+        {
+          column_name: "DEPARTMENT_ID",
+          is_primary_key: false,
+          is_foreign_key: true,
+          references_table: "DEPARTMENTS",
+          references_column: "DEPARTMENT_ID",
+        },
+      ],
+      DEPARTMENTS: [
+        { column_name: "DEPARTMENT_ID", is_primary_key: true, is_foreign_key: false },
+        { column_name: "DEPARTMENT_NAME", is_primary_key: false, is_foreign_key: false },
+      ],
+    },
+    relationships: [],
+  },
+};
+
 beforeEach(() => {
   window.localStorage.clear();
   vi.mocked(getProfiles).mockReset();
   vi.mocked(runReport).mockReset();
   vi.mocked(execute).mockReset();
+  vi.mocked(getSchema).mockReset();
 });
 afterEach(cleanup);
 
@@ -154,6 +193,34 @@ describe("RunReportDialog", () => {
       expect(vi.mocked(runReport)).toHaveBeenCalledWith("rep1", { profile_id: "p1", binds: { dept_id: 20 } }),
     );
     expect(onResult).toHaveBeenCalled();
+  });
+
+  it("auto-derives a dropdown from a foreign key when the param has no explicit lookup", async () => {
+    window.localStorage.setItem("aor.profileId", "p1");
+    window.localStorage.setItem("aor.schemaId", "s1");
+    vi.mocked(getProfiles).mockResolvedValue([PROFILE]);
+    vi.mocked(getSchema).mockResolvedValue(SCHEMA);
+    vi.mocked(execute).mockResolvedValue({
+      columns: ["DEPARTMENT_ID", "DEPARTMENT_NAME"],
+      rows: [[20, "Engineering"], [10, "Finance"]],
+      elapsed_seconds: 0.01,
+      row_count: 2,
+      truncated: false,
+    });
+    const u = user();
+    renderDialog(REPORT_AUTO);
+
+    await u.click(screen.getByRole("button", { name: /^run$/i }));
+    await screen.findByRole("dialog");
+
+    // The lookup was derived from the FK (no explicit lookup_sql on the report).
+    await waitFor(() =>
+      expect(vi.mocked(execute)).toHaveBeenCalledWith({
+        sql: "SELECT DEPARTMENT_ID, DEPARTMENT_NAME FROM DEPARTMENTS ORDER BY DEPARTMENT_NAME",
+        profile_id: "p1",
+      }),
+    );
+    expect(await screen.findByRole("option", { name: "Engineering" })).toBeInTheDocument();
   });
 
   it("runs with coerced binds and the active profile, then returns the result", async () => {

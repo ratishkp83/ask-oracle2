@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle, AlertTriangle, ChevronDown, Code2, Database, Loader2, Play } from "lucide-react";
@@ -11,9 +11,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { execute, getProfiles, runReport } from "@/lib/api/endpoints";
+import { execute, getProfiles, getSchema, runReport } from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/client";
 import type { ExecuteResult, Report, ReportParam } from "@/lib/api/schemas";
+import { buildAutoLookups } from "@/lib/derive/paramLookup";
 import { useSession } from "@/app/session";
 
 const inputCls =
@@ -47,12 +48,22 @@ export function RunReportDialog({
   report: Report;
   onResult: (report: Report, result: ExecuteResult) => void;
 }) {
-  const { profileId } = useSession();
+  const { profileId, schemaId } = useSession();
   const { data: profiles } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const active = profiles?.find((p) => p.id === profileId) ?? null;
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
+
+  // Auto value-pickers: when a parameter has no explicit lookup, derive one from
+  // the report SQL + the active data dictionary (FK → referenced table). The
+  // explicit lookup_sql always wins; otherwise the derived one drives the dropdown.
+  const { data: schema } = useQuery({
+    queryKey: ["schema", schemaId],
+    queryFn: () => getSchema(schemaId as string),
+    enabled: !!schemaId && open && report.parameters.length > 0,
+  });
+  const autoLookups = useMemo(() => buildAutoLookups(report.sql, schema), [report.sql, schema]);
 
   // Connection: session selection overrides; else the report's bound profile.
   const hasConnection = !!profileId || !!report.default_profile_id;
@@ -148,6 +159,7 @@ export function RunReportDialog({
               <Field key={p.name} label={`${p.label || p.name}${p.required && !hasDefault(p) ? " *" : ""}`}>
                 <ParamField
                   param={p}
+                  lookupSql={p.lookup_sql || autoLookups[p.name]}
                   lookupProfileId={profileId ?? report.default_profile_id ?? undefined}
                   value={form[p.name] ?? ""}
                   onChange={(v) => setForm((f) => ({ ...f, [p.name]: v }))}
@@ -187,19 +199,21 @@ export function RunReportDialog({
 // the lookup fails — so a value can always be entered.
 function ParamField({
   param,
+  lookupSql,
   lookupProfileId,
   value,
   onChange,
 }: {
   param: ReportParam;
+  lookupSql?: string;
   lookupProfileId?: string;
   value: string;
   onChange: (value: string) => void;
 }) {
-  const useLookup = !!param.lookup_sql && !!lookupProfileId;
+  const useLookup = !!lookupSql && !!lookupProfileId;
   const q = useQuery({
-    queryKey: ["param-lookup", param.lookup_sql, lookupProfileId],
-    queryFn: () => execute({ sql: param.lookup_sql as string, profile_id: lookupProfileId }),
+    queryKey: ["param-lookup", lookupSql, lookupProfileId],
+    queryFn: () => execute({ sql: lookupSql as string, profile_id: lookupProfileId }),
     enabled: useLookup,
     staleTime: 60_000,
   });
