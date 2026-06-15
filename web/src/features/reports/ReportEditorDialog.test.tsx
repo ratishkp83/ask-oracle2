@@ -3,14 +3,16 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReportEditorDialog } from "./ReportEditorDialog";
-import type { Report } from "@/lib/api/schemas";
+import { SessionProvider } from "@/app/session";
+import type { Report, SchemaRecord } from "@/lib/api/schemas";
 
 vi.mock("@/lib/api/endpoints", () => ({
   getProfiles: vi.fn(),
   createReport: vi.fn(),
   updateReport: vi.fn(),
+  getSchema: vi.fn(),
 }));
-import { createReport, getProfiles, updateReport } from "@/lib/api/endpoints";
+import { createReport, getProfiles, getSchema, updateReport } from "@/lib/api/endpoints";
 
 const user = () => userEvent.setup({ pointerEventsCheck: 0 });
 
@@ -26,19 +28,53 @@ const EXISTING: Report = {
   updated_at: "x",
 };
 
+// A minimal dictionary with a foreign key, to drive the FK suggest.
+const SCHEMA: SchemaRecord = {
+  id: "s1",
+  name: "AOR_DEMO",
+  source: "introspection",
+  profile_id: null,
+  table_count: 2,
+  created_at: "x",
+  updated_at: "x",
+  definition: {
+    tables: {
+      EMPLOYEES: [
+        { column_name: "EMPLOYEE_ID", is_primary_key: true, is_foreign_key: false },
+        {
+          column_name: "DEPARTMENT_ID",
+          is_primary_key: false,
+          is_foreign_key: true,
+          references_table: "DEPARTMENTS",
+          references_column: "DEPARTMENT_ID",
+        },
+      ],
+      DEPARTMENTS: [
+        { column_name: "DEPARTMENT_ID", is_primary_key: true, is_foreign_key: false },
+        { column_name: "DEPARTMENT_NAME", is_primary_key: false, is_foreign_key: false },
+      ],
+    },
+    relationships: [],
+  },
+};
+
 function renderEditor(props: Partial<React.ComponentProps<typeof ReportEditorDialog>> = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onOpenChange = props.onOpenChange ?? vi.fn();
   render(
     <QueryClientProvider client={qc}>
-      <ReportEditorDialog open onOpenChange={onOpenChange} {...props} />
+      <SessionProvider>
+        <ReportEditorDialog open onOpenChange={onOpenChange} {...props} />
+      </SessionProvider>
     </QueryClientProvider>,
   );
   return { onOpenChange };
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   vi.mocked(getProfiles).mockResolvedValue([]);
+  vi.mocked(getSchema).mockResolvedValue(SCHEMA);
   vi.mocked(createReport).mockReset();
   vi.mocked(updateReport).mockReset();
 });
@@ -84,6 +120,41 @@ describe("ReportEditorDialog", () => {
           parameters: [expect.objectContaining({ name: "org_id", type: "string", required: true })],
         }),
       ),
+    );
+  });
+
+  it("persists a parameter's value-picker SQL", async () => {
+    vi.mocked(createReport).mockResolvedValue(EXISTING);
+    const u = user();
+    renderEditor();
+
+    await u.type(screen.getByLabelText("Name"), "Lookup report");
+    await u.type(screen.getByLabelText(/SQL \(SELECT/i), "SELECT * FROM t WHERE id = :dept_id");
+    await u.click(screen.getByRole("button", { name: /^add$/i }));
+    await u.type(screen.getByLabelText(/parameter 1 name/i), "dept_id");
+    await u.type(screen.getByLabelText(/parameter 1 value list sql/i), "SELECT id, name FROM depts");
+    await u.click(screen.getByRole("button", { name: /create report/i }));
+
+    await waitFor(() =>
+      expect(vi.mocked(createReport)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parameters: [expect.objectContaining({ name: "dept_id", lookup_sql: "SELECT id, name FROM depts" })],
+        }),
+      ),
+    );
+  });
+
+  it("suggests a value picker from a foreign key in the active schema", async () => {
+    window.localStorage.setItem("aor.schemaId", "s1");
+    const u = user();
+    renderEditor();
+
+    await u.click(screen.getByRole("button", { name: /^add$/i }));
+    const suggest = await screen.findByLabelText(/parameter 1 suggest value picker/i);
+    await u.selectOptions(suggest, "0");
+
+    expect(screen.getByLabelText(/parameter 1 value list sql/i)).toHaveValue(
+      "SELECT DEPARTMENT_ID, DEPARTMENT_NAME FROM DEPARTMENTS ORDER BY DEPARTMENT_NAME",
     );
   });
 

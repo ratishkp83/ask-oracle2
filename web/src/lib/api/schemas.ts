@@ -141,6 +141,9 @@ export const ReportParamSchema = z.object({
   type: ParamTypeSchema,
   required: z.boolean().default(true),
   default: z.any().optional(),
+  // Optional value-picker SELECT (col 1 = value, optional col 2 = label); drives
+  // a live dropdown in the run dialog via the chokepoint.
+  lookup_sql: z.string().nullable().optional(),
 });
 export type ReportParam = z.infer<typeof ReportParamSchema>;
 

@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getProfiles, runReport } from "@/lib/api/endpoints";
+import { execute, getProfiles, runReport } from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/client";
 import type { ExecuteResult, Report, ReportParam } from "@/lib/api/schemas";
 import { useSession } from "@/app/session";
@@ -146,13 +146,11 @@ export function RunReportDialog({
           <div className="space-y-3">
             {report.parameters.map((p) => (
               <Field key={p.name} label={`${p.label || p.name}${p.required && !hasDefault(p) ? " *" : ""}`}>
-                <input
-                  type={p.type === "date" ? "date" : "text"}
-                  inputMode={p.type === "number" ? "numeric" : undefined}
+                <ParamField
+                  param={p}
+                  lookupProfileId={profileId ?? report.default_profile_id ?? undefined}
                   value={form[p.name] ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, [p.name]: e.target.value }))}
-                  placeholder={p.type === "list" ? "comma, separated, values" : undefined}
-                  className={inputCls}
+                  onChange={(v) => setForm((f) => ({ ...f, [p.name]: v }))}
                 />
               </Field>
             ))}
@@ -179,6 +177,61 @@ export function RunReportDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// A single parameter input. When the parameter declares a lookup_sql and a
+// connection is available, it fetches the allowed values live through the
+// SELECT-only chokepoint and renders a dropdown (col 1 = value, optional col 2 =
+// label). Falls back to a typed input when there's no lookup, no connection, or
+// the lookup fails — so a value can always be entered.
+function ParamField({
+  param,
+  lookupProfileId,
+  value,
+  onChange,
+}: {
+  param: ReportParam;
+  lookupProfileId?: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const useLookup = !!param.lookup_sql && !!lookupProfileId;
+  const q = useQuery({
+    queryKey: ["param-lookup", param.lookup_sql, lookupProfileId],
+    queryFn: () => execute({ sql: param.lookup_sql as string, profile_id: lookupProfileId }),
+    enabled: useLookup,
+    staleTime: 60_000,
+  });
+
+  // Dropdown only when the lookup succeeded; otherwise fall through to the input.
+  if (useLookup && !q.isError) {
+    const rows = q.data?.rows ?? [];
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={inputCls}>
+        <option value="">{q.isLoading ? "Loading…" : "Select…"}</option>
+        {rows.map((r, i) => {
+          const v = r[0] == null ? "" : String(r[0]);
+          const label = r[1] != null ? String(r[1]) : v;
+          return (
+            <option key={`${v}-${i}`} value={v}>
+              {label}
+            </option>
+          );
+        })}
+      </select>
+    );
+  }
+
+  return (
+    <input
+      type={param.type === "date" ? "date" : "text"}
+      inputMode={param.type === "number" ? "numeric" : undefined}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={param.type === "list" ? "comma, separated, values" : undefined}
+      className={inputCls}
+    />
   );
 }
 

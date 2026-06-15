@@ -74,6 +74,29 @@ def test_report_crud_lifecycle():
     assert client.delete(f"/reports/{rid}").status_code == 404
 
 
+def test_param_lookup_sql_round_trips():
+    """A parameter's optional lookup_sql (value-picker query) persists verbatim."""
+    body = _make_report(
+        name="With lookup",
+        parameters=[
+            {
+                "name": "dept_id",
+                "label": "Department",
+                "type": "number",
+                "required": True,
+                "lookup_sql": "SELECT department_id, department_name FROM departments ORDER BY department_name",
+            }
+        ],
+    )
+    created = client.post("/reports", json=body)
+    assert created.status_code == 201
+    param = created.json()["parameters"][0]
+    assert param["lookup_sql"] == "SELECT department_id, department_name FROM departments ORDER BY department_name"
+    # Omitting it defaults to null (backward-compatible).
+    plain = client.post("/reports", json=_make_report(name="No lookup")).json()
+    assert plain["parameters"][0]["lookup_sql"] is None
+
+
 # --- run ------------------------------------------------------------------ #
 def test_run_report_with_inline_connection(no_db):
     rid = client.post("/reports", json=_make_report()).json()["id"]

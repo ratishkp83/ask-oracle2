@@ -10,8 +10,9 @@ import type { ExecuteResult, ProfilePublic, Report } from "@/lib/api/schemas";
 vi.mock("@/lib/api/endpoints", () => ({
   getProfiles: vi.fn(),
   runReport: vi.fn(),
+  execute: vi.fn(),
 }));
-import { getProfiles, runReport } from "@/lib/api/endpoints";
+import { execute, getProfiles, runReport } from "@/lib/api/endpoints";
 
 const user = () => userEvent.setup({ pointerEventsCheck: 0 });
 
@@ -60,10 +61,24 @@ function renderDialog(report: Report, onResult = vi.fn()) {
   return { onResult };
 }
 
+const REPORT_LOOKUP: Report = {
+  ...REPORT,
+  parameters: [
+    {
+      name: "dept_id",
+      label: "Department",
+      type: "number",
+      required: true,
+      lookup_sql: "SELECT department_id, department_name FROM departments ORDER BY department_name",
+    },
+  ],
+};
+
 beforeEach(() => {
   window.localStorage.clear();
   vi.mocked(getProfiles).mockReset();
   vi.mocked(runReport).mockReset();
+  vi.mocked(execute).mockReset();
 });
 afterEach(cleanup);
 
@@ -104,6 +119,41 @@ describe("RunReportDialog", () => {
     await screen.findByRole("dialog");
     expect(screen.getByText(/view sql/i)).toBeInTheDocument();
     expect(screen.getByText(/SELECT \* FROM gl_balances/i)).toBeInTheDocument();
+  });
+
+  it("renders a live dropdown for a parameter with a lookup and binds the chosen value", async () => {
+    window.localStorage.setItem("aor.profileId", "p1");
+    vi.mocked(getProfiles).mockResolvedValue([PROFILE]);
+    vi.mocked(execute).mockResolvedValue({
+      columns: ["DEPARTMENT_ID", "DEPARTMENT_NAME"],
+      rows: [[20, "Engineering"], [10, "Finance"]],
+      elapsed_seconds: 0.01,
+      row_count: 2,
+      truncated: false,
+    });
+    vi.mocked(runReport).mockResolvedValue(RESULT);
+    const u = user();
+    const { onResult } = renderDialog(REPORT_LOOKUP);
+
+    await u.click(screen.getByRole("button", { name: /^run$/i }));
+    await screen.findByRole("dialog");
+
+    // The lookup runs via the chokepoint and the options appear in a dropdown.
+    await waitFor(() =>
+      expect(vi.mocked(execute)).toHaveBeenCalledWith({
+        sql: "SELECT department_id, department_name FROM departments ORDER BY department_name",
+        profile_id: "p1",
+      }),
+    );
+    const select = await screen.findByLabelText(/department/i);
+    expect(await screen.findByRole("option", { name: "Engineering" })).toBeInTheDocument();
+    await u.selectOptions(select, "20");
+    await u.click(screen.getByRole("button", { name: /run report/i }));
+
+    await waitFor(() =>
+      expect(vi.mocked(runReport)).toHaveBeenCalledWith("rep1", { profile_id: "p1", binds: { dept_id: 20 } }),
+    );
+    expect(onResult).toHaveBeenCalled();
   });
 
   it("runs with coerced binds and the active profile, then returns the result", async () => {

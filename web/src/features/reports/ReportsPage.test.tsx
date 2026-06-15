@@ -16,6 +16,8 @@ vi.mock("@/lib/api/endpoints", () => ({
   createReport: vi.fn(),
   updateReport: vi.fn(),
   getProfiles: vi.fn(),
+  getSchema: vi.fn(),
+  execute: vi.fn(),
   // Pulled in via the reused ResultsView / EmailDialog.
   downloadXlsx: vi.fn(),
   emailReport: vi.fn(),

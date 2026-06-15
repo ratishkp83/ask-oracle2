@@ -51,6 +51,11 @@ class ReportParam(BaseModel):
     type: ParamType = "string"
     required: bool = True
     default: Optional[Any] = None
+    # Optional value-picker: a SELECT returning the allowed values (column 1 = the
+    # bind value, optional column 2 = a display label). Drives a live dropdown in
+    # the run dialog, fetched through the SELECT-only chokepoint at run time. The
+    # query is not executed here; it is only persisted with the report.
+    lookup_sql: Optional[str] = None
 
     @field_validator("name")
     @classmethod

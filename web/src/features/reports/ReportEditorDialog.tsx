@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import {
@@ -9,9 +9,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { createReport, getProfiles, updateReport, type ReportCreateBody } from "@/lib/api/endpoints";
+import { createReport, getProfiles, getSchema, updateReport, type ReportCreateBody } from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/client";
 import type { Report, ReportParam } from "@/lib/api/schemas";
+import { useSession } from "@/app/session";
+
+// Foreign-key-derived lookup suggestions from the active data dictionary: for each
+// FK column, a ready-to-use value-picker SELECT against the referenced table, with
+// a *_NAME column chosen as the label when present.
+type FkSuggestion = { label: string; sql: string };
 
 const inputCls =
   "w-full rounded-control border border-hairline bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-brand";
@@ -44,6 +50,32 @@ export function ReportEditorDialog({
   const qc = useQueryClient();
   const { data: profiles } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
 
+  // The active data dictionary (if any) powers the FK-based lookup suggestions.
+  const { schemaId } = useSession();
+  const { data: schema } = useQuery({
+    queryKey: ["schema", schemaId],
+    queryFn: () => getSchema(schemaId as string),
+    enabled: !!schemaId && open,
+  });
+  const fkSuggestions = useMemo<FkSuggestion[]>(() => {
+    if (!schema) return [];
+    const tables = schema.definition.tables;
+    const out: FkSuggestion[] = [];
+    for (const [tableName, cols] of Object.entries(tables)) {
+      for (const c of cols) {
+        if (!c.is_foreign_key || !c.references_table) continue;
+        const refTable = c.references_table;
+        const refCol = c.references_column || c.column_name;
+        const labelCol = (tables[refTable] ?? []).find((rc) => /name/i.test(rc.column_name))?.column_name ?? refCol;
+        out.push({
+          label: `${tableName}.${c.column_name} → ${refTable}`,
+          sql: `SELECT ${refCol}, ${labelCol} FROM ${refTable} ORDER BY ${labelCol}`,
+        });
+      }
+    }
+    return out;
+  }, [schema]);
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [sql, setSql] = useState("");
@@ -56,7 +88,12 @@ export function ReportEditorDialog({
         name: name.trim(),
         description: description.trim(),
         sql,
-        parameters: params.map((p) => ({ ...p, name: p.name.trim(), label: p.label.trim() })),
+        parameters: params.map((p) => ({
+          ...p,
+          name: p.name.trim(),
+          label: p.label.trim(),
+          lookup_sql: p.lookup_sql?.trim() || null,
+        })),
         default_profile_id: defaultProfileId || null,
         template_id: report?.template_id ?? seed?.template_id ?? null,
       };
@@ -147,42 +184,75 @@ export function ReportEditorDialog({
             ) : (
               <div className="space-y-2">
                 {params.map((p, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <input
-                      aria-label={`Parameter ${i + 1} name`}
-                      value={p.name}
-                      onChange={(e) => patchParam(i, { name: e.target.value })}
-                      placeholder="name"
-                      className={`${inputCls} num flex-1`}
-                    />
-                    <select
-                      aria-label={`Parameter ${i + 1} type`}
-                      value={p.type}
-                      onChange={(e) => patchParam(i, { type: e.target.value as ReportParam["type"] })}
-                      className={`${inputCls} w-[92px] shrink-0`}
-                    >
-                      {PARAM_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                    <label className="flex shrink-0 items-center gap-1 text-[11.5px] text-ink-muted">
+                  <div key={i} className="space-y-1.5 rounded-control border border-hairline/70 bg-surface-sunken/30 p-2">
+                    <div className="flex items-center gap-2">
                       <input
-                        type="checkbox"
-                        checked={p.required}
-                        onChange={(e) => patchParam(i, { required: e.target.checked })}
+                        aria-label={`Parameter ${i + 1} name`}
+                        value={p.name}
+                        onChange={(e) => patchParam(i, { name: e.target.value })}
+                        placeholder="name"
+                        className={`${inputCls} num flex-1`}
                       />
-                      req.
-                    </label>
-                    <button
-                      type="button"
-                      aria-label={`Remove parameter ${i + 1}`}
-                      onClick={() => removeParam(i)}
-                      className="shrink-0 rounded-control border border-hairline p-1.5 text-ink-faint hover:border-loss hover:text-loss"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                      <select
+                        aria-label={`Parameter ${i + 1} type`}
+                        value={p.type}
+                        onChange={(e) => patchParam(i, { type: e.target.value as ReportParam["type"] })}
+                        className={`${inputCls} w-[92px] shrink-0`}
+                      >
+                        {PARAM_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="flex shrink-0 items-center gap-1 text-[11.5px] text-ink-muted">
+                        <input
+                          type="checkbox"
+                          checked={p.required}
+                          onChange={(e) => patchParam(i, { required: e.target.checked })}
+                        />
+                        req.
+                      </label>
+                      <button
+                        type="button"
+                        aria-label={`Remove parameter ${i + 1}`}
+                        onClick={() => removeParam(i)}
+                        className="shrink-0 rounded-control border border-hairline p-1.5 text-ink-faint hover:border-loss hover:text-loss"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {/* Optional value picker: a SELECT (value [, label]) that drives a live
+                        dropdown at run time. "Suggest…" fills it from a foreign key in the
+                        active data dictionary. */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        aria-label={`Parameter ${i + 1} value list SQL`}
+                        value={p.lookup_sql ?? ""}
+                        onChange={(e) => patchParam(i, { lookup_sql: e.target.value })}
+                        placeholder="Value picker SQL (optional) — SELECT value, label FROM …"
+                        className={`${inputCls} num flex-1`}
+                      />
+                      {fkSuggestions.length > 0 && (
+                        <select
+                          aria-label={`Parameter ${i + 1} suggest value picker`}
+                          value=""
+                          onChange={(e) => {
+                            const s = fkSuggestions[Number(e.target.value)];
+                            if (s) patchParam(i, { lookup_sql: s.sql });
+                          }}
+                          title="Suggest from a foreign key in the active schema"
+                          className={`${inputCls} w-[132px] shrink-0`}
+                        >
+                          <option value="">Suggest…</option>
+                          {fkSuggestions.map((s, idx) => (
+                            <option key={idx} value={idx}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
