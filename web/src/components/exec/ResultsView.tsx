@@ -4,14 +4,16 @@ import { ExecuteResult } from "@/lib/api/schemas";
 import { errorMessage } from "@/lib/api/client";
 import { downloadXlsx } from "@/lib/api/endpoints";
 import { classifyColumns, ColumnMeta } from "@/lib/derive/columns";
-import { parseSelectMeta } from "@/lib/derive/sql";
+import { parseSelectMeta, SqlMeta } from "@/lib/derive/sql";
 import { DrillLevel, dimensionOrder, filterRows } from "@/lib/derive/cascade";
 import { PullFilter } from "@/lib/derive/pullDetail";
 import { deriveKpis } from "@/lib/derive/kpis";
+import { deriveInsights } from "@/lib/derive/insight";
 import { pickChart } from "@/lib/derive/chart";
 import { downloadCsv, slugify } from "@/lib/export";
 import { formatCompact, formatNumber, formatPercent, humanize, toNumber } from "@/lib/format";
 import { SummaryBand } from "./SummaryBand";
+import { InsightBand } from "./InsightBand";
 import { KpiCard } from "./KpiCard";
 import { DriverChart } from "./DriverChart";
 import { ResultGrid } from "./ResultGrid";
@@ -105,6 +107,7 @@ export function ResultsView({
         columns={result.columns}
         rows={rows}
         cols={cols}
+        sqlMeta={sqlMeta}
         order={order}
         excludeChartDims={stack.map((d) => d.dimIndex)}
         header={header}
@@ -144,6 +147,7 @@ function ResultScope({
   columns,
   rows,
   cols,
+  sqlMeta,
   order,
   excludeChartDims,
   header,
@@ -155,6 +159,7 @@ function ResultScope({
   columns: string[];
   rows: unknown[][];
   cols: ColumnMeta[];
+  sqlMeta: SqlMeta | null;
   order: number[];
   excludeChartDims: number[];
   header: ReactNode;
@@ -164,6 +169,7 @@ function ResultScope({
   leaf?: LeafContext;
 }) {
   const kpis = useMemo(() => deriveKpis(rows, cols), [rows, cols]);
+  const insights = useMemo(() => deriveInsights(cols, rows, sqlMeta), [cols, rows, sqlMeta]);
   const chart = useMemo(
     () => pickChart(rows, cols, excludeChartDims, order),
     [rows, cols, excludeChartDims, order],
@@ -187,6 +193,8 @@ function ResultScope({
   return (
     <div className="flex h-full flex-col gap-3.5 px-6 py-5">
       {header}
+
+      <InsightBand insights={insights} />
 
       {kpis.length > 0 && (
         <div
