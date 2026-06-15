@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.16 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-15 (Phase-9 B6 complete: **BUG-009** [error-readability] FIXED; B6 screens + value-pickers delivered; only **ITM-026** + **ITM-031** remain open)
+> **Document:** Issue Log · **Version:** 1.17 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-15 (Phase-9 B6 + B7 acceptance: **BUG-009** [error-readability] FIXED; B6 screens + value-pickers delivered; **B7 acceptance pass** done; open = **ITM-026** + **ITM-031** + **ITM-034** [B-4 label nit])
 
 ## Bug workflow (mandatory)
 
@@ -176,6 +176,12 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
   security issue** — stays a bound SELECT, chokepoint-revalidated, surfaces as a sanitized E9 the user can
   edit. Pre-noted in the 4a internal review. Fix-when-it-fits: alias-dedupe the wrapped projection or
   detect collisions client-side. File: `web/src/lib/derive/pullDetail.ts`.
+
+- ITM-034: (Phase 9 — B7 acceptance, OPEN/label-nit, S4) **"Introspect" is mild jargon.** The Data
+  Dictionary action/dialog says "Introspect schema"; charter bar B-4 suggests plainer wording (e.g.
+  "Read from the database"). No functional impact. Fix-when-it-fits: rename in `IntrospectDialog.tsx` +
+  `DataDictionaryPage.tsx`. Logged at the B7 acceptance pass (2026-06-15,
+  [reviews/phase-9-b7-acceptance.md](reviews/phase-9-b7-acceptance.md)).
 
 ## Phase 9 (v2) — B5b-3 exit-gate review & remediation (r1)
 
