@@ -4,6 +4,15 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Fixed (Phase 9 — off-topic NL guard, [ADR-025](adr/ADR-025-off-topic-nl-guard.md))
+- An off-topic prompt (e.g. **"how to swim"**) still produced a `SELECT` that ran (immediately under
+  Auto-run). NL→SQL now has a **conservative off-topic guard**: the model emits a `CANNOT_ANSWER:` sentinel
+  when a request isn't answerable from the schema; the generator returns `NLSQLResult(answerable=False,
+  message=…)` (only when no SQL fence is present — prefer SQL if both), `POST /nl2sql` returns
+  `answerable`+`message` (additive, defaulted), and the Ask page shows a calm notice while **proposing/
+  running nothing — including under Auto-run**. The SELECT-only chokepoint is unchanged. Verified live
+  (Groq `llama-3.3-70b`): "how to swim" declined, "headcount by department" still answered. (BUG-010.)
+
 ### Added (Phase 9 — B6 supporting screens + Reports value-pickers)
 - **The four supporting screens** replace their `PlaceholderPage` routes — each built as its own packet
   (build → gates → internal review → HOLD for owner sign-off), bound to the existing `/v1` endpoints:

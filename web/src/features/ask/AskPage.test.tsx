@@ -222,6 +222,30 @@ describe("AskPage state machine", () => {
     );
   });
 
+  it("off-topic: shows a notice and runs nothing, even with Auto-run on", async () => {
+    window.localStorage.setItem("aor.profileId", "p1");
+    window.localStorage.setItem("aor.schemaId", "s1");
+    window.localStorage.setItem("aor.autoRun", "1");
+    vi.mocked(nl2sql).mockResolvedValue({
+      sql: "",
+      explanation: null,
+      confidence: null,
+      answerable: false,
+      message: "I can only answer questions about your Oracle data.",
+    });
+    const user = userEvent.setup();
+    renderAsk();
+
+    await user.type(screen.getByPlaceholderText(/Top 10 customers/i), "how to swim");
+    await user.click(screen.getByRole("button", { name: /^ask$/i }));
+
+    // Calm notice on the ask form; nothing proposed, nothing executed.
+    expect(await screen.findByRole("status")).toHaveTextContent(/only answer questions about your oracle data/i);
+    expect(execute).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Detail ·/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /proposed sql/i })).not.toBeInTheDocument();
+  });
+
   it("auto-run falls back to the review step when no connection is set", async () => {
     window.localStorage.setItem("aor.schemaId", "s1");
     window.localStorage.setItem("aor.autoRun", "1"); // on, but no profileId

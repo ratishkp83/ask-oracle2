@@ -512,7 +512,13 @@ def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
             if result.confidence
             else None
         )
-        return {"sql": result.sql, "explanation": result.explanation, "confidence": confidence}
+        return {
+            "sql": result.sql,
+            "explanation": result.explanation,
+            "confidence": confidence,
+            "answerable": result.answerable,
+            "message": result.message,
+        }
     except (ValueError, LLMError) as exc:
         # Intentional/clean messages stay verbatim (the ADR-012 rule): our own
         # validation ValueErrors ("Schema is empty…", unsafe generation) and

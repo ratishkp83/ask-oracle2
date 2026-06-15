@@ -45,7 +45,9 @@ def _capture_schema(monkeypatch):
 
     def fake_generate(nl, schema, **kwargs):
         captured["schema"] = schema
-        return SimpleNamespace(sql="SELECT region FROM ar_open_items", explanation=None, confidence=None)
+        return SimpleNamespace(
+            sql="SELECT region FROM ar_open_items", explanation=None, confidence=None, answerable=True, message=None
+        )
 
     monkeypatch.setattr(api_module, "generate_sql_from_nl", fake_generate)
     return captured

@@ -54,6 +54,25 @@ def test_rejects_non_select(monkeypatch):
         nl2sql.generate_sql_from_nl("delete everything", _schema())
 
 
+def test_off_topic_returns_not_answerable(monkeypatch):
+    # The model declines a non-data question with the sentinel → no SQL, no run.
+    _patch_provider(monkeypatch, "CANNOT_ANSWER: I can only answer questions about your database.")
+    result = nl2sql.generate_sql_from_nl("how to swim", _schema())
+    assert result.answerable is False
+    assert result.sql == ""
+    assert "database" in (result.message or "").lower()
+    assert result.confidence is None
+
+
+def test_off_topic_sentinel_ignored_when_sql_present(monkeypatch):
+    # Conservative: if the model returns BOTH a SQL fence and the sentinel, prefer
+    # the SQL so a real question is never blocked.
+    _patch_provider(monkeypatch, "```sql\nSELECT emp_id FROM emp\n```\nCANNOT_ANSWER: maybe")
+    result = nl2sql.generate_sql_from_nl("show emp ids", _schema())
+    assert result.answerable is True
+    assert result.sql.lower().startswith("select")
+
+
 def test_graceful_when_no_provider(monkeypatch):
     def boom(cfg=None, policy=None):
         raise LLMError("no provider configured")

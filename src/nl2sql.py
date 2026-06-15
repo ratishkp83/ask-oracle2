@@ -29,6 +29,10 @@ __all__ = [
     "DEFAULT_OPENAI_MODEL",
 ]
 
+# Sentinel the model emits (instead of SQL) when a request isn't a data question
+# answerable from the schema. Parsed back into a non-answerable NLSQLResult.
+CANNOT_ANSWER_PREFIX = "CANNOT_ANSWER:"
+
 SYSTEM_PROMPT = (
     "You are an expert Oracle SQL generator. Using ONLY the provided schema, respond with:\n"
     "1. A single Oracle SELECT (or WITH … SELECT) query inside a ```sql code fence — "
@@ -37,7 +41,15 @@ SYSTEM_PROMPT = (
     "FETCH FIRST n ROWS ONLY or ROWNUM — never LIMIT (Oracle has no LIMIT). Do not end the "
     "statement with a semicolon.\n"
     "2. Then a line beginning with 'Explanation:' and at most 3 sentences explaining the "
-    "query, referring only to the provided schema. Do not include any data values."
+    "query, referring only to the provided schema. Do not include any data values.\n\n"
+    "IMPORTANT — scope: only answer questions that can be answered with data from the "
+    "provided schema. If the request is NOT a question about this data (for example small "
+    "talk, general knowledge, or a topic unrelated to the schema such as 'how to swim'), do "
+    "NOT invent a query. Instead respond with a single line and nothing else:\n"
+    f"{CANNOT_ANSWER_PREFIX} <one short sentence saying you can only answer questions about "
+    "the database>\n"
+    "Only refuse when the request is clearly not about the data. If it is plausibly a data "
+    "question, attempt the SQL."
 )
 
 
@@ -129,6 +141,16 @@ def generate_sql_from_nl(
         raise LLMError(
             f"LLM request failed ({type(exc).__name__}). Check the API key, model, and provider settings."
         ) from exc
+
+    # Off-topic guard (conservative): the model emits the CANNOT_ANSWER sentinel
+    # for a request that isn't answerable from the schema. Only treat it as a
+    # refusal when there's no SQL fence — if it somehow returned both, prefer the
+    # SQL so a real question is never blocked.
+    has_fence = re.search(r"```(?:sql)?\s", raw, re.IGNORECASE) is not None
+    refusal = re.search(r"(?im)^\s*CANNOT_ANSWER\s*:\s*(.*)$", raw)
+    if refusal and not has_fence:
+        reason = refusal.group(1).strip() or "I can only answer questions about your database."
+        return NLSQLResult(sql="", answerable=False, message=reason)
 
     sql, explanation = _parse_sql_and_explanation(raw)
     if not sql_is_safe_select(sql):

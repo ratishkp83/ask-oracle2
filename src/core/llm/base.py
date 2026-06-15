@@ -36,6 +36,11 @@ class NLSQLResult:
     sql: str
     explanation: Optional[str] = None
     confidence: Optional[Confidence] = None
+    # Off-topic guard (conservative): False when the request isn't answerable from
+    # the provided schema (not a data question). Then `sql` is empty and `message`
+    # carries a short, user-facing reason; the UI proposes/runs nothing.
+    answerable: bool = True
+    message: Optional[str] = None
 
 
 @runtime_checkable

@@ -185,6 +185,11 @@ export const Nl2SqlSchema = z.object({
   sql: z.string(),
   explanation: z.string().nullable().optional(),
   confidence: ConfidenceSchema.optional(),
+  // Off-topic guard: false when the question isn't answerable from the data; then
+  // `message` is a friendly reason and the UI proposes/runs nothing. Defaults keep
+  // older responses (without these fields) working as answerable.
+  answerable: z.boolean().default(true),
+  message: z.string().nullable().optional(),
 });
 export type Nl2SqlResult = z.infer<typeof Nl2SqlSchema>;
 

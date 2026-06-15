@@ -32,5 +32,6 @@ new ADR that references the old one (don't rewrite history).
 | [ADR-022](ADR-022-auto-run-mode.md) | Auto-run mode + the reframing of Invariant 2 (chokepoint never bypassed) | Accepted |
 | [ADR-023](ADR-023-report-parameter-value-pickers.md) | Report parameter value-pickers (lookups, FK suggest, run-time auto-derivation) | Accepted |
 | [ADR-024](ADR-024-user-readable-error-presentation.md) | User-readable error presentation (no developer text to end users; `error_id` kept) | Accepted |
+| [ADR-025](ADR-025-off-topic-nl-guard.md) | Off-topic / out-of-scope NL guard (decline non-data questions; conservative, chokepoint unchanged) | Accepted |
 
 Template: [ADR-template.md](ADR-template.md).

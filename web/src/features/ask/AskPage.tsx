@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Loader2, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, Info, Loader2, Sparkles, Zap } from "lucide-react";
 import { ResultsView } from "@/components/exec/ResultsView";
 import { nl2sql, execute } from "@/lib/api/endpoints";
 import { friendlyError } from "@/lib/api/client";
@@ -65,9 +65,13 @@ export function AskPage() {
   const [q, setQ] = useState("");
   const [state, setState] = useState<AskState>({ kind: "idle" });
   const [error, setError] = useState<PhaseError>(null);
+  // Off-topic notice: a calm "I can only answer questions about your data" message
+  // shown on the ask form when nl2sql declines a non-data question (no SQL, no run).
+  const [notice, setNotice] = useState<string | null>(null);
 
   function reset() {
     setError(null);
+    setNotice(null);
     setState({ kind: "idle" });
   }
 
@@ -75,6 +79,7 @@ export function AskPage() {
   // proposal returns to the ask form to edit the question.
   function back() {
     setError(null);
+    setNotice(null);
     if (state.kind === "review" && state.data.returnResults) setState(state.data.returnResults);
     else setState({ kind: "idle" });
   }
@@ -106,6 +111,7 @@ export function AskPage() {
     const question = q.trim();
     if (!question) return;
     setError(null);
+    setNotice(null);
     // Auto-run only when a connection is set; otherwise fall back to the review so
     // the user can pick a connection (Run shows the E10 hint).
     const auto = autoRun && !!profileId;
@@ -116,6 +122,13 @@ export function AskPage() {
         schema_id: schemaId ?? undefined,
         llm: llm ?? undefined,
       });
+      // Off-topic guard: not a data question → calm notice, propose/run nothing
+      // (applies even under Auto-run; the chokepoint is never reached).
+      if (proposal.answerable === false) {
+        setNotice(proposal.message || "I can only answer questions about your Oracle data.");
+        setState({ kind: "idle" });
+        return;
+      }
       const data: ReviewData = {
         question,
         eyebrow: "Review proposed SQL",
@@ -295,6 +308,17 @@ export function AskPage() {
                 Reference: <span className="num">{error.errorId}</span>
               </span>
             )}
+          </div>
+        )}
+
+        {/* Off-topic notice (E12): not a data question — calm, not an error. */}
+        {notice && (
+          <div
+            role="status"
+            className="mt-3 flex items-start gap-2 rounded-card border border-warn/30 bg-warn/5 px-3.5 py-2.5 text-[12.5px] text-ink"
+          >
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
+            <span>{notice}</span>
           </div>
         )}
 
