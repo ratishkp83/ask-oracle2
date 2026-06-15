@@ -1,12 +1,16 @@
 import { del, downloadPost, get, post } from "./client";
 import {
   ConnectionTestSchema,
+  EbsPackListSchema,
+  EbsPackSchema,
   EmailResultSchema,
   ExecuteSchema,
   HealthSchema,
+  IntrospectResultSchema,
   Nl2SqlSchema,
   ProfileListSchema,
   ProfilePublicSchema,
+  SchemaRecordSchema,
   SchemaSummaryListSchema,
 } from "./schemas";
 
@@ -68,6 +72,39 @@ export async function testConnection(conn: InlineConnection) {
 // NL→SQL context by id; never carries row data (invariant 3).
 export async function getSchemas() {
   return SchemaSummaryListSchema.parse(await get("/schemas"));
+}
+
+// Full detail for one saved schema (tables/columns/relationships). Metadata only.
+export async function getSchema(id: string) {
+  return SchemaRecordSchema.parse(await get(`/schemas/${encodeURIComponent(id)}`));
+}
+
+export async function deleteSchema(id: string) {
+  await del(`/schemas/${encodeURIComponent(id)}`);
+}
+
+// Introspect a live schema via the SELECT-only chokepoint (metadata only) and,
+// when save is set, persist it (removes the E11 admin handoff). Uses the chosen
+// connection by id — no DB secret is sent from the client (invariant 4).
+export type IntrospectBody = {
+  profile_id?: string;
+  owner: string;
+  table_like?: string;
+  save?: boolean;
+  name?: string | null;
+};
+
+export async function introspectSchema(body: IntrospectBody) {
+  return IntrospectResultSchema.parse(await post("/schemas/introspect", body));
+}
+
+// Curated EBS metadata packs (read-only). Names/descriptions/glossary only.
+export async function getPacks() {
+  return EbsPackListSchema.parse(await get("/packs"));
+}
+
+export async function getPack(module: string) {
+  return EbsPackSchema.parse(await get(`/packs/${encodeURIComponent(module)}`));
 }
 
 export async function nl2sql(body: {

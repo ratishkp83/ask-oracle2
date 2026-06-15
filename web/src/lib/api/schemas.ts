@@ -54,6 +54,82 @@ export type SchemaSummary = z.infer<typeof SchemaSummarySchema>;
 
 export const SchemaSummaryListSchema = z.array(SchemaSummarySchema);
 
+// Full schema detail (GET /schemas/{id}) — mirrors SchemaRecord + the serialized
+// `definition` (schema_to_dict): tables keyed by name, each a list of columns,
+// plus relationships. Metadata only — column names/types and PK/FK flags, never
+// any row value (invariant 3).
+export const SchemaColumnSchema = z.object({
+  table_name: z.string().optional(),
+  column_name: z.string(),
+  data_type: z.string().nullable().optional(),
+  is_primary_key: z.boolean().default(false),
+  is_foreign_key: z.boolean().default(false),
+  references_table: z.string().nullable().optional(),
+  references_column: z.string().nullable().optional(),
+});
+
+export const SchemaRelationshipSchema = z.object({
+  from_table: z.string(),
+  from_column: z.string(),
+  to_table: z.string(),
+  to_column: z.string(),
+  relationship_type: z.string().nullable().optional(),
+});
+
+export const SchemaDefinitionSchema = z.object({
+  tables: z.record(z.array(SchemaColumnSchema)).default({}),
+  relationships: z.array(SchemaRelationshipSchema).default([]),
+});
+
+export const SchemaRecordSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  source: SchemaSourceSchema,
+  profile_id: z.string().nullable().optional(),
+  table_count: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  definition: SchemaDefinitionSchema.default({ tables: {}, relationships: [] }),
+});
+export type SchemaRecord = z.infer<typeof SchemaRecordSchema>;
+
+// Result of POST /schemas/introspect. The large `definition` blob is ignored
+// here (the saved schema is re-fetched via /schemas); we only need the summary.
+export const IntrospectResultSchema = z.object({
+  table_count: z.number(),
+  warnings: z.array(z.string()).default([]),
+  truncated: z.boolean().default(false),
+  saved: SchemaSummarySchema.nullable().optional(),
+});
+export type IntrospectResult = z.infer<typeof IntrospectResultSchema>;
+
+// Curated EBS metadata packs (GET /packs, /packs/{module}) — mirrors EbsPack
+// (src/core/ebs_packs.py). Names/descriptions/joins + a business glossary; no
+// row data. `module` kept as a plain string to tolerate any future module.
+export const EbsTableNoteSchema = z.object({
+  table: z.string(),
+  description: z.string(),
+  key_columns: z.array(z.string()).default([]),
+  joins: z.array(z.string()).default([]),
+});
+
+export const EbsGlossaryTermSchema = z.object({
+  term: z.string(),
+  table: z.string(),
+  column: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
+});
+
+export const EbsPackSchema = z.object({
+  module: z.string(),
+  name: z.string(),
+  tables: z.array(EbsTableNoteSchema).default([]),
+  glossary: z.array(EbsGlossaryTermSchema).default([]),
+});
+export type EbsPack = z.infer<typeof EbsPackSchema>;
+
+export const EbsPackListSchema = z.array(EbsPackSchema);
+
 export const ConfidenceSchema = z
   .object({ level: z.string(), reasons: z.array(z.string()).default([]) })
   .nullable();

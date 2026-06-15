@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { deleteProfile, getProfiles, testProfile } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/client";
+import { errorMessage } from "@/lib/api/client";
 import type { ProfilePublic } from "@/lib/api/schemas";
 import { AddConnectionDialog } from "./AddConnectionDialog";
 
@@ -42,7 +42,7 @@ export function ConnectionsPage() {
         {isLoading ? (
           <ListSkeleton />
         ) : isError ? (
-          <ErrorState message={errMsg(error)} />
+          <ErrorState message={errorMessage(error)} />
         ) : !profiles || profiles.length === 0 ? (
           <EmptyState />
         ) : (
@@ -68,7 +68,7 @@ function ConnectionRow({ profile }: { profile: ProfilePublic }) {
       const res = await testProfile(profile.id);
       setTest({ kind: "ok", message: `Connected in ${res.elapsed_seconds.toFixed(2)}s` });
     } catch (e) {
-      setTest({ kind: "error", message: errMsg(e) });
+      setTest({ kind: "error", message: errorMessage(e) });
     }
   }
 
@@ -170,7 +170,7 @@ function DeleteConnectionDialog({ profile }: { profile: ProfilePublic }) {
         {remove.isError && (
           <div className="flex items-start gap-2 rounded-control bg-[#FBECEC] px-3 py-2 text-[12.5px] text-loss">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{errMsg(remove.error)}</span>
+            <span>{errorMessage(remove.error)}</span>
           </div>
         )}
 
@@ -254,12 +254,4 @@ function ListSkeleton() {
       ))}
     </ul>
   );
-}
-
-// Sanitized, friendly message (+ ref id when present) — never raw driver text.
-// Shared by the list load, per-row test, and delete, so the fallback stays
-// context-neutral (the ApiError message itself carries the specifics).
-function errMsg(e: unknown): string {
-  if (e instanceof ApiError) return e.errorId ? `${e.message} (ref ${e.errorId})` : e.message;
-  return "Something went wrong. Please try again.";
 }

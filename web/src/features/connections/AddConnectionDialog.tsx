@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { createProfile, testConnection, type InlineConnection } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/client";
+import { errorMessage } from "@/lib/api/client";
 
 type ConnectBy = "service" | "sid";
 type Env = "DEV" | "TEST" | "PROD";
@@ -110,7 +110,7 @@ export function AddConnectionDialog() {
       const res = await testConnection(connectionPayload());
       setTest({ kind: "ok", message: `Connected in ${res.elapsed_seconds.toFixed(2)}s` });
     } catch (e) {
-      setTest({ kind: "error", message: errMsg(e) });
+      setTest({ kind: "error", message: errorMessage(e) });
     }
   }
 
@@ -260,7 +260,7 @@ export function AddConnectionDialog() {
         {save.isError && (
           <div className="flex items-start gap-2 rounded-control bg-[#FBECEC] px-3 py-2 text-[12.5px] text-loss">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{errMsg(save.error)}</span>
+            <span>{errorMessage(save.error)}</span>
           </div>
         )}
 
@@ -287,12 +287,6 @@ export function AddConnectionDialog() {
       </DialogContent>
     </Dialog>
   );
-}
-
-// Friendly, sanitized message (+ ref id when present) — never raw driver text.
-function errMsg(e: unknown): string {
-  if (e instanceof ApiError) return e.errorId ? `${e.message} (ref ${e.errorId})` : e.message;
-  return "Something went wrong. Please try again.";
 }
 
 function Field({ label, className, children }: { label: string; className?: string; children: ReactNode }) {

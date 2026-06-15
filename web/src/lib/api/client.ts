@@ -13,6 +13,14 @@ export class ApiError extends Error {
   }
 }
 
+// Friendly, sanitized message for any failure (+ a support reference id when the
+// server returned one) — never raw driver text. The single place the UI turns a
+// thrown error into copy (invariant 5).
+export function errorMessage(e: unknown, fallback = "Something went wrong. Please try again."): string {
+  if (e instanceof ApiError) return e.errorId ? `${e.message} (ref ${e.errorId})` : e.message;
+  return fallback;
+}
+
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");

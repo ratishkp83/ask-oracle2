@@ -3,6 +3,7 @@ import { AppShell } from "./app/AppShell";
 import { PlaceholderPage } from "./app/PlaceholderPage";
 import { AskPage } from "./features/ask/AskPage";
 import { ConnectionsPage } from "./features/connections/ConnectionsPage";
+import { DataDictionaryPage } from "./features/dictionary/DataDictionaryPage";
 
 export const router = createBrowserRouter([
   {
@@ -15,15 +16,7 @@ export const router = createBrowserRouter([
         path: "reports",
         element: <PlaceholderPage title="Reports" subtitle="Saved reports — run, refine, and re-share." />,
       },
-      {
-        path: "dictionary",
-        element: (
-          <PlaceholderPage
-            title="Data dictionary"
-            subtitle="Browse schemas and curated EBS module packs (GL · AP · AR · PO · OM)."
-          />
-        ),
-      },
+      { path: "dictionary", element: <DataDictionaryPage /> },
       { path: "connections", element: <ConnectionsPage /> },
       {
         path: "settings",
