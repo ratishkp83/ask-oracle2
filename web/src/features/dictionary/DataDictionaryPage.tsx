@@ -1,24 +1,7 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  BookText,
-  ChevronRight,
-  Database,
-  KeyRound,
-  Link2,
-  Loader2,
-  Table2,
-  Trash2,
-} from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, BookText, ChevronRight, Database, KeyRound, Link2, Table2, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { deleteSchema, getPack, getPacks, getSchema, getSchemas } from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/client";
 import type { SchemaRecord, SchemaSummary } from "@/lib/api/schemas";
@@ -254,65 +237,25 @@ function TableCard({ name, columns }: { name: string; columns: SchemaColumns }) 
 
 function DeleteSchemaDialog({ id, name }: { id: string; name: string }) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const remove = useMutation({
-    mutationFn: () => deleteSchema(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["schemas"] });
-      setOpen(false);
-    },
-  });
-
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        setOpen(o);
-        if (!o) remove.reset();
-      }}
-    >
-      <button
-        type="button"
-        aria-label={`Delete ${name}`}
-        onClick={() => setOpen(true)}
-        className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-control border border-hairline px-3 text-[12.5px] font-medium text-ink-faint transition-colors hover:border-loss hover:text-loss"
-      >
-        <Trash2 className="h-3.5 w-3.5" /> Delete
-      </button>
-      <DialogContent className="bg-surface sm:max-w-[420px]">
-        <DialogHeader>
-          <DialogTitle className="font-display text-[18px] font-semibold text-ink">Delete schema</DialogTitle>
-          <DialogDescription className="text-[13px] text-ink-muted">
-            Remove the dictionary <span className="font-medium text-ink">{name}</span>? Questions will lose this
-            schema as NL→SQL context until it is re-introspected.
-          </DialogDescription>
-        </DialogHeader>
-        {remove.isError && (
-          <div className="flex items-start gap-2 rounded-control bg-[#FBECEC] px-3 py-2 text-[12.5px] text-loss">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{errorMessage(remove.error)}</span>
-          </div>
-        )}
-        <DialogFooter className="gap-2 sm:gap-2">
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="rounded-control border border-hairline px-4 py-2 text-[13px] font-medium text-ink-muted transition-colors hover:text-ink"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => remove.mutate()}
-            disabled={remove.isPending}
-            className="inline-flex items-center gap-1.5 rounded-control bg-loss px-4 py-2 text-[13px] font-medium text-white disabled:opacity-40"
-          >
-            {remove.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            {remove.isPending ? "Deleting…" : "Delete"}
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      triggerAriaLabel={`Delete ${name}`}
+      triggerClassName="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-control border border-hairline px-3 text-[12.5px] font-medium text-ink-faint transition-colors hover:border-loss hover:text-loss"
+      triggerChildren={
+        <>
+          <Trash2 className="h-3.5 w-3.5" /> Delete
+        </>
+      }
+      title="Delete schema"
+      description={
+        <>
+          Remove the dictionary <span className="font-medium text-ink">{name}</span>? Questions will lose this schema
+          as NL→SQL context until it is re-introspected.
+        </>
+      }
+      onConfirm={() => deleteSchema(id)}
+      onConfirmed={() => qc.invalidateQueries({ queryKey: ["schemas"] })}
+    />
   );
 }
 

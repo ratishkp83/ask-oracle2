@@ -1,7 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertCircle, AlertTriangle, Database, Loader2, Play } from "lucide-react";
+import { AlertCircle, AlertTriangle, ChevronDown, Code2, Database, Loader2, Play } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -131,6 +131,16 @@ export function RunReportDialog({
             </span>
           </div>
         )}
+
+        <details className="group rounded-control border border-hairline bg-surface-sunken/40">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-[12px] font-medium text-ink-muted">
+            <Code2 className="h-3.5 w-3.5" /> View SQL
+            <ChevronDown className="ml-auto h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+          </summary>
+          <pre className="num max-h-40 overflow-auto whitespace-pre-wrap border-t border-hairline px-3 py-2 text-[11.5px] leading-relaxed text-ink">
+            {report.sql}
+          </pre>
+        </details>
 
         {report.parameters.length > 0 && (
           <div className="space-y-3">

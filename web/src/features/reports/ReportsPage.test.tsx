@@ -90,6 +90,15 @@ describe("ReportsPage", () => {
     expect(screen.getByText(/1 parameter/)).toBeInTheDocument();
   });
 
+  it("shows the bound connection name when a report has a default profile", async () => {
+    vi.mocked(getReports).mockResolvedValue([{ ...REPORTS[0], default_profile_id: "p1" }]);
+    vi.mocked(getProfiles).mockResolvedValue([PROFILE]);
+    renderPage();
+
+    const row = (await screen.findByText("Total invoices")).closest("li")!;
+    expect(within(row).getByText("XE (read-only)")).toBeInTheDocument();
+  });
+
   it("shows a calm empty state with a create affordance", async () => {
     vi.mocked(getReports).mockResolvedValue([]);
     renderPage();

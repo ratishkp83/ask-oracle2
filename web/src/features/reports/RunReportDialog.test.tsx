@@ -94,6 +94,18 @@ describe("RunReportDialog", () => {
     expect(screen.getByRole("button", { name: /run report/i })).toBeEnabled();
   });
 
+  it("exposes the report SQL via a View SQL disclosure", async () => {
+    window.localStorage.setItem("aor.profileId", "p1");
+    vi.mocked(getProfiles).mockResolvedValue([PROFILE]);
+    const u = user();
+    renderDialog(REPORT);
+
+    await u.click(screen.getByRole("button", { name: /^run$/i }));
+    await screen.findByRole("dialog");
+    expect(screen.getByText(/view sql/i)).toBeInTheDocument();
+    expect(screen.getByText(/SELECT \* FROM gl_balances/i)).toBeInTheDocument();
+  });
+
   it("runs with coerced binds and the active profile, then returns the result", async () => {
     window.localStorage.setItem("aor.profileId", "p1");
     vi.mocked(getProfiles).mockResolvedValue([PROFILE]);

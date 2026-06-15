@@ -1,16 +1,10 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, FileText, Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, Database, FileText, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ResultsView } from "@/components/exec/ResultsView";
-import { deleteReport, getReports, getTemplates } from "@/lib/api/endpoints";
+import { deleteReport, getProfiles, getReports, getTemplates } from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/client";
 import type { ExecuteResult, Report, Template } from "@/lib/api/schemas";
 import { RunReportDialog } from "./RunReportDialog";
@@ -25,6 +19,7 @@ type EditorState = { open: boolean; report?: Report | null; seed?: ReportSeed | 
 // and stays reviewable in the editor.
 export function ReportsPage() {
   const { data: reports, isLoading, isError, error } = useQuery({ queryKey: ["reports"], queryFn: getReports });
+  const { data: profiles } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const [view, setView] = useState<View>({ kind: "list" });
   const [editor, setEditor] = useState<EditorState>({ open: false });
   const [pickTemplate, setPickTemplate] = useState(false);
@@ -81,6 +76,11 @@ export function ReportsPage() {
               <ReportRow
                 key={r.id}
                 report={r}
+                boundConnection={
+                  r.default_profile_id
+                    ? (profiles?.find((p) => p.id === r.default_profile_id)?.name ?? "bound connection")
+                    : undefined
+                }
                 onEdit={() => setEditor({ open: true, report: r, seed: null })}
                 onResult={(report, result) => setView({ kind: "results", report, result })}
               />
@@ -113,10 +113,12 @@ export function ReportsPage() {
 
 function ReportRow({
   report,
+  boundConnection,
   onEdit,
   onResult,
 }: {
   report: Report;
+  boundConnection?: string;
   onEdit: () => void;
   onResult: (report: Report, result: ExecuteResult) => void;
 }) {
@@ -141,6 +143,14 @@ function ReportRow({
           <span>
             {paramCount} {paramCount === 1 ? "parameter" : "parameters"}
           </span>
+          {boundConnection && (
+            <>
+              <span aria-hidden>·</span>
+              <span className="inline-flex items-center gap-1 truncate">
+                <Database className="h-3 w-3 shrink-0" /> {boundConnection}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -159,64 +169,20 @@ function ReportRow({
 
 function DeleteReportDialog({ report }: { report: Report }) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const remove = useMutation({
-    mutationFn: () => deleteReport(report.id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["reports"] });
-      setOpen(false);
-    },
-  });
-
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        setOpen(o);
-        if (!o) remove.reset();
-      }}
-    >
-      <button
-        type="button"
-        aria-label={`Delete ${report.name}`}
-        onClick={() => setOpen(true)}
-        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-hairline text-ink-faint transition-colors hover:border-loss hover:text-loss"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
-      <DialogContent className="bg-surface sm:max-w-[420px]">
-        <DialogHeader>
-          <DialogTitle className="font-display text-[18px] font-semibold text-ink">Delete report</DialogTitle>
-          <DialogDescription className="text-[13px] text-ink-muted">
-            Remove <span className="font-medium text-ink">{report.name}</span>? This can’t be undone.
-          </DialogDescription>
-        </DialogHeader>
-        {remove.isError && (
-          <div className="flex items-start gap-2 rounded-control bg-[#FBECEC] px-3 py-2 text-[12.5px] text-loss">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{errorMessage(remove.error)}</span>
-          </div>
-        )}
-        <DialogFooter className="gap-2 sm:gap-2">
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="rounded-control border border-hairline px-4 py-2 text-[13px] font-medium text-ink-muted transition-colors hover:text-ink"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => remove.mutate()}
-            disabled={remove.isPending}
-            className="inline-flex items-center gap-1.5 rounded-control bg-loss px-4 py-2 text-[13px] font-medium text-white disabled:opacity-40"
-          >
-            {remove.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-            {remove.isPending ? "Deleting…" : "Delete"}
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      triggerAriaLabel={`Delete ${report.name}`}
+      triggerClassName="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-hairline text-ink-faint transition-colors hover:border-loss hover:text-loss"
+      triggerChildren={<Trash2 className="h-3.5 w-3.5" />}
+      title="Delete report"
+      description={
+        <>
+          Remove <span className="font-medium text-ink">{report.name}</span>? This can’t be undone.
+        </>
+      }
+      onConfirm={() => deleteReport(report.id)}
+      onConfirmed={() => qc.invalidateQueries({ queryKey: ["reports"] })}
+    />
   );
 }
 
