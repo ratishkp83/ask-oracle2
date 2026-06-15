@@ -15,7 +15,10 @@ const lastSegmentUpper = (col: string): string => col.split(".").pop()!.toUpperC
 
 // Map every bind name found in `sql` to the (unqualified, upper-cased) column it
 // is compared against. Handles `col <op> :b`, `col IN (:b)`, `col BETWEEN :a AND
-// :b`, and the bind-on-the-left form. First match wins per bind.
+// :b`, and the bind-on-the-left form. First match wins per bind. Note: an
+// `IN (:a, :b, …)` list only maps the FIRST bind; the rest simply fall back to a
+// typed input (a safe degradation — multi-value IN binds are out of scope, cf.
+// ITM-011). Exit-gate review F-2.
 export function deriveBindColumns(sql: string): Record<string, string> {
   const out: Record<string, string> = {};
   const set = (bind: string, col: string) => {

@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.20 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-15 (Phase-9 B6 + B7 + post-B7 hardening: **BUG-009** [error-readability], **BUG-010** [off-topic NL guard], **BUG-011** [no-proxy for missing columns], **BUG-012** [consistent decline, no technical error] — all FIXED via ADR-024/025; open = **ITM-026** + **ITM-031** + **ITM-034**)
+> **Document:** Issue Log · **Version:** 1.21 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-15 (**PHASE 9 CLOSED** — B6+B7 + post-B7 fixes BUG-009..012 [ADR-024/025] FIXED; owner CXO sign-off + independent exit-gate r1 = PASS-WITH-FIXES, 5 S4 findings remediated/accepted [`reviews/phase-9-b6b7-review-r1.md`]; open backlog = **ITM-026** + **ITM-031** + **ITM-034**)
 
 ## Bug workflow (mandatory)
 
@@ -346,3 +346,4 @@ EBS-context tripwire-safety). Two S4 observations, both remediated. Post-remedia
 | 1.15 | 2026-06-12 | Engineering | **ITM-019 RESOLVED** — Render Disk selected (no code change); `render.yaml` disk blocks added; D7 §5 runbook written. |
 | 1.3 | 2026-06-10 | Engineering | Phase 4: ITM-011 (list/multi-value binds deferred) + ITM-012 (templates not live-EBS validated) logged. |
 | 1.16 | 2026-06-15 | Engineering | Phase 9 **B6 complete** (Connections/Dictionary/Reports/Settings screens): **BUG-009** logged + FIXED (error-readability, ADR-024); report parameter value-pickers shipped (ADR-023). ITM-026 + ITM-031 remain open. |
+| 1.21 | 2026-06-15 | Engineering | Phase 9 **B7 + post-B7 fixes** (BUG-010/011/012, ADR-025) FIXED; **owner CXO sign-off** + **independent exit-gate r1 = PASS-WITH-FIXES** (reviewer ≠ author; gates 433/130; all 5 invariants hold). 5 S4 findings (F-1 stale counts, F-2 multi-bind IN, F-3 stale comment, F-4 latent effect, F-5 model-compliance) remediated/accepted. **PHASE 9 CLOSED.** Open: ITM-026/031/034. |

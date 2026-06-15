@@ -16,11 +16,14 @@ bar (charter §5b, B-1…B-8) and the carried invariants (§4), and a live walkt
 ## 2. Gates (complete product test)
 | Gate | Result |
 |------|--------|
-| `pytest -q` | **428 passed** |
-| `vitest run` | **128 passed** (23 test files) |
+| `pytest -q` | **433 passed** |
+| `vitest run` | **129 passed** (23 test files) |
 | `tsc --noEmit` | clean |
 | `vite build` | green |
 | OpenAPI | generates — **3.1.0**, 40 paths (`GET /openapi.json`) |
+
+> Counts updated to final totals after the post-B7 NL-guard fixes (BUG-010/011/012); the original B7
+> pass at `8be5283` was 428/128. (Exit-gate review F-1.)
 
 Frontend coverage spans the client/Zod (`schemas.test`, `errorMessage.test`), all derivation
 (`derive`/`edge`/`cascade`/`sql`/`pullDetail`/`paramLookup`), the results hierarchy

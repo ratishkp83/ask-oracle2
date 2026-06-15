@@ -29,11 +29,14 @@
 > **B7 broader acceptance COMPLETE** ([reviews/phase-9-b7-acceptance.md](reviews/phase-9-b7-acceptance.md)) +
 > post-B7 owner-found fixes (user-readable errors [ADR-024], report value-pickers + run-time FK
 > auto-derivation [ADR-023], off-topic/missing-column/consistent-decline NL guard [ADR-025], Auto-run
-> toggle UX). **Owner CXO acceptance SIGNED OFF 2026-06-15** (criterion #3). ~433 backend / 129 frontend.
-> **Remaining:** the **independent exit-gate review** (reviewer ≠ author, ADR-006) — IN PROGRESS. Open
-> backlog (non-blocking): **ITM-026** (dynamic Ask chips), **ITM-031** (frontend ESLint debt), **ITM-034**
-> (rename "Introspect"). Ops: backend on **8010** (coexists with sentinel on 8000) via the `ask-oracle-api`
-> launch entry; dev servers proxy via `AOR_API_TARGET`.
+> toggle UX). **Owner CXO acceptance SIGNED OFF 2026-06-15** (criterion #3). **Independent exit-gate review
+> r1 = PASS-WITH-FIXES** (reviewer ≠ author, ADR-006; [reviews/phase-9-b6b7-review-r1.md](reviews/phase-9-b6b7-review-r1.md)):
+> all 4 gates re-run green + all 5 invariants verified; 5 findings, **all S4**, remediated/accepted →
+> **🎉 PHASE 9 CLOSED** (all §15 exit criteria met). **433 backend / 130 frontend / tsc clean / vite build.**
+> Open backlog (non-blocking): **ITM-026** (dynamic Ask chips), **ITM-031** (frontend ESLint debt),
+> **ITM-034** (rename "Introspect"). Ops: backend on **8010** (coexists with sentinel on 8000) via the
+> `ask-oracle-api` launch entry; dev servers proxy via `AOR_API_TARGET`. **All Phase-9 work is local-only
+> — still NO PUSH until the July reset.**
 > **Phase 8 (email) CLOSED 2026-06-13.** Everything in §0–§7 below is **v1 history on `main`**.
 > ---
 

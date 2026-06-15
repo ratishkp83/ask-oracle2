@@ -4,6 +4,13 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Phase 9 (React CXO UI) — CLOSED (2026-06-15)
+- **Owner CXO acceptance signed off** (criterion #3) and the **independent exit-gate review r1 = PASS-WITH-FIXES**
+  (reviewer ≠ author, ADR-006; [reviews/phase-9-b6b7-review-r1.md](reviews/phase-9-b6b7-review-r1.md)): all four
+  gates re-run green (**pytest 433 · vitest 130 · tsc clean · vite build**), all five invariants verified, 5
+  findings — **all S4** — remediated/accepted. All §15 exit criteria met → **Phase 9 closed.** (Local commits
+  only; no push until the July reset.)
+
 ### Fixed (Phase 9 — off-topic NL guard, [ADR-025](adr/ADR-025-off-topic-nl-guard.md))
 - An off-topic prompt (e.g. **"how to swim"**) still produced a `SELECT` that ran (immediately under
   Auto-run). NL→SQL now has a **conservative off-topic guard**: the model emits a `CANNOT_ANSWER:` sentinel

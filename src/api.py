@@ -521,8 +521,10 @@ def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
         }
     except (ValueError, LLMError) as exc:
         # Intentional/clean messages stay verbatim (the ADR-012 rule): our own
-        # validation ValueErrors ("Schema is empty…", unsafe generation) and
-        # LLMError, which nl2sql already maps provider failures into (F2).
+        # validation ValueErrors (empty schema / empty NL input, or a malformed
+        # schema_csv from this same request) and LLMError, which nl2sql already maps
+        # provider failures into (F2). Note: a non-SELECT/off-topic generation no
+        # longer raises here — nl2sql returns answerable=False (ADR-025).
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:  # noqa: BLE001 — unexpected: sanitize (ITM-017)
         error_id = get_request_id() or new_error_id()

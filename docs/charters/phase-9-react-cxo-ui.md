@@ -228,9 +228,14 @@ Email exists only in `src/core/mailer/` (Streamlit-wired). Phase 9 exposes it so
     a shared **ConfirmDialog**, and **report parameter value-pickers**
     ([ADR-023](../adr/ADR-023-report-parameter-value-pickers.md): explicit lookup + FK suggest + run-time auto).
   - Gate at close: **428 backend / 128 frontend / tsc clean / vite build green;** verified live vs XE at 1366×768.
-- **B7 (broader acceptance + owner CXO review)** — remaining.
-- **B8 — in progress:** ADR-019..024 + RISK-22 + CHANGELOG/issue-log/HANDOFF done; **independent exit-gate
-  review (reviewer ≠ author) pending** (ADR-006, owner-supplied reviewer).
+- **B7 — broader acceptance ✓ (2026-06-15)** — complete product test + cross-cutting review vs the bar
+  ([reviews/phase-9-b7-acceptance.md](../reviews/phase-9-b7-acceptance.md)); **owner CXO acceptance SIGNED OFF**.
+- **B8 — docs + exit-gate ✓:** ADR-019..025 + RISK-22 + CHANGELOG/issue-log/HANDOFF/trackers current;
+  **independent exit-gate review r1 = PASS-WITH-FIXES** (reviewer ≠ author, ADR-006;
+  [reviews/phase-9-b6b7-review-r1.md](../reviews/phase-9-b6b7-review-r1.md)) — gates 433/130, all 5 invariants
+  hold, 5 S4 findings remediated/accepted.
+- **🎉 PHASE 9 CLOSED (2026-06-15)** — all §15 exit criteria met. Open backlog (non-blocking): ITM-026,
+  ITM-031, ITM-034. Still local-only (no push until the July reset).
 
 ## 15. Success criteria (phase exit)
 

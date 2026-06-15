@@ -106,6 +106,9 @@ export function ReportEditorDialog({
   });
 
   // Populate the form when the dialog opens (from the edited report or a seed).
+  // Re-init keys only on `open` by design: the dialog is always closed between
+  // distinct edits (the page sets editor state then opens), so report/seed never
+  // change while it's already open. Exit-gate review F-4 (latent; documented).
   useEffect(() => {
     if (!open) return;
     const src = report ?? seed ?? null;

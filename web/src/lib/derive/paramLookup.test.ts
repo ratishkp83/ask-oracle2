@@ -44,6 +44,11 @@ describe("deriveBindColumns", () => {
     expect(deriveBindColumns("WHERE created BETWEEN :from AND :to")).toEqual({ from: "CREATED", to: "CREATED" });
     expect(deriveBindColumns("WHERE :code = status_code")).toEqual({ code: "STATUS_CODE" });
   });
+
+  it("maps only the first bind in a multi-value IN-list (safe degradation, F-2)", () => {
+    // The remaining binds simply get no auto-dropdown and fall back to typed input.
+    expect(deriveBindColumns("WHERE org_id IN (:a, :b, :c)")).toEqual({ a: "ORG_ID" });
+  });
 });
 
 describe("buildAutoLookups", () => {
