@@ -333,15 +333,13 @@ function AutoRunSwitch({ on, onChange }: { on: boolean; onChange: (v: boolean) =
       aria-checked={on}
       aria-label="Auto-run"
       onClick={() => onChange(!on)}
-      title="Auto-run: convert and fetch results without the review step"
-      className={`inline-flex shrink-0 items-center gap-1.5 text-[12px] font-medium ${
-        on ? "text-brand" : "text-ink-faint"
-      }`}
+      title={on ? "Auto-run is on — click to turn it off" : "Auto-run is off — click to turn it on"}
+      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-hairline bg-surface px-2 py-1 transition-colors hover:border-brand"
     >
+      {/* The sliding knob makes the on/off affordance obvious — clicking the
+          control toggles it either way (the explicit On/Off badge confirms state). */}
       <span
-        className={`relative h-[18px] w-8 rounded-full transition-colors ${
-          on ? "bg-brand" : "bg-ink-faint/30"
-        }`}
+        className={`relative h-[18px] w-8 rounded-full transition-colors ${on ? "bg-brand" : "bg-ink-faint/40"}`}
       >
         <span
           className={`absolute top-[3px] h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${
@@ -349,8 +347,15 @@ function AutoRunSwitch({ on, onChange }: { on: boolean; onChange: (v: boolean) =
           }`}
         />
       </span>
-      <span className="inline-flex items-center gap-1">
-        <Zap className="h-3.5 w-3.5" /> Auto-run
+      <span className="inline-flex items-center gap-1 text-[12px] font-medium text-ink">
+        <Zap className={`h-3.5 w-3.5 ${on ? "text-brand" : "text-ink-faint"}`} /> Auto-run
+      </span>
+      <span
+        className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${
+          on ? "bg-brand text-white" : "bg-surface-sunken text-ink-faint"
+        }`}
+      >
+        {on ? "On" : "Off"}
       </span>
     </button>
   );
