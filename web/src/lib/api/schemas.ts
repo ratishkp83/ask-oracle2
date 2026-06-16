@@ -147,6 +147,18 @@ export const ReportParamSchema = z.object({
 });
 export type ReportParam = z.infer<typeof ReportParamSchema>;
 
+// Persisted cascade plan (Phase 10, ADR-026) — mirrors CascadeSpec (src/core/
+// reports.py), snake_case on the wire. Metadata only (column names + ints); never
+// executed. The frontend maps this to/from the internal camelCase CascadeSpec
+// (web/src/lib/cascade/spec.ts) at the boundary.
+export const CascadePersistedSchema = z.object({
+  dimension_order: z.array(z.string()).default([]),
+  depth: z.number().default(2),
+  children_per_level: z.number().default(8),
+  rows_per_child: z.number().nullable().optional(),
+});
+export type CascadePersisted = z.infer<typeof CascadePersistedSchema>;
+
 export const ReportSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -155,6 +167,7 @@ export const ReportSchema = z.object({
   parameters: z.array(ReportParamSchema).default([]),
   default_profile_id: z.string().nullable().optional(),
   template_id: z.string().nullable().optional(),
+  cascade: CascadePersistedSchema.nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });

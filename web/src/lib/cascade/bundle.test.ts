@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { buildCascadeBundle } from "./bundle";
-import { DEFAULT_CASCADE_SPEC, resolveCascade } from "./spec";
+import { DEFAULT_CASCADE_SPEC, fromPersistedSpec, resolveCascade, toPersistedSpec } from "./spec";
 import { ColumnMeta } from "../derive/columns";
 
 const columns = ["REGION", "CUSTOMER", "AMOUNT"];
@@ -31,6 +31,27 @@ describe("resolveCascade", () => {
   });
   it("honours an explicit dimension order and drops unknown names", () => {
     expect(resolveCascade({ ...DEFAULT_CASCADE_SPEC, dimensionOrder: ["CUSTOMER", "NOPE", "REGION"] }, columns, cols, null).dimIndices).toEqual([1, 0]);
+  });
+});
+
+describe("cascade spec persistence mapping (camelCase <-> snake_case)", () => {
+  it("round-trips internal <-> persisted", () => {
+    const internal = { dimensionOrder: ["REGION", "CUSTOMER"], depth: 2, childrenPerLevel: 8, rowsPerChild: 500 };
+    const persisted = toPersistedSpec(internal);
+    expect(persisted).toEqual({
+      dimension_order: ["REGION", "CUSTOMER"],
+      depth: 2,
+      children_per_level: 8,
+      rows_per_child: 500,
+    });
+    expect(fromPersistedSpec(persisted)).toEqual(internal);
+  });
+
+  it("maps null/absent rows_per_child to undefined and back", () => {
+    expect(
+      fromPersistedSpec({ dimension_order: [], depth: 2, children_per_level: 8, rows_per_child: null }).rowsPerChild,
+    ).toBeUndefined();
+    expect(toPersistedSpec({ dimensionOrder: [], depth: 2, childrenPerLevel: 8 }).rows_per_child).toBeNull();
   });
 });
 

@@ -1,6 +1,7 @@
 import { ColumnMeta } from "../derive/columns";
 import { SqlMeta } from "../derive/sql";
 import { dimensionOrder } from "../derive/cascade";
+import type { CascadePersisted } from "../api/schemas";
 
 // The persisted shape of a cascading report (ADR-026). Stored on a saved report
 // (additive Report.cascade) and resolved against a result at generate time. It is
@@ -55,4 +56,24 @@ export function resolveCascade(
       : undefined;
 
   return { dimIndices, childrenPerLevel, rowsPerChild };
+}
+
+// Map the internal camelCase spec to/from the persisted snake_case form stored on
+// a Report (ADR-026). The wire shape matches the backend CascadeSpec exactly.
+export function toPersistedSpec(s: CascadeSpec): CascadePersisted {
+  return {
+    dimension_order: s.dimensionOrder,
+    depth: s.depth,
+    children_per_level: s.childrenPerLevel,
+    rows_per_child: s.rowsPerChild ?? null,
+  };
+}
+
+export function fromPersistedSpec(p: CascadePersisted): CascadeSpec {
+  return {
+    dimensionOrder: p.dimension_order,
+    depth: p.depth,
+    childrenPerLevel: p.children_per_level,
+    rowsPerChild: p.rows_per_child ?? undefined,
+  };
 }

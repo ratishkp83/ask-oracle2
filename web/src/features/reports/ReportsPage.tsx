@@ -4,9 +4,11 @@ import { AlertCircle, Database, FileText, Pencil, Plus, Sparkles, Trash2 } from 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ResultsView } from "@/components/exec/ResultsView";
-import { deleteReport, getProfiles, getReports, getTemplates } from "@/lib/api/endpoints";
+import { deleteReport, execute, getProfiles, getReports, getTemplates } from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/client";
 import type { ExecuteResult, Report, Template } from "@/lib/api/schemas";
+import { fromPersistedSpec } from "@/lib/cascade/spec";
+import { useSession } from "@/app/session";
 import { RunReportDialog } from "./RunReportDialog";
 import { ReportEditorDialog, type ReportSeed } from "./ReportEditorDialog";
 
@@ -18,6 +20,7 @@ type EditorState = { open: boolean; report?: Report | null; seed?: ReportSeed | 
 // the same SELECT-only chokepoint as Ask (invariant 1); the report SQL is shown
 // and stays reviewable in the editor.
 export function ReportsPage() {
+  const { profileId } = useSession();
   const { data: reports, isLoading, isError, error } = useQuery({ queryKey: ["reports"], queryFn: getReports });
   const { data: profiles } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const [view, setView] = useState<View>({ kind: "list" });
@@ -25,12 +28,24 @@ export function ReportsPage() {
   const [pickTemplate, setPickTemplate] = useState(false);
 
   if (view.kind === "results") {
+    // A saved cascading report regenerates its bundle from the saved spec, fetching
+    // fresh child slices live through the chokepoint when a connection is available.
+    const runProfile = profileId ?? view.report.default_profile_id ?? undefined;
     return (
       <ResultsView
         question={view.report.name}
         sql={view.report.sql}
         result={view.result}
         onBack={() => setView({ kind: "list" })}
+        cascadeSpec={view.report.cascade ? fromPersistedSpec(view.report.cascade) : undefined}
+        onRunSql={
+          runProfile
+            ? async (sql, binds) => {
+                const r = await execute({ sql, profile_id: runProfile, binds });
+                return { columns: r.columns ?? [], rows: r.rows ?? [] };
+              }
+            : undefined
+        }
       />
     );
   }

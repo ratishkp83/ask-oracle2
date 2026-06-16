@@ -1,5 +1,5 @@
 import { ReactNode, useMemo, useState } from "react";
-import { ArrowLeft, ChevronRight, Code2, Download, FileSpreadsheet, Layers, Loader2, SearchX } from "lucide-react";
+import { ArrowLeft, ChevronRight, Code2, Download, FileSpreadsheet, Loader2, SearchX } from "lucide-react";
 import { ExecuteResult } from "@/lib/api/schemas";
 import { errorMessage } from "@/lib/api/client";
 import { downloadXlsx } from "@/lib/api/endpoints";
@@ -10,13 +10,13 @@ import { PullFilter } from "@/lib/derive/pullDetail";
 import { deriveKpis } from "@/lib/derive/kpis";
 import { deriveInsights } from "@/lib/derive/insight";
 import { pickChart } from "@/lib/derive/chart";
-import { downloadCsv, downloadHtml, slugify } from "@/lib/export";
-import { DEFAULT_CASCADE_SPEC, resolveCascade } from "@/lib/cascade/spec";
-import { buildCascadeBundle } from "@/lib/cascade/bundle";
-import { renderBundleHtml } from "@/lib/cascade/renderHtml";
+import { downloadCsv, slugify } from "@/lib/export";
+import { CascadeSpec, DEFAULT_CASCADE_SPEC, resolveCascade } from "@/lib/cascade/spec";
+import { RunSql } from "@/lib/cascade/bundle";
 import { formatCompact, formatNumber, formatPercent, humanize, toNumber } from "@/lib/format";
 import { SummaryBand } from "./SummaryBand";
 import { InsightBand } from "./InsightBand";
+import { CascadeReportDialog } from "./CascadeReportDialog";
 import { KpiCard } from "./KpiCard";
 import { DriverChart } from "./DriverChart";
 import { ResultGrid } from "./ResultGrid";
@@ -42,6 +42,9 @@ export function ResultsView({
   onPullQuery,
   onPullDetail,
   onEditSql,
+  onRunSql,
+  cascadeSpec,
+  savable,
 }: {
   question: string;
   sql: string;
@@ -50,6 +53,11 @@ export function ResultsView({
   onPullQuery?: (q: string) => void;
   onPullDetail?: (filters: PullFilter[]) => void;
   onEditSql?: () => void; // pull the query up to edit + re-run
+  // Phase 10: live fresh-fetch fan-out for the cascading report (else local mode);
+  // a saved report's cascade spec; and whether to offer "Save as cascading report".
+  onRunSql?: RunSql;
+  cascadeSpec?: CascadeSpec;
+  savable?: boolean;
 }) {
   // The proposed SQL drives classification (GROUP BY → dimensions, aggregate
   // funcs → measures + their exact aggregation) and the cascade order; the name
@@ -119,6 +127,9 @@ export function ResultsView({
         reportSql={sql}
         reportRows={result.rows}
         reportTitle={question}
+        onRunSql={onRunSql}
+        cascadeSpec={cascadeSpec}
+        savable={savable}
         onDrill={push}
         leaf={{ filters, onPullQuery, onPullDetail: safePullDetail }}
       />
@@ -145,6 +156,9 @@ export function ResultsView({
       reportSql={sql}
       reportRows={result.rows}
       reportTitle={question}
+      onRunSql={onRunSql}
+      cascadeSpec={cascadeSpec}
+      savable={savable}
       onDrill={push}
       // F3: a non-drillable trend (date dim) still gets a path to detail at the top
       // level — pull the whole underlying detail (filters empty).
@@ -166,6 +180,9 @@ function ResultScope({
   reportSql,
   reportRows,
   reportTitle,
+  onRunSql,
+  cascadeSpec,
+  savable,
   onDrill,
   leaf,
 }: {
@@ -182,6 +199,9 @@ function ResultScope({
   reportSql: string;
   reportRows: unknown[][];
   reportTitle: string;
+  onRunSql?: RunSql;
+  cascadeSpec?: CascadeSpec;
+  savable?: boolean;
   onDrill: (dimIndex: number, value: string) => void;
   leaf?: LeafContext;
 }) {
@@ -193,16 +213,14 @@ function ResultScope({
   );
 
   const [xlsxBusy, setXlsxBusy] = useState(false);
-  const [bundleBusy, setBundleBusy] = useState(false);
   const [exportErr, setExportErr] = useState<string | null>(null);
 
   // A cascading report is offered only when the result has at least one dimension
   // to fan out by (auto-derived from the SQL / column shape).
-  const resolved = useMemo(
-    () => resolveCascade(DEFAULT_CASCADE_SPEC, columns, cols, sqlMeta),
-    [columns, cols, sqlMeta],
+  const canCascade = useMemo(
+    () => resolveCascade(cascadeSpec ?? DEFAULT_CASCADE_SPEC, columns, cols, sqlMeta).dimIndices.length > 0,
+    [cascadeSpec, columns, cols, sqlMeta],
   );
-  const canCascade = resolved.dimIndices.length > 0;
 
   async function exportXlsx() {
     setExportErr(null);
@@ -213,33 +231,6 @@ function ResultScope({
       setExportErr(errorMessage(e, "Couldn’t export to Excel. Please try again, or contact IT support."));
     } finally {
       setXlsxBusy(false);
-    }
-  }
-
-  // Build the cascading-report bundle from the FULL report (ADR-026) and download
-  // it as a single self-contained HTML file. Local mode (no fresh fetch) here —
-  // the live un-truncated fan-out is wired with the saved-report run in B5.
-  async function downloadReport() {
-    setExportErr(null);
-    setBundleBusy(true);
-    try {
-      const bundle = await buildCascadeBundle(
-        reportSql,
-        { columns, rows: reportRows },
-        cols,
-        sqlMeta,
-        resolved,
-      );
-      const html = renderBundleHtml(bundle, {
-        title: reportTitle,
-        question: reportTitle,
-        sql: reportSql,
-      });
-      downloadHtml(`${slugify(reportTitle) || "report"}-cascading`, html);
-    } catch (e) {
-      setExportErr(errorMessage(e, "Couldn’t build the cascading report. Please try again."));
-    } finally {
-      setBundleBusy(false);
     }
   }
 
@@ -299,20 +290,17 @@ function ResultScope({
               Excel
             </button>
             {canCascade && excludeChartDims.length === 0 && (
-              <button
-                type="button"
-                onClick={downloadReport}
-                disabled={bundleBusy}
-                title="Download a cascading report (summary → breakdowns) as a single HTML file"
-                className="inline-flex items-center gap-1.5 rounded-control border border-hairline bg-surface px-2.5 py-1.5 text-[12px] font-medium text-ink hover:bg-surface-sunken disabled:opacity-50"
-              >
-                {bundleBusy ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-muted" />
-                ) : (
-                  <Layers className="h-3.5 w-3.5 text-ink-muted" />
-                )}
-                Report
-              </button>
+              <CascadeReportDialog
+                reportSql={reportSql}
+                columns={columns}
+                reportRows={reportRows}
+                cols={cols}
+                sqlMeta={sqlMeta}
+                cascadeSpec={cascadeSpec}
+                onRunSql={onRunSql}
+                reportTitle={reportTitle}
+                savable={savable}
+              />
             )}
             <EmailDialog question={subject} columns={columns} rows={rows} filename={filename} />
           </div>

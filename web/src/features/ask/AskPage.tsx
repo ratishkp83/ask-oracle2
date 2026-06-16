@@ -211,6 +211,17 @@ export function AskPage() {
         onBack={reset}
         onPullDetail={s.pullable ? (filters) => enterPullDetail(s, filters) : undefined}
         onEditSql={s.pullable ? () => editSql(s) : undefined}
+        // Phase 10: a cascading report can fetch fresh, un-truncated child slices
+        // live (the same SELECT-only chokepoint), and be saved as a report.
+        onRunSql={
+          profileId
+            ? async (sql, binds) => {
+                const r = await execute({ sql, profile_id: profileId, binds });
+                return { columns: r.columns ?? [], rows: r.rows ?? [] };
+              }
+            : undefined
+        }
+        savable={s.pullable}
       />
     );
   }

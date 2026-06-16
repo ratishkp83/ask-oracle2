@@ -72,8 +72,9 @@ describe("ResultsView — multi-level cascade", () => {
   });
 
   // Regression: the top-level ResultScope must receive reportSql/reportRows so the
-  // cascading-report download builds a bundle instead of throwing on undefined rows.
-  it("downloads a cascading-report HTML bundle from the top level", async () => {
+  // cascading-report dialog builds a bundle (instead of throwing on undefined rows),
+  // and the Download action produces an HTML blob.
+  it("builds a cascading report and downloads it as HTML from the top level", async () => {
     const user = userEvent.setup();
     const blobs: Blob[] = [];
     const origCreate = URL.createObjectURL;
@@ -86,9 +87,11 @@ describe("ResultsView — multi-level cascade", () => {
     try {
       render(<ResultsView question="Sales by region" sql={SQL} result={RESULT} />);
       await user.click(await screen.findByRole("button", { name: /^report$/i }));
+      // The dialog builds the bundle (local mode) and then offers Download.
+      await user.click(await screen.findByRole("button", { name: /download html/i }));
       await waitFor(() => expect(blobs.length).toBeGreaterThan(0));
       expect(blobs[0].type).toContain("text/html");
-      expect(screen.queryByText(/please try again/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/couldn’t build/i)).not.toBeInTheDocument();
     } finally {
       URL.createObjectURL = origCreate;
       URL.revokeObjectURL = origRevoke;

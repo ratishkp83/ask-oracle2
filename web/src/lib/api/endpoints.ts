@@ -15,6 +15,7 @@ import {
   SchemaRecordSchema,
   SchemaSummaryListSchema,
   TemplateListSchema,
+  type CascadePersisted,
   type ReportParam,
 } from "./schemas";
 
@@ -133,7 +134,8 @@ export async function execute(body: {
   return ExecuteSchema.parse(await post("/execute", body));
 }
 
-// Saved reports (CRUD). A report is a saved SELECT/CTE + optional typed params.
+// Saved reports (CRUD). A report is a saved SELECT/CTE + optional typed params,
+// and (Phase 10) an optional cascade plan so it re-runs to a cascading bundle.
 export type ReportCreateBody = {
   name: string;
   description?: string;
@@ -141,6 +143,7 @@ export type ReportCreateBody = {
   parameters?: ReportParam[];
   default_profile_id?: string | null;
   template_id?: string | null;
+  cascade?: CascadePersisted | null;
 };
 
 export async function getReports() {
@@ -191,4 +194,18 @@ export async function emailReport(body: {
   filename?: string;
 }) {
   return EmailResultSchema.parse(await post("/reports/email", body));
+}
+
+// Email a prebuilt cascading-report HTML bundle as an .html attachment (Phase 10,
+// ADR-026). The bundle was assembled locally from the result the client already
+// holds — no re-query, no LLM. Reuses the Phase-8 mailer chokepoint server-side.
+export async function emailBundle(body: {
+  to: string;
+  subject: string;
+  body: string;
+  html: string;
+  cc?: string;
+  filename?: string;
+}) {
+  return EmailResultSchema.parse(await post("/reports/email-bundle", body));
 }
