@@ -273,8 +273,7 @@ export function AskPage() {
           What would you like to know?
         </h1>
         <p className="mt-2 text-[14px] leading-relaxed text-ink-muted">
-          Ask a question about your Oracle data. We propose read-only SQL for your review —
-          nothing runs until you approve it{autoRun ? ", unless Auto-run is on" : ""}.
+          Ask a question about your data — it’s strictly read-only, so nothing is ever changed.
         </p>
 
         <div className="mt-5 rounded-card border border-hairline bg-surface p-3 shadow-e1">
