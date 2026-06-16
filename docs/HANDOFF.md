@@ -12,9 +12,11 @@
 > **client-orchestrated fan-out reusing the TS `derive/*` layer**; each cascade child is a `pullDetail`-style
 > deterministic derivation of the **approved** parent through the existing `/execute` chokepoint (all five
 > invariants hold). **OUT/deferred:** conversational Ask, semantic layer, scheduling, LLM-phrased insight,
-> PDF/Excel, query history. Build plan B1 charter ✓ → **B2 design + ADR-026/027 = NEXT** (second sign-off
-> before feature code) → B3 insight engine → B4 fan-out + bundle + download → B5 email + "Save as cascading
-> report" → B6 docs + exit-gate. **Typecheck gate = `tsc --build`** (BUG-013: the previously-used
+> PDF/Excel, query history. Build plan B1 charter ✓ → B2 design + ADR-026/027 ✓ → B3 insight engine ✓ →
+> B4 fan-out + bundle + download ✓ → B5 (a backend cascade-persistence + `/reports/email-bundle`; b frontend
+> "Report" dialog Download/Email/Save + live fan-out) ✓ → **B6 docs + exit-gate = IN PROGRESS** (owner
+> approved B5; doc sweep + complete product test done — **`tsc --build` clean · vitest 158 · vite build ·
+> pytest 446 · OpenAPI 3.1.0 / 42 paths** — independent exit-gate review next). **Typecheck gate = `tsc --build`** (BUG-013: the previously-used
 > `tsc --noEmit -p tsconfig.json` is a **no-op** — root `tsconfig.json` has `files:[]` + project
 > references, so without `--build` it checks **zero** files; verified by a deliberate type error passing
 > it while `tsc --build` caught it). `*.tsbuildinfo` is git-ignored. **Local commits only; NO PUSH until the July reset.**

@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.23 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-15 (**BUG-013 FIXED** — the `tsc --noEmit -p tsconfig.json` typecheck gate was a no-op; adopted `tsc --build` + fixed the pre-existing `sql.test.ts:98`. Phase 10 B3+B4 building. Prior: **ITM-034 CLOSED**; **PHASE 9 CLOSED** — exit-gate r1 = PASS-WITH-FIXES)
+> **Document:** Issue Log · **Version:** 1.24 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-15 (**Phase 10 B1–B5 complete**, B6 docs + independent exit-gate review in progress; complete product test green (`tsc --build`/vitest 158/vite/pytest 446). Prior: **BUG-013 FIXED** (`tsc --noEmit -p tsconfig.json` gate was a no-op → adopted `tsc --build`); **ITM-034 CLOSED**; **PHASE 9 CLOSED**)
 
 ## Bug workflow (mandatory)
 

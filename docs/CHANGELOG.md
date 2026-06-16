@@ -4,7 +4,23 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
-### Added (Phase 10 — cascading report deliverables + local insight; B3–B4, in progress)
+### Added (Phase 10 — cascading report deliverables + local insight; B3–B5)
+- **B5 — delivery + persistence.** **B5a (backend):** additive **`Report.cascade`** (`CascadeSpec`:
+  dimension_order / depth / children_per_level / rows_per_child; metadata-only, clamped not rejected;
+  back-compatible) and a new **`POST /reports/email-bundle`** (+`/v1`, auth-gated) that emails a prebuilt
+  HTML bundle as an `.html` attachment via the Phase-8 mailer chokepoint (`send_html_bundle_email` +
+  `build_html_message`) — allow-list, header-injection guard, size cap, audit, `SendResult`→HTTP all
+  reused; **no LLM, no re-query**; opt-in `503`, oversized `400`. **B5b (frontend):** the cascading-report
+  actions consolidate into one **"Report" dialog** (`web/src/components/exec/CascadeReportDialog.tsx`) —
+  **Download** (client Blob), **Email** (`emailBundle` → `/reports/email-bundle`), and **Save as report**
+  (persists SQL + cascade). **Live fresh-fetch fan-out**: `ResultsView` gains `onRunSql` (wired in Ask +
+  Reports to `execute`) so child slices are fetched fresh + un-truncated via the chokepoint when connected,
+  else local. A **saved cascading report** regenerates the same bundle when run from Reports
+  (`Report.cascade` → `cascadeSpec` via `fromPersistedSpec`). `CascadePersisted` Zod + camelCase↔snake_case
+  mappers. Tests: email-bundle API (10) + cascade round-trip (3) backend; CascadeReportDialog
+  (download/email/save) + mapper round-trip + dialog regression frontend.
+
+### Added (Phase 10 — cascading report deliverables + local insight; B3–B4)
 - **B3 — local insight narration ([ADR-027](adr/ADR-027-local-insight-narration.md)):**
   `web/src/lib/derive/insight.ts` `deriveInsights()` emits a ranked, threshold-gated set of
   deterministic facts (total / top+concentration / date-trend / spread / coverage) from the
