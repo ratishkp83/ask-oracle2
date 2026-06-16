@@ -74,6 +74,35 @@ class ReportParam(BaseModel):
         return self
 
 
+class CascadeSpec(BaseModel):
+    """Persisted cascade plan for a report (Phase 10, ADR-026).
+
+    **Metadata only** — output column names + integers; it is never executed and
+    never reaches the SELECT-only chokepoint as SQL. Bounds mirror the frontend
+    resolver (``web/src/lib/cascade/spec.ts``); values are clamped, not rejected.
+    """
+
+    dimension_order: List[str] = Field(default_factory=list)
+    depth: int = 2
+    children_per_level: int = 8
+    rows_per_child: Optional[int] = None
+
+    @field_validator("depth")
+    @classmethod
+    def _clamp_depth(cls, v: int) -> int:
+        return max(1, min(5, v))
+
+    @field_validator("children_per_level")
+    @classmethod
+    def _clamp_children(cls, v: int) -> int:
+        return max(1, min(50, v))
+
+    @field_validator("rows_per_child")
+    @classmethod
+    def _clamp_rows(cls, v: Optional[int]) -> Optional[int]:
+        return None if v is None else max(1, v)
+
+
 class ReportCreate(BaseModel):
     """Inbound payload for creating/updating a report (no id/timestamps)."""
 
@@ -83,6 +112,7 @@ class ReportCreate(BaseModel):
     parameters: List[ReportParam] = Field(default_factory=list)
     default_profile_id: Optional[str] = None
     template_id: Optional[str] = None
+    cascade: Optional[CascadeSpec] = None
 
 
 class Report(BaseModel):
@@ -95,6 +125,7 @@ class Report(BaseModel):
     parameters: List[ReportParam] = Field(default_factory=list)
     default_profile_id: Optional[str] = None
     template_id: Optional[str] = None
+    cascade: Optional[CascadeSpec] = None
     created_at: str
     updated_at: str
 
@@ -113,6 +144,7 @@ def _new_report(data: ReportCreate, *, report_id: Optional[str] = None) -> Repor
         parameters=data.parameters,
         default_profile_id=data.default_profile_id,
         template_id=data.template_id,
+        cascade=data.cascade,
         created_at=now,
         updated_at=now,
     )
@@ -313,6 +345,7 @@ class JsonFileReportStore(ReportStore):
                 parameters=data.parameters,
                 default_profile_id=data.default_profile_id,
                 template_id=data.template_id,
+                cascade=data.cascade,
                 created_at=existing.created_at,
                 updated_at=_now_iso(),
             )
@@ -368,6 +401,7 @@ class InMemoryReportStore(ReportStore):
                 parameters=data.parameters,
                 default_profile_id=data.default_profile_id,
                 template_id=data.template_id,
+                cascade=data.cascade,
                 created_at=existing.created_at,
                 updated_at=_now_iso(),
             )

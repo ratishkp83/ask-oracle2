@@ -48,7 +48,7 @@ from src.core.introspection import introspect_schema
 from src.core.sql_safety import SqlSafetyError, assert_safe_select
 from src.core.templates import Module, Template, get_template, list_templates
 from src.core.ebs_packs import EbsPack, get_pack, list_packs
-from src.core.mailer import email_enabled, send_report_email
+from src.core.mailer import email_enabled, send_html_bundle_email, send_report_email
 
 _EBS_MODULES = set(get_args(Module))  # {"GL","AP","AR","PO","OM"}
 from src.schema import schema_from_dict, schema_to_dict
@@ -301,6 +301,29 @@ class EmailReportRequest(BaseModel):
     def _require_columns(cls, value: List[str]) -> List[str]:
         if not value:
             raise ValueError("columns must be a non-empty list.")
+        return value
+
+
+class EmailBundleRequest(BaseModel):
+    """Email a prebuilt cascading-report **HTML bundle** as an ``.html`` attachment
+    (Phase 10, ADR-026).
+
+    The client passes the already-assembled bundle (built locally from the result
+    it already holds) — **no LLM, no re-query**. Reuses the Phase-8 mailer chokepoint
+    unchanged (header-injection guard, allow-list, size cap, audit log)."""
+
+    to: str
+    subject: str
+    body: str = ""
+    html: str
+    cc: str = ""
+    filename: Optional[str] = None
+
+    @field_validator("html")
+    @classmethod
+    def _require_html(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("html must be a non-empty cascading-report document.")
         return value
 
 
@@ -786,6 +809,56 @@ def email_report(req: EmailReportRequest):
     # request-scoped one) so the client's reference matches the server log line —
     # returned explicitly because a contextvar set in the sync-route threadpool
     # would not reach the async exception handler. 502: the upstream send failed.
+    return JSONResponse(
+        status_code=502,
+        content={"detail": result.message, "error_id": result.error_id},
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Email a cascading-report HTML bundle (Phase 10, ADR-026): the client posts the
+# prebuilt bundle; it is sent as an .html attachment via the Phase-8 mailer
+# chokepoint (allow-list, header-injection guard, size cap, audit). No LLM, no
+# re-query — the same data-egress boundary as /reports/email.
+# --------------------------------------------------------------------------- #
+@router.post("/reports/email-bundle")
+def email_report_bundle(req: EmailBundleRequest):
+    # Opt-in: inert unless SMTP_USER + SMTP_PASSWORD are configured server-side.
+    if not email_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Email is not configured — set SMTP_USER and SMTP_PASSWORD on the server.",
+        )
+
+    # Reject an oversized bundle cheaply, before the mailer encodes it. The mailer's
+    # own byte cap (EMAIL_MAX_ATTACHMENT_MB) is the authoritative limit and maps to 400.
+    MAX_BUNDLE_BYTES = 30_000_000
+    if len(req.html.encode("utf-8")) > MAX_BUNDLE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail="Report is too large to email. Narrow it (fewer breakdowns/rows) and try again.",
+        )
+
+    result = send_html_bundle_email(
+        to=req.to,
+        subject=req.subject,
+        body=req.body,
+        html=req.html,
+        cc=req.cc,
+        filename=req.filename,
+    )
+
+    if result.kind == "ok":
+        return {
+            "status": "ok",
+            "message": result.message,
+            "recipients": result.recipients,
+            "attachment_bytes": result.attachment_bytes,
+        }
+    if result.kind == "rejected":
+        # User-actionable (bad recipient/domain/oversize/not configured) — safe verbatim.
+        raise HTTPException(status_code=400, detail=result.message)
+    # Transport/auth failure: generic message + the mailer's own error_id.
     return JSONResponse(
         status_code=502,
         content={"detail": result.message, "error_id": result.error_id},

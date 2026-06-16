@@ -31,6 +31,7 @@ from src.core.mailer.config import EmailConfig, load_config
 from src.core.mailer.message import (
     EmailRejected,
     all_recipients,
+    build_html_message,
     build_message,
     enforce_allowlist,
     normalize_format,
@@ -157,5 +158,75 @@ def send_report_email(
     return SendResult(
         kind="ok",
         message=f"Sent to {len(envelope)} recipient(s) - {fmt.upper()} attached ({size_text}).",
+        recipients=len(envelope), attachment_bytes=size,
+    )
+
+
+def send_html_bundle_email(
+    *,
+    to: str,
+    subject: str,
+    body: str,
+    html: str,
+    cc: str = "",
+    filename: Optional[str] = None,
+    config: Optional[EmailConfig] = None,
+) -> SendResult:
+    """Send a cascading-report **HTML bundle** as an ``.html`` attachment (Phase 10,
+    ADR-026). Mirrors :func:`send_report_email`'s validate -> build -> send -> audit
+    flow but carries the prebuilt bundle instead of a DataFrame — **no LLM, no
+    re-query**. Reuses every guard (allow-list, header-injection, size cap, audit).
+    """
+    cfg = config or load_config()
+    if not (cfg.user and cfg.password):
+        return SendResult(
+            kind="rejected",
+            message="Email is not configured — set SMTP_USER and SMTP_PASSWORD in .env.",
+        )
+
+    try:
+        to_list = parse_recipients(to)
+        cc_list = parse_recipients(cc)
+        if not to_list:
+            raise EmailRejected("At least one recipient is required.")
+        enforce_allowlist(to_list + cc_list, cfg.allowed_domains)
+        msg = build_html_message(
+            sender=cfg.sender, to=to_list, cc=cc_list, subject=subject, body=body,
+            html=html, filename=filename, max_attachment_bytes=cfg.max_attachment_bytes,
+        )
+    except EmailRejected as exc:
+        metrics.increment("emails_rejected")
+        return SendResult(kind="rejected", message=str(exc))
+
+    envelope = all_recipients(msg)
+    size = _attachment_size(msg)
+    audit_fields = {
+        "to": to_list,
+        "cc": cc_list,
+        "subject": msg["Subject"],
+        "attachment_format": "html",
+        "attachment_bytes": size,
+    }
+
+    try:
+        _transport_send(cfg, msg, envelope)
+    except Exception as exc:  # noqa: BLE001 - sanitize any transport/auth error
+        error_id = new_error_id()
+        log_error(exc, context="email-bundle-send", error_id=error_id, event="email_error")
+        metrics.increment("emails_failed")
+        _audit.warning("email_failed", extra={"extra_fields": {
+            "event": "email_failed", "error_id": error_id, "outcome": "error", **audit_fields,
+        }})
+        return SendResult(kind="error", message=GENERIC_EMAIL_DETAIL, error_id=error_id,
+                          recipients=len(envelope), attachment_bytes=size)
+
+    metrics.increment("emails_sent")
+    _audit.info("email_sent", extra={"extra_fields": {
+        "event": "email_sent", "outcome": "sent", **audit_fields,
+    }})
+    size_text = f"{size / 1024:.1f} KB" if size >= 1024 else f"{size} bytes"
+    return SendResult(
+        kind="ok",
+        message=f"Sent to {len(envelope)} recipient(s) - HTML report attached ({size_text}).",
         recipients=len(envelope), attachment_bytes=size,
     )

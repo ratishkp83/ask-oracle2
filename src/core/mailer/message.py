@@ -157,6 +157,55 @@ def build_message(
     return msg
 
 
+def build_html_message(
+    *,
+    sender: str,
+    to: Sequence[str],
+    cc: Sequence[str] = (),
+    subject: str,
+    body: str,
+    html: str,
+    filename: Optional[str] = None,
+    max_attachment_bytes: Optional[int] = None,
+) -> EmailMessage:
+    """Assemble a message carrying a cascading-report **HTML bundle** as an
+    ``.html`` attachment (Phase 10, ADR-026).
+
+    The bundle is the already-built document — **no DataFrame, no re-query**. Same
+    guards as :func:`build_message`: every recipient re-validated, the subject and
+    From control-char-stripped (header-injection-safe), and the size cap enforced
+    *before* any network use. Raises :class:`EmailRejected` for user-fixable errors.
+    """
+    to_list = [validate_address(a) for a in to]
+    cc_list = [validate_address(a) for a in cc]
+    if not to_list:
+        raise EmailRejected("At least one recipient is required.")
+
+    data = (html or "").encode("utf-8")
+    if not data:
+        raise EmailRejected("The report is empty.")
+    if max_attachment_bytes is not None and len(data) > max_attachment_bytes:
+        raise EmailRejected(
+            f"Report is {len(data) / 1024 / 1024:.1f} MB, over the "
+            f"{max_attachment_bytes / 1024 / 1024:.0f} MB limit. "
+            "Narrow the report (fewer breakdowns/rows) and try again."
+        )
+
+    msg = EmailMessage()
+    msg["From"] = _CONTROL_RE.sub("", sender)
+    msg["To"] = ", ".join(to_list)
+    if cc_list:
+        msg["Cc"] = ", ".join(cc_list)
+    msg["Subject"] = sanitize_subject(subject)
+    msg.set_content(body or "Your cascading report is attached as an HTML file.")
+
+    name = filename or "cascading-report.html"
+    if not name.lower().endswith(".html"):
+        name = f"{name}.html"
+    msg.add_attachment(data, maintype="text", subtype="html", filename=name)
+    return msg
+
+
 def all_recipients(msg: EmailMessage) -> List[str]:
     """Flatten To + Cc into a single envelope list (used by the sender)."""
     out: List[str] = []
