@@ -28,7 +28,13 @@ Each feature phase runs through the lifecycle micro-cycle (Discovery → Design 
 > → single-file HTML bundle; Download/Email/Save "Report" dialog; live fresh-fetch + saved cascading reports.
 > Exit-gate r1 = **PASS-WITH-FIXES** (reviewer ≠ author; all 5 invariants hold; 4 S4 remediated;
 > [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)); gates `tsc --build`/vitest 160/vite/pytest
-> 446; **live XE end-to-end confirmed** (run → live fan-out → download → real email). Authoritative v2 state
+> 446; **live XE end-to-end confirmed** (run → live fan-out → download → real email). **Phase 11
+> (Plan-Aware Query Intelligence + Resilient Execution) OPENED 2026-06-18** —
+> [charter](charters/phase-11-plan-aware-resilient.md) (B1) + [design](plan-aware-resilient-design.md) /
+> ADR-[028](adr/ADR-028-database-profiling.md)…[031](adr/ADR-031-privilege-gated-plan-reading.md) (B2)
+> **approved**; now building **B3** (read-only profiling + Optimization Advisory + soft-block setup
+> readiness gate). Two pillars (profiling+plan-aware generation; resilient async execution); the
+> semantic/metrics layer is **Phase 12** (deferred). Authoritative v2 state
 > lives in [HANDOFF.md](HANDOFF.md) (top banner). End goal: *fully intelligent + cascading reporting.*
 
 **Phase 7 CLOSED (2026-06-12) — all planned phases [on v1/`main`] are now complete.** Phase 7 shipped the EBS
