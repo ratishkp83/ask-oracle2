@@ -183,4 +183,44 @@ describe("deriveInsights", () => {
     expect(text).not.toMatch(/across 2 first names/i);
     expect(text).not.toMatch(/of the total/i);
   });
+
+  it("frames a grouped MAX as 'highest … across N', led by a group, with no share", () => {
+    const cols = [dim("DEPARTMENT", 0), measure("SALARY", 1, { type: "currency", agg: "max" })];
+    const rows = [
+      ["Engineering", 130000],
+      ["Sales", 120000],
+      ["HR", 90000],
+    ];
+    const ins = deriveInsights(cols, rows, null);
+    expect(ins.find((i) => i.kind === "total")!.text).toBe("Highest salary across 3 departments: $130.0K.");
+    const top = ins.find((i) => i.kind === "top")!;
+    expect(top.text).toBe("Engineering leads salary at $130.0K.");
+    expect(top.text).not.toContain("of the total"); // share is meaningless for a MAX
+  });
+
+  it("frames a grouped COUNT as an additive total with a leader share", () => {
+    const cols = [dim("STATUS", 0), measure("ORDERS", 1, { isInteger: true, agg: "count" })];
+    const rows = [
+      ["Open", 600],
+      ["Closed", 300],
+      ["Cancelled", 100],
+    ];
+    const ins = deriveInsights(cols, rows, null);
+    expect(ins.find((i) => i.kind === "total")!.text).toMatch(/^Orders across 3 statuses: /);
+    expect(ins.find((i) => i.kind === "top")!.text).toContain("of the total"); // counts are additive
+  });
+
+  it("omits the range when an un-aggregated list has a single distinct value", () => {
+    const ins = deriveInsights(
+      [dim("NAME", 0), measure("SALARY", 1)],
+      [
+        ["A", 100000],
+        ["B", 100000],
+      ],
+      null,
+    );
+    expect(ins).toHaveLength(1);
+    expect(ins[0].text).toMatch(/^Highest salary: 100(\.0)?K — A\.$/);
+    expect(ins.some((i) => /ranges/.test(i.text))).toBe(false);
+  });
 });
