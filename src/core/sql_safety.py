@@ -81,11 +81,13 @@ def _strip_trailing_semicolons(sql: str) -> str:
     return sql.strip().rstrip(";").strip()
 
 
-def assert_safe_select(sql: str) -> SafetyResult:
+def assert_safe_select(sql: str, dialect: str = "oracle") -> SafetyResult:
     """Return a :class:`SafetyResult` describing whether ``sql`` is a safe SELECT.
 
-    Never raises for unsafe input; callers inspect ``result.allowed`` and may
-    raise :class:`SqlSafetyError` themselves. Only programming errors propagate.
+    ``dialect`` selects the sqlglot parser (``"oracle"`` | ``"postgres"`` | …) so the
+    same read-only guarantee applies across database engines. Defaults to Oracle for
+    backward-compatibility. Never raises for unsafe input; callers inspect
+    ``result.allowed`` and may raise :class:`SqlSafetyError` themselves.
     """
     if not sql or not sql.strip():
         return SafetyResult(allowed=False, reason="Empty SQL is not allowed.")
@@ -94,9 +96,9 @@ def assert_safe_select(sql: str) -> SafetyResult:
     if not cleaned:
         return SafetyResult(allowed=False, reason="Empty SQL is not allowed.")
 
-    # Layer 1: parse with the Oracle dialect; reject stacked statements.
+    # Layer 1: parse with the engine dialect; reject stacked statements.
     try:
-        parsed = [s for s in sqlglot.parse(cleaned, read="oracle") if s is not None]
+        parsed = [s for s in sqlglot.parse(cleaned, read=dialect) if s is not None]
     except Exception as exc:  # noqa: BLE001 - any parse failure is fail-closed
         return SafetyResult(
             allowed=False,
@@ -152,7 +154,7 @@ def assert_safe_select(sql: str) -> SafetyResult:
 
     # Layer 4: keyword denylist backstop over normalised, literal-stripped SQL.
     try:
-        normalized = statement.sql(dialect="oracle")
+        normalized = statement.sql(dialect=dialect)
     except Exception:  # noqa: BLE001 - fall back to the cleaned input
         normalized = cleaned
     scannable = _STRING_LITERAL_RE.sub("''", normalized)
@@ -166,6 +168,6 @@ def assert_safe_select(sql: str) -> SafetyResult:
     return SafetyResult(allowed=True, normalized_sql=normalized)
 
 
-def is_safe_select(sql: str) -> bool:
+def is_safe_select(sql: str, dialect: str = "oracle") -> bool:
     """Backwards-compatible boolean wrapper around :func:`assert_safe_select`."""
-    return assert_safe_select(sql).allowed
+    return assert_safe_select(sql, dialect=dialect).allowed
