@@ -25,6 +25,12 @@ export interface Insight {
 // sum. Only used when the SQL didn't yield an exact aggregation (c.agg).
 const AVG_HINT = /(pct|percent|rate|ratio|margin|avg|average|days|age|score|price)/;
 
+// Per-entity measures (a person's pay) — NOT additive across distinct records, so a
+// record list of them is narrated by the MAX (the relevant "highest"), not a total.
+// Additive measures (amount/revenue/balance) keep the normal total/leader framing
+// (e.g. "total outstanding AR across customers"). Mirrors kpis.ts PER_ENTITY_MEASURE.
+const PER_ENTITY_MEASURE = /(salary|salaries|wage|stipend|compensation)/i;
+
 // Conservative thresholds — a weak signal stays silent rather than misleading.
 const CONCENTRATION_MIN = 0.3; // top-1 share of the total to call out concentration
 const TREND_MIN_PCT = 0.1; // |first→last % change| to call out a trend
@@ -34,6 +40,17 @@ const ISO_LIKE = /^\d{4}(-\d{2}(-\d{2})?)?/; // sortable date/year key for trend
 
 function leadAgg(c: ColumnMeta): Agg {
   return c.agg ?? (AVG_HINT.test(c.name.toLowerCase()) ? "avg" : "sum");
+}
+
+// Avoid doubling the aggregation word when the measure name already carries it
+// (e.g. a column aliased AVERAGE_SALARY → "Average average salary"). F3.
+const AGG_PREFIX_WORDS: Record<string, string[]> = {
+  Average: ["average", "avg", "mean"],
+  Highest: ["highest", "max", "maximum", "top"],
+  Lowest: ["lowest", "min", "minimum"],
+};
+function aggSubject(prefix: "Average" | "Highest" | "Lowest", mLower: string, mLabel: string): string {
+  return (AGG_PREFIX_WORDS[prefix] ?? []).some((w) => mLower.includes(w)) ? mLabel : `${prefix} ${mLower}`;
 }
 
 function formatMeasure(raw: number, c: ColumnMeta, agg: Agg): string {
@@ -175,12 +192,13 @@ export function deriveInsights(
     return out.slice(0, max);
   }
 
-  // --- detail record list (measure NOT aggregated: no GROUP BY, no agg func) --
-  // The rows are individual records (e.g. "the highest-paid employee in each
-  // department"). SUMming the measure across distinct records, and "X leads with
-  // N% of the total", are meaningless — so lead with the MAX (which is what
-  // "highest …" asks for) and the range, never a bogus total/share/per-name scope.
-  if (lead.agg === undefined) {
+  // --- detail record list of a PER-ENTITY measure (no GROUP BY, no agg func) ---
+  // The rows are individual records and the measure is a per-entity attribute
+  // (salary) — SUMming it across distinct records, and "X leads with N% of the
+  // total", are meaningless. Lead with the MAX (what "highest …" asks) + the range,
+  // never a per-name scope. Additive un-aggregated measures (amount/revenue) fall
+  // through to the normal total/leader path, which is correct for them (total AR).
+  if (lead.agg === undefined && PER_ENTITY_MEASURE.test(lead.name)) {
     const measureIdx = new Set(rankMeasures(cols).map((m) => m.index));
     let maxRow = rows[0];
     let maxV = -Infinity;
@@ -207,8 +225,8 @@ export function deriveInsights(
       kind: "top",
       measure: lead.name,
       text: entity
-        ? `Highest ${mLower}: ${formatMeasure(maxV, lead, "max")} — ${entity}.`
-        : `Highest ${mLower}: ${formatMeasure(maxV, lead, "max")}.`,
+        ? `${aggSubject("Highest", mLower, mLabel)}: ${formatMeasure(maxV, lead, "max")} — ${entity}.`
+        : `${aggSubject("Highest", mLower, mLabel)}: ${formatMeasure(maxV, lead, "max")}.`,
       basis: `max ${lead.name} over ${measureRows.toLocaleString()} records`,
       confidence: "high",
     });
@@ -245,9 +263,9 @@ export function deriveInsights(
     const unit = useGroups ? units(dimLabel, n) : units("row", n);
     const scope = `across ${n.toLocaleString()} ${unit}`;
     let text: string;
-    if (agg === "avg") text = `Average ${mLower} ${scope}: ${val}.`;
-    else if (agg === "min") text = `Lowest ${mLower} ${scope}: ${val}.`;
-    else if (agg === "max") text = `Highest ${mLower} ${scope}: ${val}.`;
+    if (agg === "avg") text = `${aggSubject("Average", mLower, mLabel)} ${scope}: ${val}.`;
+    else if (agg === "min") text = `${aggSubject("Lowest", mLower, mLabel)} ${scope}: ${val}.`;
+    else if (agg === "max") text = `${aggSubject("Highest", mLower, mLabel)} ${scope}: ${val}.`;
     else text = `${mLabel} ${scope}: ${val}.`;
     out.push({
       kind: "total",
@@ -271,14 +289,24 @@ export function deriveInsights(
         }
       }
       const name = keyLabel(topG.key, dimLabel);
-      let text = `${name} leads ${mLower} at ${formatMeasure(topV, lead, agg)}`;
-      let basis = `largest ${agg} of ${lead.name} by ${dimLabel}`;
-      // Share only makes sense for additive totals (sum/count), not avg/min/max.
-      if ((agg === "sum" || agg === "count") && totalSum > 0) {
-        const share = topG.sum / totalSum;
-        if (share >= CONCENTRATION_MIN) {
-          text += ` — ${pctStr(share)} of the total`;
-          basis = `${formatCompact(topG.sum, lead.type === "currency")} of ${formatCompact(totalSum, lead.type === "currency")}`;
+      const topValStr = formatMeasure(topV, lead, agg);
+      // F6: "leads" is wrong when several groups share the top value — say it's a tie.
+      const tieCount = stats.filter((g) => Math.abs(foldStat(g, agg) - topV) < 1e-9).length;
+      let text: string;
+      let basis: string;
+      if (tieCount > 1) {
+        text = `${name} and ${tieCount - 1} other${tieCount - 1 === 1 ? "" : "s"} tie for the top ${mLower} at ${topValStr}`;
+        basis = `${tieCount} groups tied at the top ${agg} of ${lead.name}`;
+      } else {
+        text = `${name} leads ${mLower} at ${topValStr}`;
+        basis = `largest ${agg} of ${lead.name} by ${dimLabel}`;
+        // Share only makes sense for a sole leader on an additive total (sum/count).
+        if ((agg === "sum" || agg === "count") && totalSum > 0) {
+          const share = topG.sum / totalSum;
+          if (share >= CONCENTRATION_MIN) {
+            text += ` — ${pctStr(share)} of the total`;
+            basis = `${formatCompact(topG.sum, lead.type === "currency")} of ${formatCompact(totalSum, lead.type === "currency")}`;
+          }
         }
       }
       out.push({ kind: "top", measure: lead.name, text: text + ".", basis, confidence: "high" });

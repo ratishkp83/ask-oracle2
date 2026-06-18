@@ -32,6 +32,10 @@ export function pickChart(
   if (rows.length < 2) return null;
   const measure = rankMeasures(cols)[0];
   if (!measure) return null;
+  // A chart aggregates the measure *within each dimension value* (a grouping), so
+  // SUM is the right default — daily/regional totals are meaningful, and for a
+  // record list with unique keys sum == the per-record value anyway. (The KPI
+  // tiles, which roll up across ALL rows, are where an un-aggregated SUM misleads.)
   const agg: Agg = measure.agg ?? "sum";
 
   const dims = cols.filter((c) => !c.isMeasure && c.type !== "id" && !exclude.includes(c.index));

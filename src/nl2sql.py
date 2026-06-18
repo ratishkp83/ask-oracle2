@@ -4,6 +4,9 @@ import logging
 import re
 from typing import List, Optional, Tuple
 
+import sqlglot
+from sqlglot import exp
+
 logger = logging.getLogger("ask_oracle")
 
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -58,9 +61,11 @@ SYSTEM_PROMPT = (
     "(a) the request is not about this data at all (small talk / general knowledge, e.g. "
     "'how to swim'); or\n"
     "(b) answering it would require information the schema does not contain — e.g. counting "
-    "'women' when there is no gender column, or filtering by an age/status/category that is "
-    "not a column. In that case do NOT substitute a different metric or guess a proxy; "
-    "decline.\n"
+    "employees by gender (men OR women) when there is no gender column, filtering by a hire "
+    "date / age / status / category that is not a column, or any attribute absent from the "
+    "schema. In that case do NOT substitute a different metric, do NOT invent a column, and "
+    "do NOT silently drop the unsatisfiable filter and return a broader count (e.g. a plain "
+    "COUNT(*) for 'how many women') — decline.\n"
     "Otherwise, if the question maps to tables and columns that actually exist, attempt the SQL."
 )
 
@@ -125,6 +130,55 @@ def _decline_message(text: str) -> str:
     msg = re.sub(r"\s+", " ", (text or "").strip())
     msg = re.sub(r"(?i)^cannot_answer\s*:?\s*", "", msg).strip()
     return msg[:240] if msg else _DEFAULT_DECLINE_MSG
+
+
+# Oracle pseudo-columns / built-ins that are valid references but never appear in a
+# data dictionary — never treat these as "fabricated".
+_PSEUDO_COLUMNS = {
+    "ROWNUM", "ROWID", "LEVEL", "ORA_ROWSCN", "SYSDATE", "SYSTIMESTAMP",
+    "CURRENT_DATE", "CURRENT_TIMESTAMP", "USER", "UID",
+}
+
+
+def _unknown_columns(sql: str, schema: Schema) -> List[str]:
+    """Column names the SQL references that are NOT in the schema, NOT query-defined
+    (SELECT aliases / CTE names / table aliases), and NOT Oracle pseudo-columns.
+
+    Used to decline a query that referenced a **fabricated** column (e.g. HIRE_DATE
+    when the schema has no such column) GRACEFULLY, instead of running it and
+    surfacing a raw ORA-00904. **Fail-open:** any parse difficulty, or an unknown
+    schema, returns ``[]`` so a valid query is never wrongly blocked (the SELECT-only
+    chokepoint remains the hard safety boundary regardless)."""
+    try:
+        tree = sqlglot.parse_one(sql, read="oracle")
+    except Exception:  # noqa: BLE001 - unparseable → don't block
+        return []
+    if tree is None:
+        return []
+    known = {c.column_name.upper() for t in schema.tables.values() for c in t.columns}
+    if not known:
+        return []  # we don't know the schema's columns → cannot judge
+
+    defined: set = set()
+    for node in tree.find_all(exp.Alias):
+        if node.alias:
+            defined.add(node.alias.upper())
+    for cte in tree.find_all(exp.CTE):
+        if cte.alias:
+            defined.add(cte.alias.upper())
+    for tbl in tree.find_all(exp.Table):
+        if tbl.alias:
+            defined.add(tbl.alias.upper())
+
+    unknown: List[str] = []
+    for col in tree.find_all(exp.Column):
+        name = (col.name or "").upper()
+        if not name or name == "*":
+            continue
+        if name in known or name in defined or name in _PSEUDO_COLUMNS:
+            continue
+        unknown.append(col.name)
+    return sorted(set(unknown))
 
 
 def generate_sql_from_nl(
@@ -207,6 +261,19 @@ def generate_sql_from_nl(
         logger.warning("nl2sql: no usable SELECT produced; declining (preview=%r)", (sql or "")[:120])
         message = _decline_message("" if _looks_like_sql(sql) else sql)
         return NLSQLResult(sql="", answerable=False, message=message)
+
+    # Decline gracefully when the model fabricated a column that isn't in the schema
+    # (F2): far better a calm "the data has no column for X" than a raw ORA-00904 at
+    # run time. Fail-open — only fires on a confident, parseable unknown reference.
+    unknown = _unknown_columns(sql, schema)
+    if unknown:
+        logger.info("nl2sql: SQL references column(s) not in schema %s; declining", unknown)
+        cols_txt = ", ".join(unknown[:5])
+        return NLSQLResult(
+            sql="",
+            answerable=False,
+            message=f"I can't answer that from the available data — it has no column for: {cols_txt}.",
+        )
 
     return NLSQLResult(
         sql=sql,

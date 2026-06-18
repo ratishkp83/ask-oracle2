@@ -71,8 +71,19 @@ describe("name-heuristic fallback (SQL unreadable)", () => {
       [["A", 100], ["B", 200]],
     );
     expect(meta!.reliable).toBe(false); // no GROUP BY, no aggregate
-    expect(kpis[0].value).toBe("$300");
+    expect(kpis[0].value).toBe("$300"); // additive amount → still a Total
     expect(kpis[0].context).toBe("Total · 2 values");
+  });
+
+  it("rolls a per-entity measure (salary) up by MAX in a record list, never a sum (F4)", () => {
+    const cols = classifyColumns(
+      ["FIRST_NAME", "SALARY"],
+      [["Alan", 130000], ["Bob", 125000]],
+    );
+    const kpi = deriveKpis([["Alan", 130000], ["Bob", 125000]], cols)[0];
+    expect(kpi.label).toBe("Salary");
+    expect(kpi.context).toMatch(/^Maximum/);
+    expect(kpi.value).not.toContain("255"); // never the sum of two people's pay
   });
 
   it("classifies with no SQL meta at all (backward compatible)", () => {

@@ -101,7 +101,8 @@ describe("deriveInsights", () => {
     ];
     const ins = deriveInsights(cols, rows, null);
     const top = ins.find((i) => i.kind === "top")!;
-    expect(top.text).toBe("A leads amt at $100.");
+    // F6: an even split is a tie at the top, not a sole leader (and no share).
+    expect(top.text).toBe("A and 3 others tie for the top amt at $100.");
     expect(top.text).not.toContain("of the total");
     // All-equal groups → no spread either.
     expect(ins.some((i) => i.kind === "spread")).toBe(false);
@@ -208,6 +209,25 @@ describe("deriveInsights", () => {
     const ins = deriveInsights(cols, rows, null);
     expect(ins.find((i) => i.kind === "total")!.text).toMatch(/^Orders across 3 statuses: /);
     expect(ins.find((i) => i.kind === "top")!.text).toContain("of the total"); // counts are additive
+  });
+
+  it("does not double the aggregation word when the column already carries it (F3)", () => {
+    const cols = [dim("DEPARTMENT_NAME", 0), measure("AVERAGE_SALARY", 1, { type: "currency", agg: "avg" })];
+    const total = deriveInsights(cols, [["Eng", 130000], ["Sales", 120000]], null).find((i) => i.kind === "total")!;
+    expect(total.text).toMatch(/^Average salary across 2 department names: /);
+    expect(total.text).not.toMatch(/average average/i);
+  });
+
+  it("calls a shared top value a tie, not a sole leader (F6)", () => {
+    const cols = [dim("DEPARTMENT", 0), measure("AVG_SAL", 1, { type: "currency", agg: "avg" })];
+    const rows = [
+      ["Finance", 125000],
+      ["Engineering", 125000],
+      ["HR", 90000],
+    ];
+    const top = deriveInsights(cols, rows, null).find((i) => i.kind === "top")!;
+    expect(top.text).toMatch(/tie for the top/);
+    expect(top.text).not.toMatch(/\bleads\b/);
   });
 
   it("omits the range when an un-aggregated list has a single distinct value", () => {
