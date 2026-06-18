@@ -100,6 +100,29 @@ describe("AskPage state machine", () => {
     );
   });
 
+  it("shows the model's interpreted question (typo-corrected) in review and results", async () => {
+    window.localStorage.setItem("aor.profileId", "p1");
+    window.localStorage.setItem("aor.schemaId", "s1");
+    vi.mocked(nl2sql).mockResolvedValue({ ...PROPOSAL, interpreted_question: "Revenue by region?" });
+    vi.mocked(execute).mockResolvedValue(RESULT);
+    const user = userEvent.setup();
+    renderAsk();
+
+    await user.type(screen.getByPlaceholderText(/Top 10 customers/i), "rev by regn");
+    await user.click(screen.getByRole("button", { name: /generate sql/i }));
+
+    // Review headline is the interpreted question; the raw typed text is shown beneath.
+    expect(await screen.findByRole("heading", { name: /Revenue by region\?/i })).toBeInTheDocument();
+    expect(screen.getByText(/You asked:/i)).toBeInTheDocument();
+    expect(screen.getByText(/rev by regn/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /run query/i }));
+
+    // Results correlate to intent: "Showing results for" + the interpreted question.
+    expect(await screen.findByText(/Showing results for/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Revenue by region\?/i })).toBeInTheDocument();
+  });
+
   it("runs the (edited) SQL via /execute with the session profile_id and renders results", async () => {
     window.localStorage.setItem("aor.profileId", "p1");
     window.localStorage.setItem("aor.schemaId", "s1");

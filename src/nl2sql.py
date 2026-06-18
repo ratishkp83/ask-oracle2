@@ -43,7 +43,11 @@ SYSTEM_PROMPT = (
     "date functions (TRUNC, ADD_MONTHS, SYSDATE) where needed. For row limits / top-N use "
     "FETCH FIRST n ROWS ONLY or ROWNUM — never LIMIT (Oracle has no LIMIT). Do not end the "
     "statement with a semicolon.\n"
-    "2. Then a line beginning with 'Explanation:' and at most 3 sentences explaining the "
+    "2. Then a line beginning with 'Interpreted question:' that restates the user's request "
+    "as you understood it — correct obvious typos, resolve ambiguity, phrase it as a single "
+    "clear question, and make it faithfully describe what your SQL actually returns (so the "
+    "reader can tell whether it matches their intent). Do not include any data values.\n"
+    "3. Then a line beginning with 'Explanation:' and at most 3 sentences explaining the "
     "query, referring only to the provided schema. Do not include any data values.\n\n"
     "IMPORTANT — scope & honesty. Use ONLY tables and columns that appear in the provided "
     "schema; never invent a column or fabricate a proxy/approximation for a concept the "
@@ -61,29 +65,37 @@ SYSTEM_PROMPT = (
 )
 
 
-def _parse_sql_and_explanation(text: str) -> Tuple[str, Optional[str]]:
-    """Split the model output into (sql, explanation). Robust to a missing
-    explanation block or missing code fence."""
+def _parse_sql_and_explanation(text: str) -> Tuple[str, Optional[str], Optional[str]]:
+    """Split the model output into (sql, explanation, interpreted_question).
+    Robust to any of the labelled lines or the code fence being absent."""
     text = (text or "").strip()
+    interpreted: Optional[str] = None
     explanation: Optional[str] = None
 
+    # Single-line restatement of the request (typo-corrected / disambiguated).
+    m_i = re.search(r"(?im)^\s*interpreted\s*question\s*:\s*(.+?)\s*$", text)
+    if m_i:
+        interpreted = m_i.group(1).strip() or None
+
     m = re.search(r"(?ims)^\s*explanation\s*:\s*(.+)$", text)
-    sql_part = text
     if m:
         explanation = m.group(1).strip() or None
-        sql_part = text[: m.start()].strip()
 
-    fence = re.search(r"```(?:sql)?\s*(.*?)```", sql_part, re.DOTALL | re.IGNORECASE)
+    # SQL always comes from the fenced block; fall back to the text with the
+    # labelled lines stripped when there is no fence.
+    fence = re.search(r"```(?:sql)?\s*(.*?)```", text, re.DOTALL | re.IGNORECASE)
     if fence:
         sql = fence.group(1).strip()
     else:
-        sql = sql_part.strip()
+        sql_part = text[: m.start()] if m else text
+        sql_part = re.sub(r"(?im)^\s*interpreted\s*question\s*:.*$", "", sql_part).strip()
+        sql = sql_part
         if sql.startswith("```"):
             sql = re.sub(r"^```[a-zA-Z]*\n|```$", "", sql, flags=re.MULTILINE).strip()
     # Strip a trailing statement terminator: python-oracledb rejects a single
     # statement ending in ';' (ORA-00933), and models routinely append one.
     sql = re.sub(r"[;\s]+\Z", "", sql)
-    return sql, explanation
+    return sql, explanation, interpreted
 
 
 # reraise=True so a persistent failure surfaces the underlying exception rather
@@ -159,7 +171,8 @@ def generate_sql_from_nl(
     user = (
         "Schema:\n" + context + "\n\n"
         "User request:\n" + question + "\n\n"
-        "Return the Oracle SQL in a ```sql fence, then an 'Explanation:' line."
+        "Return the Oracle SQL in a ```sql fence, then an 'Interpreted question:' line, "
+        "then an 'Explanation:' line."
     )
 
     try:
@@ -181,7 +194,7 @@ def generate_sql_from_nl(
     if refusal and not has_fence:
         return NLSQLResult(sql="", answerable=False, message=_decline_message(refusal.group(1)))
 
-    sql, explanation = _parse_sql_and_explanation(raw)
+    sql, explanation, interpreted = _parse_sql_and_explanation(raw)
     if not sql_is_safe_select(sql):
         # The model didn't return a usable read-only query — whether an explicit
         # decline (sentinel/prose), or non-SELECT / unparseable output. Always surface
@@ -195,4 +208,9 @@ def generate_sql_from_nl(
         message = _decline_message("" if _looks_like_sql(sql) else sql)
         return NLSQLResult(sql="", answerable=False, message=message)
 
-    return NLSQLResult(sql=sql, explanation=explanation, confidence=assess_confidence(sql, schema))
+    return NLSQLResult(
+        sql=sql,
+        explanation=explanation,
+        interpreted_question=interpreted,
+        confidence=assess_confidence(sql, schema),
+    )

@@ -23,6 +23,9 @@ export interface SqlMeta {
   groupBy: string[]; // normalized GROUP BY expressions
   hasGroupBy: boolean;
   reliable: boolean; // false → the caller should lean on heuristics
+  // A single-row "top-1" shape: ORDER BY … + FETCH FIRST 1 / ROWNUM = 1. Lets
+  // insight narration say "highest/lowest" for a single-record result (Phase 11).
+  topOne?: { desc: boolean } | null;
 }
 
 const AGG_RE = /^(sum|avg|count|min|max)\s*\(/i;
@@ -161,6 +164,20 @@ export function parseSelectMeta(sql: string): SqlMeta | null {
     return { alias, role: hasGroupBy ? "dimension" : "passthrough" };
   });
 
+  // Phase 11: detect a single-row top-1 shape so a one-record result can be
+  // narrated as the highest/lowest rather than a bogus "across 1 group" total.
+  let topOne: { desc: boolean } | null = null;
+  const limited1 =
+    /\bfetch\s+(?:first|next)\s+1\s+rows?\s+only\b/i.test(masked) ||
+    /\brownum\s*(?:<=?|=)\s*1\b/i.test(masked);
+  const orderBy = findFrom(masked, /\border\s+by\b/i, from.end);
+  if (limited1 && orderBy) {
+    const stop = findFrom(masked, /\bfetch\b|\boffset\b/i, orderBy.end);
+    const obText = sanitized.slice(orderBy.end, stop ? stop.start : sanitized.length);
+    const firstTerm = obText.split(",")[0] ?? "";
+    topOne = { desc: /\bdesc\b/i.test(firstTerm) };
+  }
+
   const reliable = hasGroupBy || outputs.some((o) => o.agg);
-  return { outputs, groupBy, hasGroupBy, reliable };
+  return { outputs, groupBy, hasGroupBy, reliable, topOne };
 }

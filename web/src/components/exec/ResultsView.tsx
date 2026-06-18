@@ -36,6 +36,7 @@ interface LeafContext {
 // becomes a "pull live detail" prompt. All derivation stays local/deterministic.
 export function ResultsView({
   question,
+  interpretedQuestion,
   sql,
   result,
   onBack,
@@ -47,6 +48,9 @@ export function ResultsView({
   savable,
 }: {
   question: string;
+  // Phase 11: the model's restatement of the request, shown as the headline so
+  // the result correlates to intent. Absent for derived/demo/saved-report views.
+  interpretedQuestion?: string | null;
   sql: string;
   result: ExecuteResult;
   onBack?: () => void;
@@ -87,6 +91,7 @@ export function ResultsView({
     return (
       <EmptyResult
         question={question}
+        interpretedQuestion={interpretedQuestion}
         sql={sql}
         result={result}
         onRefine={onPullQuery ? () => onPullQuery(question) : onBack}
@@ -96,7 +101,16 @@ export function ResultsView({
 
   // E2 — single value (1×1): promote the one figure to a hero rather than a 1-cell grid.
   if (result.columns.length === 1 && result.rows.length === 1) {
-    return <HeroResult question={question} sql={sql} result={result} col={cols[0]} onBack={onBack} />;
+    return (
+      <HeroResult
+        question={question}
+        interpretedQuestion={interpretedQuestion}
+        sql={sql}
+        result={result}
+        col={cols[0]}
+        onBack={onBack}
+      />
+    );
   }
 
   if (stack.length > 0) {
@@ -138,7 +152,7 @@ export function ResultsView({
 
   const header = (
     <div className="flex shrink-0 items-start justify-between gap-4">
-      <SummaryBand question={question} sql={sql} result={result} />
+      <SummaryBand question={question} interpretedQuestion={interpretedQuestion} sql={sql} result={result} />
       <HeaderActions onBack={onBack} onEditSql={onEditSql} />
     </div>
   );
@@ -393,18 +407,20 @@ function NewQuestionButton({ onBack }: { onBack: () => void }) {
 
 function EmptyResult({
   question,
+  interpretedQuestion,
   sql,
   result,
   onRefine,
 }: {
   question: string;
+  interpretedQuestion?: string | null;
   sql: string;
   result: ExecuteResult;
   onRefine?: () => void;
 }) {
   return (
     <div className="flex h-full flex-col gap-3.5 px-6 py-5">
-      <SummaryBand question={question} sql={sql} result={result} />
+      <SummaryBand question={question} interpretedQuestion={interpretedQuestion} sql={sql} result={result} />
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-sunken text-ink-faint">
           <SearchX className="h-5 w-5" />
@@ -442,12 +458,14 @@ function heroValue(v: unknown, c: ColumnMeta): string {
 
 function HeroResult({
   question,
+  interpretedQuestion,
   sql,
   result,
   col,
   onBack,
 }: {
   question: string;
+  interpretedQuestion?: string | null;
   sql: string;
   result: ExecuteResult;
   col: ColumnMeta;
@@ -456,7 +474,7 @@ function HeroResult({
   return (
     <div className="flex h-full flex-col gap-3.5 px-6 py-5">
       <div className="flex shrink-0 items-start justify-between gap-4">
-        <SummaryBand question={question} sql={sql} result={result} />
+        <SummaryBand question={question} interpretedQuestion={interpretedQuestion} sql={sql} result={result} />
         {onBack && <NewQuestionButton onBack={onBack} />}
       </div>
       <div className="flex flex-1 flex-col items-center justify-center">

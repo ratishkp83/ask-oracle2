@@ -26,6 +26,7 @@ const EXAMPLES = [
 type ResultsState = {
   kind: "results";
   question: string;
+  interpretedQuestion?: string | null; // the model's restatement (Phase 11), shown as the headline
   sql: string;
   result: ExecuteResult;
   pullable: boolean; // false once we're already viewing a pulled detail (no nested wrap / bind-free edit)
@@ -35,6 +36,7 @@ type ResultsState = {
 // and an "Edit & re-run".
 type ReviewData = {
   question: string;
+  interpretedQuestion?: string | null;
   eyebrow: string;
   sql: string;
   confidence?: Confidence;
@@ -97,6 +99,7 @@ export function AskPage() {
       setState({
         kind: "results",
         question: data.question,
+        interpretedQuestion: data.interpretedQuestion,
         sql: data.sql,
         result,
         pullable: data.binds === undefined,
@@ -131,6 +134,7 @@ export function AskPage() {
       }
       const data: ReviewData = {
         question,
+        interpretedQuestion: proposal.interpreted_question,
         eyebrow: "Review proposed SQL",
         sql: proposal.sql,
         confidence: proposal.confidence ?? null,
@@ -206,6 +210,7 @@ export function AskPage() {
     return (
       <ResultsView
         question={s.question}
+        interpretedQuestion={s.interpretedQuestion}
         sql={s.sql}
         result={s.result}
         onBack={reset}
@@ -244,6 +249,7 @@ export function AskPage() {
     return (
       <ProposedSql
         question={data.question}
+        interpretedQuestion={data.interpretedQuestion}
         eyebrow={data.eyebrow}
         confidence={data.confidence}
         explanation={data.explanation}

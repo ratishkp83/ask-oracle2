@@ -139,4 +139,33 @@ describe("deriveInsights", () => {
     expect(() => deriveInsights([], [[1, 2, 3]], null)).not.toThrow();
     expect(() => deriveInsights(cols, [[undefined, undefined]], null)).not.toThrow();
   });
+
+  // Phase 11 — single-record results must read logically, never "across 1 X".
+  it("narrates a single-record top-1 result as the highest (not 'across 1')", () => {
+    const cols = [dim("FIRST_NAME", 0), dim("LAST_NAME", 1), measure("SALARY", 2)];
+    const sqlMeta = { outputs: [], groupBy: [], hasGroupBy: false, reliable: false, topOne: { desc: true } };
+    const ins = deriveInsights(cols, [["Steven", "King", 130000]], sqlMeta);
+    expect(ins).toHaveLength(1);
+    expect(ins[0].text).toContain("Steven King has the highest salary");
+    expect(ins[0].text).toMatch(/130(\.0)?K/);
+    expect(ins[0].text).not.toMatch(/across 1/);
+  });
+
+  it("narrates a single record without a top-1 order as a plain record", () => {
+    const ins = deriveInsights([dim("FIRST_NAME", 0), measure("SALARY", 1)], [["Steven", 130000]], null);
+    expect(ins).toHaveLength(1);
+    expect(ins[0].text).toMatch(/^Steven — Salary: 130(\.0)?K\.$/);
+    expect(ins[0].text).not.toMatch(/across 1/);
+  });
+
+  it("avoids 'across 1 <dimension>' for a single-group result", () => {
+    const cols = [dim("DEPARTMENT", 0), measure("SALARY", 1, { agg: "sum" })];
+    const rows = [
+      ["Engineering", 100000],
+      ["Engineering", 200000],
+    ];
+    const total = deriveInsights(cols, rows, null).find((i) => i.kind === "total")!;
+    expect(total.text).toMatch(/across 2 rows/);
+    expect(total.text).not.toMatch(/1 department/);
+  });
 });

@@ -141,6 +141,40 @@ export function deriveInsights(
   const dimCol = dimIndex >= 0 ? cols.find((c) => c.index === dimIndex) : undefined;
   const dimLabel = dimCol ? humanize(dimCol.name).toLowerCase() : "row";
 
+  // --- single record (e.g. "who is the highest-paid employee?") -------------
+  // A one-row result is a specific record, NOT an aggregate across groups — so
+  // narrate the record (named entity + the measure), and say "highest/lowest"
+  // when the SQL is an ordered top-1 (sqlMeta.topOne). Avoids nonsense like
+  // "Salary across 1 first name: 130.0K".
+  if (rows.length === 1) {
+    const row = rows[0];
+    const val = formatMeasure(toNumber(row[lead.index]), lead, agg);
+    const measureIdx = new Set(rankMeasures(cols).map((m) => m.index));
+    const labelParts: string[] = [];
+    for (const c of cols) {
+      if (measureIdx.has(c.index)) continue;
+      const cell = row[c.index];
+      if (cell === null || cell === undefined || String(cell).trim() === "") continue;
+      // Skip purely-numeric cells (ids/codes) — keep human labels like names.
+      if (/^[\d.,\s+-]+$/.test(String(cell))) continue;
+      labelParts.push(String(cell).trim());
+    }
+    const entity = labelParts.slice(0, 3).join(" ");
+    const top = sqlMeta?.topOne ?? null;
+    let text: string;
+    let basis: string;
+    if (top) {
+      const sup = top.desc ? "highest" : "lowest";
+      text = entity ? `${entity} has the ${sup} ${mLower}: ${val}.` : `The ${sup} ${mLower} is ${val}.`;
+      basis = `single row, ordered ${top.desc ? "desc" : "asc"} (top 1)`;
+    } else {
+      text = entity ? `${entity} — ${mLabel}: ${val}.` : `${mLabel}: ${val}.`;
+      basis = "single record";
+    }
+    out.push({ kind: "total", measure: lead.name, text, basis, confidence: "high" });
+    return out.slice(0, max);
+  }
+
   const stats = dimCol ? groupByDim(rows, dimIndex, lead.index) : [];
   const groupCount = stats.length;
 
@@ -155,8 +189,11 @@ export function deriveInsights(
     }
     const total = foldAgg(allNums, agg);
     const val = formatMeasure(total, lead, agg);
-    const n = dimCol ? groupCount : rows.length;
-    const unit = dimCol ? units(dimLabel, n) : units("row", n);
+    // Only frame "across N <dimension>" when there are ≥2 groups; a single group
+    // (or no dimension) is described per row, never the misleading "across 1 X".
+    const useGroups = !!dimCol && groupCount >= 2;
+    const n = useGroups ? groupCount : rows.length;
+    const unit = useGroups ? units(dimLabel, n) : units("row", n);
     const scope = `across ${n.toLocaleString()} ${unit}`;
     let text: string;
     if (agg === "avg") text = `Average ${mLower} ${scope}: ${val}.`;

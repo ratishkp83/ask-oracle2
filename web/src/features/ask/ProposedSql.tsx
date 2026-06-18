@@ -15,6 +15,7 @@ export interface StepError {
 // sees what the :pN placeholders resolve to.
 export function ProposedSql({
   question,
+  interpretedQuestion,
   eyebrow = "Review proposed SQL",
   confidence,
   explanation,
@@ -28,6 +29,7 @@ export function ProposedSql({
   error,
 }: {
   question: string;
+  interpretedQuestion?: string | null;
   eyebrow?: string;
   confidence?: Confidence;
   explanation?: string | null;
@@ -42,6 +44,10 @@ export function ProposedSql({
 }) {
   const runnable = canRun && !running && sql.trim().length > 0;
   const bindEntries = binds ? Object.entries(binds) : [];
+  const interp = interpretedQuestion?.trim();
+  const headline = interp || question;
+  const normQ = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+  const showAsked = !!interp && normQ(interp) !== normQ(question);
 
   return (
     <div className="flex h-full flex-col px-6 py-5">
@@ -53,8 +59,13 @@ export function ProposedSql({
               {eyebrow}
             </div>
             <h2 className="mt-1 truncate font-display text-[20px] font-semibold tracking-[-0.01em] text-ink">
-              {question}
+              {headline}
             </h2>
+            {showAsked && (
+              <p className="mt-0.5 truncate text-[12px] text-ink-faint">
+                You asked: <span className="italic">“{question}”</span>
+              </p>
+            )}
           </div>
           <button
             type="button"

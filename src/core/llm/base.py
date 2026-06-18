@@ -41,6 +41,10 @@ class NLSQLResult:
     # carries a short, user-facing reason; the UI proposes/runs nothing.
     answerable: bool = True
     message: Optional[str] = None
+    # The user's request restated as the model understood it (typo-corrected,
+    # disambiguated) so results correlate to intent. Shown as "Showing results
+    # for: …" — never row data, just a faithful paraphrase of the question.
+    interpreted_question: Optional[str] = None
 
 
 @runtime_checkable

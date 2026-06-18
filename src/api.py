@@ -557,6 +557,7 @@ def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
         return {
             "sql": result.sql,
             "explanation": result.explanation,
+            "interpreted_question": result.interpreted_question,
             "confidence": confidence,
             "answerable": result.answerable,
             "message": result.message,

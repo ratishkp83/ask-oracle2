@@ -227,6 +227,9 @@ export type Confidence = z.infer<typeof ConfidenceSchema>;
 export const Nl2SqlSchema = z.object({
   sql: z.string(),
   explanation: z.string().nullable().optional(),
+  // The request restated as the model understood it (typo-corrected/disambiguated),
+  // shown as "Showing results for: …" so results correlate to intent (Phase 11).
+  interpreted_question: z.string().nullable().optional(),
   confidence: ConfidenceSchema.optional(),
   // Off-topic guard: false when the question isn't answerable from the data; then
   // `message` is a friendly reason and the UI proposes/runs nothing. Defaults keep
