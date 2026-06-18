@@ -14,6 +14,22 @@ class ColumnDefinition:
     is_foreign_key: bool = False
     references_table: Optional[str] = None
     references_column: Optional[str] = None
+    # Phase 11 profiling (Channel A — structure/stats only, safe for the LLM).
+    nullable: Optional[bool] = None
+    data_length: Optional[int] = None
+    data_precision: Optional[int] = None
+    data_scale: Optional[int] = None
+    is_indexed: bool = False
+    is_unique: bool = False
+
+
+@dataclass
+class IndexDefinition:
+    """A read-only index descriptor (Phase 11) — names only, no row data."""
+
+    name: str
+    columns: List[str] = field(default_factory=list)
+    is_unique: bool = False
 
 
 @dataclass
@@ -23,12 +39,20 @@ class RelationshipDefinition:
     to_table: str
     to_column: str
     relationship_type: Optional[str] = None  # one-to-many, many-to-one, etc.
+    # Phase 11: True when joining over this relationship can fan out (duplicate
+    # rows on the many side) — drives grain/aggregation correctness hints.
+    fan_out: bool = False
 
 
 @dataclass
 class TableDefinition:
     name: str
     columns: List[ColumnDefinition] = field(default_factory=list)
+    # Phase 11 profiling (Channel A) — index/partition/size metadata.
+    indexes: List[IndexDefinition] = field(default_factory=list)
+    partition_keys: List[str] = field(default_factory=list)
+    row_count_estimate: Optional[int] = None  # ALL_TABLES.NUM_ROWS — a HINT, may be stale/null
+    stats_stale: bool = False
 
     def primary_keys(self) -> List[str]:
         return [c.column_name for c in self.columns if c.is_primary_key]
@@ -276,12 +300,36 @@ def referenced_by(schema: Schema, table_name: str) -> List[Tuple[str, str, str]]
 def schema_to_dict(schema: Schema) -> Dict[str, object]:
     return {
         "tables": {name: [asdict(c) for c in t.columns] for name, t in schema.tables.items()},
+        # Phase 11: additive table-level profiling metadata (Channel A). Absent in
+        # pre-Phase-11 records; schema_from_dict tolerates its absence.
+        "table_meta": {
+            name: {
+                "indexes": [asdict(ix) for ix in t.indexes],
+                "partition_keys": list(t.partition_keys),
+                "row_count_estimate": t.row_count_estimate,
+                "stats_stale": t.stats_stale,
+            }
+            for name, t in schema.tables.items()
+        },
         "relationships": [asdict(r) for r in schema.relationships],
     }
 
 
 def _opt_str(value: object) -> Optional[str]:
     return str(value) if value is not None else None
+
+
+def _opt_bool(value: object) -> Optional[bool]:
+    return None if value is None else bool(value)
+
+
+def _opt_int(value: object) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def schema_from_dict(data: object) -> Schema:
@@ -318,9 +366,42 @@ def schema_from_dict(data: object) -> Schema:
                             is_foreign_key=bool(c.get("is_foreign_key", False)),
                             references_table=_opt_str(c.get("references_table")),
                             references_column=_opt_str(c.get("references_column")),
+                            # Phase 11 (Channel A) — additive, defaults preserve old records.
+                            nullable=_opt_bool(c.get("nullable")),
+                            data_length=_opt_int(c.get("data_length")),
+                            data_precision=_opt_int(c.get("data_precision")),
+                            data_scale=_opt_int(c.get("data_scale")),
+                            is_indexed=bool(c.get("is_indexed", False)),
+                            is_unique=bool(c.get("is_unique", False)),
                         )
                     )
             schema.tables[tname] = TableDefinition(name=tname, columns=columns)
+
+    # Phase 11: apply additive table-level profiling metadata when present.
+    meta = data.get("table_meta")
+    if isinstance(meta, dict):
+        for tname, m in meta.items():
+            table = schema.tables.get(str(tname))
+            if table is None or not isinstance(m, dict):
+                continue
+            idxs = m.get("indexes")
+            if isinstance(idxs, list):
+                for ix in idxs:
+                    if not isinstance(ix, dict):
+                        continue
+                    ix_cols = ix.get("columns")
+                    table.indexes.append(
+                        IndexDefinition(
+                            name=str(ix.get("name") or ""),
+                            columns=[str(x) for x in ix_cols] if isinstance(ix_cols, list) else [],
+                            is_unique=bool(ix.get("is_unique", False)),
+                        )
+                    )
+            pkeys = m.get("partition_keys")
+            if isinstance(pkeys, list):
+                table.partition_keys = [str(x) for x in pkeys]
+            table.row_count_estimate = _opt_int(m.get("row_count_estimate"))
+            table.stats_stale = bool(m.get("stats_stale", False))
 
     rels = data.get("relationships")
     if isinstance(rels, list):
@@ -334,6 +415,7 @@ def schema_from_dict(data: object) -> Schema:
                     to_table=str(r.get("to_table") or ""),
                     to_column=str(r.get("to_column") or ""),
                     relationship_type=_opt_str(r.get("relationship_type")),
+                    fan_out=bool(r.get("fan_out", False)),
                 )
             )
     return schema
