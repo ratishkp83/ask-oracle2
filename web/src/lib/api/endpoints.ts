@@ -119,6 +119,21 @@ export async function introspectSchema(body: IntrospectBody) {
   return IntrospectResultSchema.parse(await post("/schemas/introspect", body));
 }
 
+// Phase 11 — profile a live schema: same SELECT-only read as introspect, plus
+// Channel-A enrichment (indexes/partitions/stats/cardinality) and the computed
+// advisory + readiness, persisted on the saved record. The response carries
+// coverage/advisory/readiness too; the dialog only needs the IntrospectResult
+// fields (extra keys are ignored at the Zod boundary).
+export type ProfileBody = IntrospectBody & {
+  schema_id?: string;
+  sample_value_columns?: string[];
+  enforcement?: "soft" | "hard";
+};
+
+export async function profileSchema(body: ProfileBody) {
+  return IntrospectResultSchema.parse(await post("/schemas/profile", body));
+}
+
 // Curated EBS metadata packs (read-only). Names/descriptions/glossary only.
 export async function getPacks() {
   return EbsPackListSchema.parse(await get("/packs"));

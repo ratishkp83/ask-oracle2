@@ -18,7 +18,7 @@ vi.mock("@/lib/api/endpoints", () => ({
   getPack: vi.fn(),
   // Pulled in transitively via IntrospectDialog.
   getProfiles: vi.fn(),
-  introspectSchema: vi.fn(),
+  profileSchema: vi.fn(),
 }));
 import {
   deleteSchema,

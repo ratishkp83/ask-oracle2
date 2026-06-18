@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getProfiles, introspectSchema } from "@/lib/api/endpoints";
+import { getProfiles, profileSchema } from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/client";
 import { useSession } from "@/app/session";
 
@@ -35,7 +35,7 @@ export function IntrospectDialog() {
 
   const run = useMutation({
     mutationFn: () =>
-      introspectSchema({
+      profileSchema({
         profile_id: profileId ?? undefined,
         owner: owner.trim(),
         table_like: tableLike.trim() || "%",
@@ -72,8 +72,8 @@ export function IntrospectDialog() {
         <DialogHeader>
           <DialogTitle className="font-display text-[18px] font-semibold text-ink">Read a schema from the database</DialogTitle>
           <DialogDescription className="text-[13px] text-ink-muted">
-            Reads table and column metadata from the live database (read-only) and saves it as a dictionary. No row
-            data is read or sent to the model.
+            Reads table, column, index and statistics metadata from the live database (read-only), then saves it as a
+            dictionary with an optimization advisory and a readiness check. No row data is read or sent to the model.
           </DialogDescription>
         </DialogHeader>
 

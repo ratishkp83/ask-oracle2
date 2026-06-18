@@ -10,9 +10,9 @@ import type { ProfilePublic } from "@/lib/api/schemas";
 
 vi.mock("@/lib/api/endpoints", () => ({
   getProfiles: vi.fn(),
-  introspectSchema: vi.fn(),
+  profileSchema: vi.fn(),
 }));
-import { getProfiles, introspectSchema } from "@/lib/api/endpoints";
+import { getProfiles, profileSchema } from "@/lib/api/endpoints";
 
 const user = () => userEvent.setup({ pointerEventsCheck: 0 });
 
@@ -43,7 +43,7 @@ function renderDialog() {
 beforeEach(() => {
   window.localStorage.clear();
   vi.mocked(getProfiles).mockReset();
-  vi.mocked(introspectSchema).mockReset();
+  vi.mocked(profileSchema).mockReset();
 });
 afterEach(cleanup);
 
@@ -64,7 +64,7 @@ describe("IntrospectDialog", () => {
   it("introspects + saves the schema via the active connection and shows the count", async () => {
     window.localStorage.setItem("aor.profileId", "p1");
     vi.mocked(getProfiles).mockResolvedValue([PROFILE]);
-    vi.mocked(introspectSchema).mockResolvedValue({
+    vi.mocked(profileSchema).mockResolvedValue({
       table_count: 12,
       warnings: [],
       truncated: false,
@@ -82,7 +82,7 @@ describe("IntrospectDialog", () => {
     await u.click(screen.getByRole("button", { name: /read & save/i }));
 
     await waitFor(() =>
-      expect(vi.mocked(introspectSchema)).toHaveBeenCalledWith(
+      expect(vi.mocked(profileSchema)).toHaveBeenCalledWith(
         expect.objectContaining({ profile_id: "p1", owner: "AOR_DEMO", save: true, table_like: "%", name: null }),
       ),
     );
@@ -93,7 +93,7 @@ describe("IntrospectDialog", () => {
   it("shows a sanitized error with a reference id when introspection fails", async () => {
     window.localStorage.setItem("aor.profileId", "p1");
     vi.mocked(getProfiles).mockResolvedValue([PROFILE]);
-    vi.mocked(introspectSchema).mockRejectedValue(new ApiError("Could not reach the database.", 502, "err_88"));
+    vi.mocked(profileSchema).mockRejectedValue(new ApiError("Could not reach the database.", 502, "err_88"));
     const u = user();
     renderDialog();
 
