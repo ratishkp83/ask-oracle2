@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.25 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-18 (**Phase 10 exit-gate r1 = PASS-WITH-FIXES** [reviewer ≠ author]; all 5 invariants hold; 4 S4 (F1–F4) remediated; gates `tsc --build`/vitest **160**/vite/pytest 446; awaiting owner sign-off + live XE leg to CLOSE. Prior: **BUG-013 FIXED**; **ITM-034 CLOSED**; **PHASE 9 CLOSED**)
+> **Document:** Issue Log · **Version:** 1.26 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-18 (**🎉 PHASE 10 CLOSED** — exit-gate r1 = PASS-WITH-FIXES [reviewer ≠ author]; all 5 invariants hold; 4 S4 (F1–F4) remediated; gates `tsc --build`/vitest **160**/vite/pytest 446; **live XE end-to-end confirmed** [run → live fan-out → download → real email]. Open backlog: ITM-026, ITM-031. Prior: **BUG-013 FIXED**; **ITM-034 CLOSED**; **PHASE 9 CLOSED**)
 
 ## Bug workflow (mandatory)
 

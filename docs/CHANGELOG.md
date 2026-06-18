@@ -4,7 +4,7 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
-### Phase 10 (Cascading Report Deliverables + Local Insight) — exit-gate r1 = PASS-WITH-FIXES (2026-06-18)
+### Phase 10 (Cascading Report Deliverables + Local Insight) — 🎉 CLOSED (2026-06-18)
 - **Independent exit-gate review** (reviewer ≠ author, ADR-006; spawned subagent;
   [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)): all four gates re-run green
   (**`tsc --build` 0 · vitest 160 · vite build · pytest 446**), the **BUG-013** no-op-gate claim
@@ -14,7 +14,11 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
   **4 findings, all S4** (non-blocking) — **all remediated:** F1 design §3.3 reworded to the reactive cap;
   F2 added escaping-sink coverage (title / SQL / column-name / KPI); F3 added a `truncated`-cap test; F4
   aligned `rankGroups`' aggregation with the insight/KPI AVG name-hint. **+2 frontend tests (158 → 160).**
-  Remaining to **close Phase 10:** owner final sign-off + the live XE `AOR_DEMO` end-to-end leg.
+- **Live XE `AOR_DEMO` end-to-end CONFIRMED (2026-06-18):** ran a saved cascading report live through the UI →
+  Report dialog built the bundle with **"1 live query"** (`onRunSql` → `/execute` fan-out) → downloaded a
+  script-free HTML bundle → sent a **real email** (4.9 KB HTML attachment) via `/reports/email-bundle` to a
+  confirmed recipient. **Owner closure sign-off → Phase 10 CLOSED.** (Local commits only; no push until the
+  July reset. Open backlog: ITM-026, ITM-031.)
 
 ### Added (Phase 10 — cascading report deliverables + local insight; B3–B5)
 - **B5 — delivery + persistence.** **B5a (backend):** additive **`Report.cascade`** (`CascadeSpec`:

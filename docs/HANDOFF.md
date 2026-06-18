@@ -4,7 +4,7 @@
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 > ---
-> ### 🟢 v2 ACTIVE — Phase 10 Discovery OPENED (charter APPROVED 2026-06-15) · Phase 9 CLOSED
+> ### 🟢 v2 — Phase 10 CLOSED (2026-06-18) · Phase 9 CLOSED
 > **Phase 10 — Cascading Report Deliverables + Local Insight Narration** ([charter](charters/phase-10-cascading-reports.md),
 > 🟢 approved). Advances the end goal "fully intelligent + cascading reporting": a **styled single-file HTML
 > bundle** (parent summary → narrated KPIs → nested per-value child sections) you can **download or email**,
@@ -17,9 +17,11 @@
 > "Report" dialog Download/Email/Save + live fan-out) ✓ → **B6 = exit-gate r1 PASS-WITH-FIXES** (independent
 > reviewer ≠ author via spawned subagent, ADR-006; all 5 invariants HOLD; **4 findings, all S4, remediated**;
 > [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)). Gates re-run green: **`tsc --build` 0 ·
-> vitest 160 · vite build · pytest 446 · OpenAPI 3.1.0 / 42 paths**. **AWAITING owner final sign-off + the
-> live XE `AOR_DEMO` end-to-end leg** (generate → download → email, recipient-confirmed) to CLOSE Phase 10.
-> **Typecheck gate = `tsc --build`** (BUG-013: the previously-used
+> vitest 160 · vite build · pytest 446 · OpenAPI 3.1.0 / 42 paths**. **Live XE `AOR_DEMO` end-to-end CONFIRMED
+> 2026-06-18** (ran a saved cascading report → live fan-out "1 live query" via `/execute` → downloaded a
+> script-free HTML bundle → sent a **real** email with the HTML attachment via `/reports/email-bundle`). **+
+> owner closure sign-off → 🎉 PHASE 10 CLOSED.** Open backlog unchanged: ITM-026 (dynamic Ask chips), ITM-031
+> (frontend ESLint debt). **Typecheck gate = `tsc --build`** (BUG-013: the previously-used
 > `tsc --noEmit -p tsconfig.json` is a **no-op** — root `tsconfig.json` has `files:[]` + project
 > references, so without `--build` it checks **zero** files; verified by a deliberate type error passing
 > it while `tsc --build` caught it). `*.tsbuildinfo` is git-ignored. **Local commits only; NO PUSH until the July reset.**

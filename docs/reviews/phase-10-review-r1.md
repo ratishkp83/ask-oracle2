@@ -71,7 +71,15 @@ All four S4 findings addressed; complete product test re-run green (**`tsc --bui
 - **P10-R1-F3 — Fixed (test).** Added `bundle.test.ts` "marks truncated and caps queries when the live fan-out exceeds the budget": an 8×7 fixture at depth-2/top-8 drives past `MAX_TOTAL_QUERIES`; asserts `truncated === true` and `queries ≤ 48`.
 - **P10-R1-F4 — Fixed (code).** `bundle.ts` now resolves the ranking aggregation with the **same AVG name-hint** as `insight.ts`/`kpis.ts` (`AVG_HINT`), so a section is ranked by the same aggregation it is narrated by. Existing tests (explicit-`agg` measures) unaffected.
 
-**Outcome: exit-gate r1 PASS-WITH-FIXES → all 4 S4 findings remediated. +2 frontend tests (158 → 160).** Remaining for closure: owner sign-off + the live XE `AOR_DEMO` end-to-end leg the reviewer flagged as could-not-verify (generate → download → email, recipient-confirmed).
+**Outcome: exit-gate r1 PASS-WITH-FIXES → all 4 S4 findings remediated. +2 frontend tests (158 → 160).**
+
+**Live leg CONFIRMED (2026-06-18) — the reviewer's one could-not-verify item is now verified.** Ran the saved
+cascading report **live against XE `AOR_DEMO`** through the actual UI: run → results ("Total … $375.0K", real
+data) → the **"Report" dialog built the bundle with "2 sections · 1 live query"** (i.e. `onRunSql` fetched a
+fresh child slice via the `/execute` chokepoint — the live fan-out) → **downloaded** a script-free single-file
+HTML bundle → **sent a REAL email** (4.9 KB HTML attachment, "Sent to 1 recipient(s)") via `/reports/email-bundle`
+to a confirmed recipient. The verification report was deleted afterward (clean Reports list). **With the owner's
+closure sign-off, Phase 10 is CLOSED.**
 
 ## Revision history
 | Version | Date | Reviewer | Change |

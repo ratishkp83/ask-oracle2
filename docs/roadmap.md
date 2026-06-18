@@ -23,12 +23,13 @@ Each feature phase runs through the lifecycle micro-cycle (Discovery → Design 
 > **v2 track (branch `v2`, local-only until the July push) — the table above is the v1/`main` view through Phase 7.**
 > The v2 line of work continues on top of v1: **Phase 8 (email a report) CLOSED 2026-06-13** · **Phase 9
 > (React CXO UI) CLOSED 2026-06-15** (+ ITM-034 closed) · **Phase 10 (Cascading Report Deliverables + Local
-> Insight Narration) — BUILDING** ([charter](charters/phase-10-cascading-reports.md), 🟢 approved;
-> [design](cascading-reports-design.md); ADR-026/027): B1–B5 complete (local insight band; client-orchestrated
-> cascade fan-out → single-file HTML bundle; Download/Email/Save "Report" dialog; live fresh-fetch + saved
-> cascading reports). **B6 (docs + independent exit-gate review) in progress** — complete product test green
-> (`tsc --build` · vitest 158 · vite build · pytest 446). Authoritative v2 state lives in
-> [HANDOFF.md](HANDOFF.md) (top banner). End goal: *fully intelligent + cascading reporting.*
+> Insight Narration) — 🎉 CLOSED 2026-06-18** ([charter](charters/phase-10-cascading-reports.md);
+> [design](cascading-reports-design.md); ADR-026/027): local insight band; client-orchestrated cascade fan-out
+> → single-file HTML bundle; Download/Email/Save "Report" dialog; live fresh-fetch + saved cascading reports.
+> Exit-gate r1 = **PASS-WITH-FIXES** (reviewer ≠ author; all 5 invariants hold; 4 S4 remediated;
+> [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)); gates `tsc --build`/vitest 160/vite/pytest
+> 446; **live XE end-to-end confirmed** (run → live fan-out → download → real email). Authoritative v2 state
+> lives in [HANDOFF.md](HANDOFF.md) (top banner). End goal: *fully intelligent + cascading reporting.*
 
 **Phase 7 CLOSED (2026-06-12) — all planned phases [on v1/`main`] are now complete.** Phase 7 shipped the EBS
 metadata packs + glossary, opt-in NL→SQL context, the `/packs` API, and the `/v1` prefix (closing
