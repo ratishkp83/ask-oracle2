@@ -12,13 +12,24 @@ vi.mock("@/lib/api/endpoints", () => ({
   getSchemas: vi.fn(),
   getSchema: vi.fn(),
   deleteSchema: vi.fn(),
+  getSchemaAdvisory: vi.fn(),
+  getSchemaReadiness: vi.fn(),
   getPacks: vi.fn(),
   getPack: vi.fn(),
   // Pulled in transitively via IntrospectDialog.
   getProfiles: vi.fn(),
   introspectSchema: vi.fn(),
 }));
-import { deleteSchema, getPack, getProfiles, getSchema, getSchemas, getPacks } from "@/lib/api/endpoints";
+import {
+  deleteSchema,
+  getPack,
+  getProfiles,
+  getSchema,
+  getSchemaAdvisory,
+  getSchemaReadiness,
+  getSchemas,
+  getPacks,
+} from "@/lib/api/endpoints";
 
 const user = () => userEvent.setup({ pointerEventsCheck: 0 });
 
@@ -90,6 +101,12 @@ beforeEach(() => {
   vi.mocked(getPacks).mockReset();
   vi.mocked(getPack).mockReset();
   vi.mocked(getProfiles).mockResolvedValue([]);
+  // Phase 11 advisory/readiness — default to quiet; specific tests override.
+  vi.mocked(getSchemaAdvisory).mockResolvedValue([]);
+  vi.mocked(getSchemaReadiness).mockResolvedValue({
+    state: "ready", usable: true, enforcement: "soft",
+    checklist: [{ key: "columns", label: "Tables & columns read", status: "ok" }],
+  });
 });
 afterEach(cleanup);
 
@@ -156,6 +173,35 @@ describe("DataDictionaryPage", () => {
 
     await waitFor(() => expect(vi.mocked(deleteSchema)).toHaveBeenCalledWith("s1"));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("shows the readiness gate and the optimization advisory for a profiled schema", async () => {
+    vi.mocked(getSchemas).mockResolvedValue(SCHEMAS);
+    vi.mocked(getPacks).mockResolvedValue(PACKS);
+    vi.mocked(getSchema).mockResolvedValue(RECORD);
+    vi.mocked(getSchemaReadiness).mockResolvedValue({
+      state: "not_optimized", usable: true, enforcement: "soft",
+      checklist: [
+        { key: "columns", label: "Tables & columns read", status: "ok" },
+        { key: "glossary", label: "Business glossary for cryptic columns", status: "missing" },
+      ],
+    });
+    vi.mocked(getSchemaAdvisory).mockResolvedValue([
+      {
+        kind: "index_fk",
+        target: "INVOICES.CUSTOMER_ID",
+        ddl_candidate: "CREATE INDEX INVOICES_CUSTOMER_ID_IX ON INVOICES (CUSTOMER_ID);",
+        rationale: "INVOICES.CUSTOMER_ID joins to CUSTOMERS but has no leading index — joins may full-scan.",
+        tradeoff: "An index speeds reads but adds write overhead and storage.",
+        severity: "high",
+      },
+    ]);
+    renderPage();
+
+    expect(await screen.findByText(/not optimized/i)).toBeInTheDocument();
+    expect(screen.getByText("Optimization advisory")).toBeInTheDocument();
+    expect(screen.getByText("INVOICES.CUSTOMER_ID")).toBeInTheDocument();
+    expect(screen.getByText(/CREATE INDEX INVOICES_CUSTOMER_ID_IX/)).toBeInTheDocument();
   });
 
   it("surfaces a sanitized error when schema detail fails to load", async () => {

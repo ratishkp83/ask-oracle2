@@ -1,10 +1,31 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, BookText, ChevronRight, Database, KeyRound, Link2, Table2, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  BookText,
+  CheckCircle2,
+  ChevronRight,
+  Database,
+  KeyRound,
+  Lightbulb,
+  Link2,
+  ShieldCheck,
+  Table2,
+  Trash2,
+} from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { deleteSchema, getPack, getPacks, getSchema, getSchemas } from "@/lib/api/endpoints";
+import {
+  deleteSchema,
+  getPack,
+  getPacks,
+  getSchema,
+  getSchemaAdvisory,
+  getSchemaReadiness,
+  getSchemas,
+} from "@/lib/api/endpoints";
 import { errorMessage } from "@/lib/api/client";
-import type { SchemaRecord, SchemaSummary } from "@/lib/api/schemas";
+import type { Readiness, SchemaRecord, SchemaSummary, Suggestion } from "@/lib/api/schemas";
 import { IntrospectDialog } from "./IntrospectDialog";
 
 type SchemaColumns = SchemaRecord["definition"]["tables"][string];
@@ -186,12 +207,101 @@ function SchemaDetail({ id }: { id: string }) {
         <DeleteSchemaDialog id={data.id} name={data.name} />
       </div>
 
+      {data.source === "introspection" && <ReadinessBanner id={id} />}
+
       <div className="mt-5 space-y-2">
         {tableNames.map((t) => (
           <TableCard key={t} name={t} columns={data.definition.tables[t]} />
         ))}
         {tableNames.length === 0 && <p className="text-[13px] text-ink-muted">This dictionary has no tables.</p>}
       </div>
+
+      {data.source === "introspection" && <AdvisorySection id={id} />}
+    </div>
+  );
+}
+
+// --- Readiness gate (D-L) + Optimization Advisory (D-K) ---------------------
+function CheckStatusIcon({ status }: { status: string }) {
+  if (status === "ok") return <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-brand" aria-label="ready" />;
+  if (status === "acknowledged")
+    return <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-ink-faint" aria-label="acknowledged" />;
+  if (status === "unavailable")
+    return <AlertCircle className="h-3.5 w-3.5 shrink-0 text-ink-faint" aria-label="unavailable" />;
+  return <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warn" aria-label="missing" />;
+}
+
+function ReadinessBanner({ id }: { id: string }) {
+  const { data } = useQuery<Readiness>({
+    queryKey: ["schema-readiness", id],
+    queryFn: () => getSchemaReadiness(id),
+  });
+  if (!data) return null;
+  const tone =
+    data.state === "ready"
+      ? { box: "border-brand/30 bg-brand-weak", icon: <ShieldCheck className="h-4 w-4 text-brand" />, text: "Optimized — ready for CXO use" }
+      : data.state === "incomplete"
+        ? { box: "border-loss/30 bg-loss/5", icon: <AlertCircle className="h-4 w-4 text-loss" />, text: "Setup incomplete" }
+        : { box: "border-warn/30 bg-warn/5", icon: <AlertTriangle className="h-4 w-4 text-warn" />, text: "Not optimized — accuracy/performance may suffer" };
+  const okCount = data.checklist.filter((c) => c.status === "ok" || c.status === "acknowledged").length;
+  return (
+    <details className={`group mt-4 overflow-hidden rounded-card border ${tone.box}`}>
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[13px] font-medium text-ink">
+        {tone.icon}
+        <span>{tone.text}</span>
+        <span className="ml-auto text-[11px] font-normal text-ink-faint">
+          {okCount}/{data.checklist.length} checks · {data.enforcement}-block
+        </span>
+        <ChevronRight className="h-3.5 w-3.5 text-ink-faint transition-transform group-open:rotate-90" />
+      </summary>
+      <ul className="border-t border-hairline/60 bg-surface/70">
+        {data.checklist.map((c) => (
+          <li key={c.key} className="flex items-center gap-2 px-3.5 py-1.5 text-[12.5px]">
+            <CheckStatusIcon status={c.status} />
+            <span className="text-ink">{c.label}</span>
+            {c.detail && <span className="ml-auto truncate text-[11px] text-ink-faint">{c.detail}</span>}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function AdvisorySection({ id }: { id: string }) {
+  const { data } = useQuery<Suggestion[]>({
+    queryKey: ["schema-advisory", id],
+    queryFn: () => getSchemaAdvisory(id),
+  });
+  if (!data || data.length === 0) return null;
+  return (
+    <div className="mt-6">
+      <div className="mb-2 flex items-center gap-2">
+        <Lightbulb className="h-3.5 w-3.5 text-warn" />
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-faint">Optimization advisory</h3>
+        <span className="text-[11px] text-ink-faint">advise-only — share with your DBA; the app never runs DDL</span>
+      </div>
+      <div className="space-y-2">
+        {data.map((s, i) => (
+          <SuggestionCard key={`${s.kind}-${s.target}-${i}`} s={s} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SuggestionCard({ s }: { s: Suggestion }) {
+  const sev = s.severity === "high" ? "text-loss" : s.severity === "medium" ? "text-warn" : "text-ink-faint";
+  return (
+    <div className="rounded-card border border-hairline bg-surface px-3.5 py-3">
+      <div className="flex items-center gap-2">
+        <span className={`text-[10px] font-semibold uppercase tracking-[0.06em] ${sev}`}>{s.severity}</span>
+        <span className="text-[13px] font-semibold text-ink">{s.target}</span>
+      </div>
+      <p className="mt-1 text-[12.5px] text-ink-muted">{s.rationale}</p>
+      <pre className="num mt-2 overflow-x-auto rounded-control bg-surface-sunken px-2.5 py-1.5 text-[11.5px] text-ink">
+        {s.ddl_candidate}
+      </pre>
+      <p className="mt-1.5 text-[11px] text-ink-faint">Tradeoff: {s.tradeoff}</p>
     </div>
   );
 }

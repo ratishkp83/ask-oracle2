@@ -10,6 +10,8 @@ import {
   Nl2SqlSchema,
   ProfileListSchema,
   ProfilePublicSchema,
+  AdvisoryResponseSchema,
+  ReadinessResponseSchema,
   ReportListSchema,
   ReportSchema,
   SchemaRecordSchema,
@@ -86,6 +88,20 @@ export async function getSchema(id: string) {
 
 export async function deleteSchema(id: string) {
   await del(`/schemas/${encodeURIComponent(id)}`);
+}
+
+// Phase 11 — the Optimization Advisory for a saved (profiled) schema. Advise-only
+// structural DDL suggestions for the engineer/DBA; derived from profiled metadata.
+export async function getSchemaAdvisory(id: string) {
+  const r = AdvisoryResponseSchema.parse(await get(`/schemas/${encodeURIComponent(id)}/advisory`));
+  return r.advisory;
+}
+
+// Phase 11 — the setup readiness gate (D-L). Persisted snapshot when profiled,
+// else recomputed with empty coverage.
+export async function getSchemaReadiness(id: string) {
+  const r = ReadinessResponseSchema.parse(await get(`/schemas/${encodeURIComponent(id)}/readiness`));
+  return r.readiness;
 }
 
 // Introspect a live schema via the SELECT-only chokepoint (metadata only) and,

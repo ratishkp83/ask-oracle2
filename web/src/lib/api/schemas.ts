@@ -103,6 +103,36 @@ export const IntrospectResultSchema = z.object({
 });
 export type IntrospectResult = z.infer<typeof IntrospectResultSchema>;
 
+// Phase 11 — Optimization Advisory (GET /schemas/{id}/advisory). Advise-only
+// structural suggestions for the engineer/DBA; the app never executes DDL.
+export const SuggestionSchema = z.object({
+  kind: z.string(),
+  target: z.string(),
+  ddl_candidate: z.string(),
+  rationale: z.string(),
+  tradeoff: z.string(),
+  severity: z.string(),
+});
+export type Suggestion = z.infer<typeof SuggestionSchema>;
+export const AdvisoryResponseSchema = z.object({ advisory: z.array(SuggestionSchema).default([]) });
+
+// Phase 11 — setup readiness gate (GET /schemas/{id}/readiness, D-L). `usable`
+// is the soft/hard-block verdict; `checklist` lists each auto/human signal.
+export const ReadinessCheckSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  status: z.string(), // ok | missing | unavailable | acknowledged
+  detail: z.string().nullable().optional(),
+});
+export const ReadinessSchema = z.object({
+  state: z.string(), // ready | not_optimized | incomplete
+  usable: z.boolean().default(true),
+  enforcement: z.string().default("soft"),
+  checklist: z.array(ReadinessCheckSchema).default([]),
+});
+export type Readiness = z.infer<typeof ReadinessSchema>;
+export const ReadinessResponseSchema = z.object({ readiness: ReadinessSchema });
+
 // Curated EBS metadata packs (GET /packs, /packs/{module}) — mirrors EbsPack
 // (src/core/ebs_packs.py). Names/descriptions/joins + a business glossary; no
 // row data. `module` kept as a plain string to tolerate any future module.
