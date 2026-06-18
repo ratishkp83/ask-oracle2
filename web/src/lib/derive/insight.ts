@@ -175,6 +175,55 @@ export function deriveInsights(
     return out.slice(0, max);
   }
 
+  // --- detail record list (measure NOT aggregated: no GROUP BY, no agg func) --
+  // The rows are individual records (e.g. "the highest-paid employee in each
+  // department"). SUMming the measure across distinct records, and "X leads with
+  // N% of the total", are meaningless — so lead with the MAX (which is what
+  // "highest …" asks for) and the range, never a bogus total/share/per-name scope.
+  if (lead.agg === undefined) {
+    const measureIdx = new Set(rankMeasures(cols).map((m) => m.index));
+    let maxRow = rows[0];
+    let maxV = -Infinity;
+    let minV = Infinity;
+    for (const r of rows) {
+      const num = toNumber(r[lead.index]);
+      if (!Number.isFinite(num)) continue;
+      if (num > maxV) {
+        maxV = num;
+        maxRow = r;
+      }
+      if (num < minV) minV = num;
+    }
+    const labelParts: string[] = [];
+    for (const c of cols) {
+      if (measureIdx.has(c.index)) continue;
+      const cell = maxRow[c.index];
+      if (cell === null || cell === undefined || String(cell).trim() === "") continue;
+      if (/^[\d.,\s+-]+$/.test(String(cell))) continue;
+      labelParts.push(String(cell).trim());
+    }
+    const entity = labelParts.slice(0, 3).join(" ");
+    out.push({
+      kind: "top",
+      measure: lead.name,
+      text: entity
+        ? `Highest ${mLower}: ${formatMeasure(maxV, lead, "max")} — ${entity}.`
+        : `Highest ${mLower}: ${formatMeasure(maxV, lead, "max")}.`,
+      basis: `max ${lead.name} over ${measureRows.toLocaleString()} records`,
+      confidence: "high",
+    });
+    if (Number.isFinite(minV) && minV < maxV) {
+      out.push({
+        kind: "spread",
+        measure: lead.name,
+        text: `Across ${measureRows.toLocaleString()} ${units("record", measureRows)}, ${mLower} ranges ${formatMeasure(minV, lead, "min")} to ${formatMeasure(maxV, lead, "max")}.`,
+        basis: `min–max over ${measureRows.toLocaleString()} records`,
+        confidence: "high",
+      });
+    }
+    return out.slice(0, max);
+  }
+
   const stats = dimCol ? groupByDim(rows, dimIndex, lead.index) : [];
   const groupCount = stats.length;
 

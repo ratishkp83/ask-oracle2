@@ -168,4 +168,19 @@ describe("deriveInsights", () => {
     expect(total.text).toMatch(/across 2 rows/);
     expect(total.text).not.toMatch(/1 department/);
   });
+
+  it("narrates an un-aggregated record list by the max — not a sum/share/per-name", () => {
+    // "the highest-paid employee in each department" → a list of records, not a
+    // groupable distribution. SALARY has no agg → must NOT be summed.
+    const cols = [dim("FIRST_NAME", 0), dim("DEPARTMENT", 1), measure("SALARY", 2)];
+    const rows = [
+      ["Alan", "Engineering", 130000],
+      ["Bob", "Sales", 125000],
+    ];
+    const text = texts(deriveInsights(cols, rows, null)).join(" | ");
+    expect(text).toMatch(/Highest salary: 130(\.0)?K — Alan/);
+    expect(text).toMatch(/ranges 125(\.0)?K to 130(\.0)?K/);
+    expect(text).not.toMatch(/across 2 first names/i);
+    expect(text).not.toMatch(/of the total/i);
+  });
 });
