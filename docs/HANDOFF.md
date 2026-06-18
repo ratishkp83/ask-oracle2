@@ -1,9 +1,26 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 3.9 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-15 (ITM-034 closed)
+> **Document:** Session Handoff · **Version:** 4.0 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-18 (Phase 11 B3 done)
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
 
 > ---
+> ### 🚧 v2 — Phase 11 IN PROGRESS — Plan-Aware Query Intelligence + Resilient Execution (B3 done, 2026-06-18)
+> **Phase 11** ([charter](charters/phase-11-plan-aware-resilient.md) B1 ✓ · [design](plan-aware-resilient-design.md)
+> + ADR-[028](adr/ADR-028-database-profiling.md)…[031](adr/ADR-031-privilege-gated-plan-reading.md) B2 ✓) attacks the
+> owner's real-life pain: on a real client DB, generated SQL isn't reliably accurate/fast and a heavy query
+> **times out the request**. **Two pillars:** P1 **Profiling + Plan-Aware Generation** (prevention/accuracy),
+> P2 **Resilient Execution** (async containment of timeouts). Semantic/metrics layer → **Phase 12**. Owner
+> additions: **D-K** advise-only Optimization Advisory (the app **never** runs DDL); **D-L** enriched metadata
+> mandatory at a **setup readiness gate** (**soft-block default**, hard-block configurable). **🟢 B3 COMPLETE +
+> live-verified vs XE `AOR_DEMO`:** the **two-channel** profiler (Channel A structure/stats → `Schema`/LLM-safe;
+> **Channel B** value-domains/semantics → separate `SchemaRecord.semantics`, **never** to the LLM — Invariant 3 by
+> construction); `profile_schema` (SELECT-only, privilege-degrading); `build_optimization_advisory` +
+> `compute_readiness`; `POST /schemas/profile` + `GET /schemas/{id}/advisory|readiness`; admin UI ReadinessBanner +
+> Advisory in the Data dictionary. **Gates `tsc --build` 0 / vitest 161 / vite / pytest 478 (+32);** live XE
+> proof = full coverage, readiness `not_optimized`/usable, a real high index advisory on `EMPLOYEES.DEPARTMENT_ID`.
+> **Local commits only (B1 `de13502` → B3 `ff898cd`); NO PUSH until the July reset. NEXT = B4 (plan-aware
+> generation) — pending the B3 packet sign-off.**
+>
 > ### 🟢 v2 — Phase 10 CLOSED (2026-06-18) · Phase 9 CLOSED
 > **Phase 10 — Cascading Report Deliverables + Local Insight Narration** ([charter](charters/phase-10-cascading-reports.md),
 > 🟢 approved). Advances the end goal "fully intelligent + cascading reporting": a **styled single-file HTML

@@ -4,6 +4,29 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Phase 11 (Plan-Aware Query Intelligence + Resilient Execution) — 🚧 IN PROGRESS (B3 done)
+- **B1 charter + B2 design/ADRs approved** ([charter](charters/phase-11-plan-aware-resilient.md);
+  [design](plan-aware-resilient-design.md); ADR-[028](adr/ADR-028-database-profiling.md)…[031](adr/ADR-031-privilege-gated-plan-reading.md)).
+  Two pillars (profiling + plan-aware generation; resilient async execution); the semantic/metrics
+  layer is deferred to Phase 12. Owner additions: **D-K** advise-only Optimization Advisory (the app
+  never runs DDL) and **D-L** enriched metadata mandatory at a setup **readiness gate** (soft-block default).
+- **B3 — Database Profiling + Advisory + Readiness ([ADR-028](adr/ADR-028-database-profiling.md)):**
+  - **Two-channel metadata** — Channel A (structure/stats: indexes, partition keys, row-count magnitude,
+    nullability, unique, FK cardinality) enriches `Schema`/`definition` and may reach the LLM; **Channel B**
+    (business glossary + sampled value domains) lives in a **separate** `SchemaRecord.semantics` field that
+    is **never** read by `schema_from_dict` / the prompt path — Invariant 3 enforced by construction.
+  - New introspection readers + `profile_schema` orchestrator (SELECT-only through the chokepoint,
+    bind-parameterized, privilege-degrading with a coverage map). `src/core/profiling.py`:
+    `build_optimization_advisory` (ranked, advise-only — FK-no-index / large-unpartitioned / stale-stats /
+    no-PK; comment-only DDL candidates) and `compute_readiness` (soft-block default, hard-block opt-in).
+    Opt-in, bounded value-domain sampling (`value_domain_sql` / `capture_value_domains`, server-side only).
+  - API: `POST /schemas/profile`, `GET /schemas/{id}/advisory`, `GET /schemas/{id}/readiness` (root + `/v1`,
+    auth-gated, sanitized errors). Admin UI: a ReadinessBanner + Optimization-Advisory section in the React
+    Data dictionary (profiled schemas only). Additive + back-compatible (old saved schemas still load).
+  - **Gates:** `tsc --build` 0 · vitest 161 · vite build · pytest 478 (+32). **Live-verified vs XE `AOR_DEMO`**
+    (full coverage; readiness `not_optimized`/usable; a real high-severity index advisory on
+    `EMPLOYEES.DEPARTMENT_ID`). **Next: B4 (plan-aware generation) — pending B3 packet sign-off.**
+
 ### Phase 10 (Cascading Report Deliverables + Local Insight) — 🎉 CLOSED (2026-06-18)
 - **Independent exit-gate review** (reviewer ≠ author, ADR-006; spawned subagent;
   [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)): all four gates re-run green
