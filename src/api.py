@@ -44,7 +44,12 @@ from src.core.schema_store import (
     SchemaStore,
     SchemaSummary,
 )
-from src.core.introspection import introspect_schema
+from src.core.introspection import (
+    capture_value_domains,
+    introspect_schema,
+    profile_schema,
+)
+from src.core.profiling import build_optimization_advisory, compute_readiness
 from src.core.sql_safety import SqlSafetyError, assert_safe_select
 from src.core.templates import Module, Template, get_template, list_templates
 from src.core.ebs_packs import EbsPack, get_pack, list_packs
@@ -380,6 +385,20 @@ class IntrospectRequest(BaseModel):
         if self.profile_id and self.connection is not None:
             raise ValueError("Provide exactly one of profile_id or connection, not both.")
         return self
+
+
+class ProfileRequest(IntrospectRequest):
+    """Profile a schema (Phase 11): enriched Channel-A metadata + optional, opt-in
+    Channel-B value-domain sampling, the Optimization Advisory, and the readiness gate.
+    """
+
+    # Update an existing saved schema in place (else create when save=True).
+    schema_id: Optional[str] = None
+    # Opt-in (default none): "TABLE.COLUMN" columns to sample value domains for.
+    sample_value_columns: List[str] = Field(default_factory=list)
+    # Engineer-supplied semantics to merge into the readiness computation/persistence.
+    semantics: Optional[Dict[str, Any]] = None
+    enforcement: str = "soft"  # soft | hard
 
 
 # --------------------------------------------------------------------------- #
@@ -1012,6 +1031,101 @@ def introspect(req: IntrospectRequest) -> Dict[str, Any]:
         "truncated": result.truncated,
         "saved": saved,
     }
+
+
+@router.post("/schemas/profile")
+def profile(req: ProfileRequest) -> Dict[str, Any]:
+    """Phase 11 profiling: enriched Channel-A metadata + advisory + readiness, and
+    optional opt-in Channel-B value-domain sampling. Every query is SELECT-only
+    through the chokepoint; value domains are stored server-side only (invariant 3)."""
+    conn_cfg, _username, profile_id = _resolve_target(req.profile_id, req.connection)
+    client = OracleClient(conn_cfg)
+    try:
+        result = profile_schema(client, owner=req.owner, table_like=req.table_like)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001 - DB/connection errors (sanitized, ITM-015)
+        raise _db_error(exc, "profile")
+
+    warnings = list(result.warnings)
+    # Channel B (opt-in): bounded value-domain sampling. Stored server-side only —
+    # NEVER part of the Schema/definition or any LLM context (invariant 3).
+    semantics: Dict[str, Any] = dict(req.semantics or {})
+    targets = []
+    for spec in req.sample_value_columns:
+        if "." in spec:
+            tname, cname = spec.split(".", 1)
+            targets.append((tname.strip().upper(), cname.strip().upper()))
+    if targets:
+        try:
+            domains, vd_warnings = capture_value_domains(client, req.owner.upper(), targets)
+        except Exception as exc:  # noqa: BLE001
+            raise _db_error(exc, "value_domains")
+        if domains:
+            merged = dict(semantics.get("value_domains") or {})
+            merged.update(domains)
+            semantics["value_domains"] = merged
+        warnings.extend(vd_warnings)
+
+    definition = schema_to_dict(result.schema)
+    advisory = [s.model_dump() for s in build_optimization_advisory(result.schema)]
+    readiness = compute_readiness(result.schema, semantics, result.coverage, req.enforcement)
+
+    saved: Optional[Dict[str, Any]] = None
+    if req.schema_id:
+        record = _schema_store.update(
+            req.schema_id, definition=definition, semantics=semantics,
+            readiness=readiness.model_dump(), source="introspection",
+        )
+        if record is None:
+            raise HTTPException(status_code=404, detail="Schema not found.")
+        saved = record.summary().model_dump()
+    elif req.save:
+        name = req.name or f"{req.owner.upper()} (profiled)"
+        try:
+            record = _schema_store.create(
+                name, definition, source="introspection", profile_id=profile_id
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+        record = _schema_store.update(
+            record.id, semantics=semantics, readiness=readiness.model_dump()
+        )
+        saved = record.summary().model_dump() if record else None
+
+    return {
+        "definition": definition,
+        "table_count": len(definition.get("tables") or {}),
+        "warnings": warnings,
+        "truncated": result.truncated,
+        "coverage": result.coverage,
+        "advisory": advisory,
+        "readiness": readiness.model_dump(),
+        "saved": saved,
+    }
+
+
+@router.get("/schemas/{schema_id}/advisory")
+def schema_advisory(schema_id: str) -> Dict[str, Any]:
+    record = _schema_store.get(schema_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Schema not found.")
+    schema = schema_from_dict(record.definition)
+    return {"advisory": [s.model_dump() for s in build_optimization_advisory(schema)]}
+
+
+@router.get("/schemas/{schema_id}/readiness")
+def schema_readiness(schema_id: str) -> Dict[str, Any]:
+    record = _schema_store.get(schema_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Schema not found.")
+    if record.readiness:
+        return {"readiness": record.readiness}
+    # No persisted snapshot (e.g. an upload that was never profiled): recompute with
+    # empty coverage so unread catalog signals show as "unavailable".
+    schema = schema_from_dict(record.definition)
+    readiness = compute_readiness(schema, record.semantics, {}, "soft")
+    return {"readiness": readiness.model_dump()}
 
 
 # Mount every route twice: at the root (back-compat) and under /v1 (T-18).
