@@ -44,6 +44,8 @@ class SchemaSummary(BaseModel):
     table_count: int
     created_at: str
     updated_at: str
+    # Phase 11 (D-L): setup-readiness state for the list view ("ready" / "not_optimized" / None).
+    readiness_state: Optional[str] = None
 
 
 class SchemaRecord(BaseModel):
@@ -57,6 +59,12 @@ class SchemaRecord(BaseModel):
     created_at: str
     updated_at: str
     definition: Dict[str, Any] = Field(default_factory=dict)
+    # Phase 11 (Channel B) — engineer-supplied semantics: glossary, value-domain
+    # labels, declared joins, acknowledgements. **Never** fed to schema_from_dict /
+    # the LLM context (invariant 3). Additive; absent on pre-Phase-11 records.
+    semantics: Dict[str, Any] = Field(default_factory=dict)
+    # Phase 11 (D-L) — computed setup-readiness snapshot (state + checklist).
+    readiness: Dict[str, Any] = Field(default_factory=dict)
 
     def summary(self) -> SchemaSummary:
         return SchemaSummary(
@@ -67,6 +75,7 @@ class SchemaRecord(BaseModel):
             table_count=self.table_count,
             created_at=self.created_at,
             updated_at=self.updated_at,
+            readiness_state=(self.readiness or {}).get("state"),
         )
 
 
@@ -91,6 +100,29 @@ def _new_record(
     )
 
 
+def _apply_update(
+    rec: SchemaRecord,
+    definition: Optional[Dict[str, Any]],
+    semantics: Optional[Dict[str, Any]],
+    readiness: Optional[Dict[str, Any]],
+    source: Optional[SchemaSource],
+) -> SchemaRecord:
+    """Apply a partial update to a record (shared by both store backends)."""
+    if definition is not None:
+        rec.definition = definition
+        tables = definition.get("tables") if isinstance(definition, dict) else None
+        if isinstance(tables, dict):
+            rec.table_count = len(tables)
+    if semantics is not None:
+        rec.semantics = semantics
+    if readiness is not None:
+        rec.readiness = readiness
+    if source is not None:
+        rec.source = source
+    rec.updated_at = _now_iso()
+    return rec
+
+
 class SchemaStore(ABC):
     @abstractmethod
     def create(
@@ -110,6 +142,21 @@ class SchemaStore(ABC):
 
     @abstractmethod
     def delete(self, schema_id: str) -> bool: ...
+
+    @abstractmethod
+    def update(
+        self,
+        schema_id: str,
+        *,
+        definition: Optional[Dict[str, Any]] = None,
+        semantics: Optional[Dict[str, Any]] = None,
+        readiness: Optional[Dict[str, Any]] = None,
+        source: Optional[SchemaSource] = None,
+    ) -> Optional[SchemaRecord]:
+        """Update a record's profiling fields in place (Phase 11). Returns the
+        updated record, or None if the id is unknown. Only the provided fields
+        change; others are preserved."""
+        ...
 
 
 class JsonFileSchemaStore(SchemaStore):
@@ -187,6 +234,25 @@ class JsonFileSchemaStore(SchemaStore):
             self._save(records)
             return True
 
+    def update(
+        self,
+        schema_id: str,
+        *,
+        definition: Optional[Dict[str, Any]] = None,
+        semantics: Optional[Dict[str, Any]] = None,
+        readiness: Optional[Dict[str, Any]] = None,
+        source: Optional[SchemaSource] = None,
+    ) -> Optional[SchemaRecord]:
+        with self._lock:
+            records = self._load()
+            rec = records.get(schema_id)
+            if rec is None:
+                return None
+            rec = _apply_update(rec, definition, semantics, readiness, source)
+            records[schema_id] = rec
+            self._save(records)
+            return rec
+
 
 class InMemorySchemaStore(SchemaStore):
     """Ephemeral store (lost on restart). Handy for tests and demos."""
@@ -221,3 +287,20 @@ class InMemorySchemaStore(SchemaStore):
     def delete(self, schema_id: str) -> bool:
         with self._lock:
             return self._records.pop(schema_id, None) is not None
+
+    def update(
+        self,
+        schema_id: str,
+        *,
+        definition: Optional[Dict[str, Any]] = None,
+        semantics: Optional[Dict[str, Any]] = None,
+        readiness: Optional[Dict[str, Any]] = None,
+        source: Optional[SchemaSource] = None,
+    ) -> Optional[SchemaRecord]:
+        with self._lock:
+            rec = self._records.get(schema_id)
+            if rec is None:
+                return None
+            rec = _apply_update(rec, definition, semantics, readiness, source)
+            self._records[schema_id] = rec
+            return rec

@@ -15,6 +15,7 @@ degrades gracefully when constraint views are not visible to the account.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -89,6 +90,44 @@ def unique_constraints_sql(owner: str, table_like: str) -> Tuple[str, Binds]:
         "WHERE c.owner = :owner AND c.constraint_type = 'U' AND cc.table_name LIKE :table_like"
     )
     return sql, {"owner": owner, "table_like": table_like}
+
+
+_IDENT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_$#]*$")
+
+
+def _ident(name: str) -> str:
+    """Validate an Oracle identifier (owner/table/column) before interpolation.
+
+    Owner/table/column cannot be bind variables, so a value-domain query must
+    interpolate them. They originate from the catalog (trusted), but this is a
+    fail-closed backstop so a crafted schema name can never inject SQL.
+    """
+    candidate = _s(name)
+    if not _IDENT_RE.match(candidate):
+        raise ValueError(f"Unsafe identifier: {name!r}")
+    return candidate
+
+
+def value_domain_sql(
+    owner: str, table: str, column: str, sample_percent: float = 10.0, cap: int = 25
+) -> Tuple[str, Binds]:
+    """A bounded distinct-value sample for one low-cardinality column (Channel B).
+
+    Read-only SELECT through the chokepoint, capped by ``SAMPLE`` (so it never
+    scans a huge table) and ``FETCH FIRST cap``. The returned values are stored
+    **server-side only** (semantics / Channel B) and are **never** sent to the LLM.
+    """
+    o, t, c = _ident(owner), _ident(table), _ident(column)
+    pct = float(sample_percent)
+    if not 0 < pct <= 100:
+        pct = 10.0
+    cap = max(1, min(int(cap), 200))
+    sql = (
+        f"SELECT {c} AS code, COUNT(*) AS cnt "
+        f"FROM {o}.{t} SAMPLE({pct}) "
+        f"GROUP BY {c} ORDER BY cnt DESC FETCH FIRST {cap} ROWS ONLY"
+    )
+    return sql, {}
 
 
 def primary_keys_sql(owner: str, table_like: str) -> Tuple[str, Binds]:
@@ -389,3 +428,38 @@ def profile_schema(
 
     derive_fk_cardinality(schema)
     return ProfileResult(schema=schema, warnings=warnings, truncated=truncated, coverage=coverage)
+
+
+def capture_value_domains(
+    client: Any,
+    owner: str,
+    targets: List[Tuple[str, str]],
+    limits: Optional[SafetyLimits] = None,
+    sample_percent: float = 10.0,
+    cap: int = 25,
+) -> Tuple[Dict[str, Any], List[str]]:
+    """Sample distinct values for the given ``(table, column)`` targets (Channel B).
+
+    **Opt-in, bounded, default OFF** (the caller decides whether to invoke this).
+    Returns ``({ "TABLE.COL": {"codes": [{code, count}], "sampled": True} }, warnings)``.
+    The result is **server-side only** — it is stored in the schema record's
+    ``semantics`` and is NEVER part of the ``Schema`` sent to the LLM (invariant 3).
+    """
+    domains: Dict[str, Any] = {}
+    warnings: List[str] = []
+    for table, column in targets:
+        try:
+            sql, binds = value_domain_sql(owner, table, column, sample_percent, cap)
+            res = client.run_select(sql, limits=limits, binds=binds)
+            rows = _rows_as_dicts(res)
+            codes = [
+                {"code": _s(r.get("CODE")), "count": _opt_int(r.get("CNT"))}
+                for r in rows
+                if _s(r.get("CODE"))
+            ]
+            if codes:
+                domains[f"{_s(table)}.{_s(column)}"] = {"codes": codes, "sampled": True}
+        except Exception as exc:  # noqa: BLE001 - column may be high-cardinality / not visible
+            logger.info("Value-domain sampling unavailable for %s.%s: %s", table, column, exc)
+            warnings.append(f"Value domains unavailable for {table}.{column}.")
+    return domains, warnings
