@@ -4,6 +4,18 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Phase 10 (Cascading Report Deliverables + Local Insight) — exit-gate r1 = PASS-WITH-FIXES (2026-06-18)
+- **Independent exit-gate review** (reviewer ≠ author, ADR-006; spawned subagent;
+  [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)): all four gates re-run green
+  (**`tsc --build` 0 · vitest 160 · vite build · pytest 446**), the **BUG-013** no-op-gate claim
+  independently confirmed, **all five invariants HOLD** under adversarial probing (no unescaped HTML sink,
+  no bind interpolation, no non-SELECT via cascade, no `SMTP_PASSWORD`/transport-text leak, no allow-list /
+  opt-in / size-cap bypass, no fan-out explosion past the caps, `Report.cascade` additive/back-compatible).
+  **4 findings, all S4** (non-blocking) — **all remediated:** F1 design §3.3 reworded to the reactive cap;
+  F2 added escaping-sink coverage (title / SQL / column-name / KPI); F3 added a `truncated`-cap test; F4
+  aligned `rankGroups`' aggregation with the insight/KPI AVG name-hint. **+2 frontend tests (158 → 160).**
+  Remaining to **close Phase 10:** owner final sign-off + the live XE `AOR_DEMO` end-to-end leg.
+
 ### Added (Phase 10 — cascading report deliverables + local insight; B3–B5)
 - **B5 — delivery + persistence.** **B5a (backend):** additive **`Report.cascade`** (`CascadeSpec`:
   dimension_order / depth / children_per_level / rows_per_child; metadata-only, clamped not rejected;

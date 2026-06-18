@@ -1,6 +1,6 @@
 # Phase 10 Charter — Cascading Report Deliverables + Local Insight Narration (v2)
 
-> **Document:** Phase Charter · **Version:** 1.2 · **Status:** 🟢 **Approved; BUILDING** — D-A…D-H resolved; **B1–B5 complete** (insight band; cascade fan-out + HTML bundle; Download/Email/Save "Report" dialog; live fan-out + saved cascading reports). **B6 (docs + independent exit-gate review) in progress** · **Owner:** Product/Engineering · **Last updated:** 2026-06-15
+> **Document:** Phase Charter · **Version:** 1.3 · **Status:** 🟢 **B1–B6 built; exit-gate r1 = PASS-WITH-FIXES** (reviewer ≠ author, ADR-006; all 5 invariants hold; 4 S4 remediated; gates `tsc --build` 0 / vitest 160 / vite / pytest 446) — **awaiting owner final sign-off + live XE leg to CLOSE** · **Owner:** Product/Engineering · **Last updated:** 2026-06-18
 
 > **End goal this phase advances:** *"fully intelligent + cascading reporting."* The product today is excellent at **single-shot answer + interactive drill-down**. Phase 10 delivers the **cascading** half as a real, sendable **deliverable**, plus a low-risk slice of **intelligence** — **local, deterministic insight narration** — so those deliverables *read* like a CXO report. Conversational Ask, a semantic/metrics layer, scheduling, and LLM-phrased insight are deliberately deferred to later phases.
 

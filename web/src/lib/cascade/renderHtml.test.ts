@@ -45,6 +45,36 @@ describe("renderBundleHtml", () => {
     expect(html).toContain("Safe &amp; Sound");
   });
 
+  it("HTML-escapes the title, SQL disclosure, and column-name/KPI sinks (P10-R6)", async () => {
+    // Adversarial column names flow into table headers, the KPI label, and the chart eyebrow.
+    const evilCols = ["RE<b>GION", "AM<i>T"];
+    const evilMeta: ColumnMeta[] = [
+      { name: "RE<b>GION", index: 0, type: "category", isMeasure: false, isInteger: false, numericAligned: false },
+      { name: "AM<i>T", index: 1, type: "currency", isMeasure: true, isInteger: false, numericAligned: true, agg: "sum" },
+    ];
+    const resolved = resolveCascade(DEFAULT_CASCADE_SPEC, evilCols, evilMeta, null);
+    const b = await buildCascadeBundle(
+      "SELECT 1",
+      { columns: evilCols, rows: [["North", 10], ["South", 20]] },
+      evilMeta,
+      null,
+      resolved,
+    );
+    const html = renderBundleHtml(b, {
+      title: "<script>t</script>",
+      question: "q",
+      sql: "SELECT '<script>' FROM dual",
+    });
+    // No raw markup from any sink: title, sql, column header, KPI label, chart eyebrow.
+    expect(html).not.toContain("<script");
+    expect(html).not.toContain("<b>");
+    expect(html).not.toContain("<i>");
+    // Escaped forms are present.
+    expect(html).toContain("&lt;script&gt;t&lt;/script&gt;"); // title
+    expect(html).toContain("&lt;b&gt;"); // dimension column header
+    expect(html).toContain("&lt;i&gt;"); // measure name (KPI label / chart eyebrow)
+  });
+
   it("includes a source-query disclosure when sql is provided", async () => {
     const b = await bundle([
       ["A", 10],

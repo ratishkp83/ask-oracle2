@@ -137,4 +137,17 @@ describe("buildCascadeBundle (live mode)", () => {
     const na = b.root.children.find((c) => c.path[0].value === "NA")!;
     expect(na.error).toBeUndefined();
   });
+
+  it("marks truncated and caps queries when the live fan-out exceeds the budget (P10-R1-F3)", async () => {
+    // 8 regions x 7 customers = 56 child queries at depth 2/top-8 → over the 48 cap.
+    const big: unknown[][] = [];
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 7; c++) big.push([`R${r}`, `R${r}C${c}`, (r + 1) * 10 + c]);
+    const run = vi.fn(async (_sql: string, binds: Record<string, unknown>) => {
+      const want = Object.values(binds).map(String);
+      return { columns, rows: big.filter((row) => want.every((v) => row.map(String).includes(v))) };
+    });
+    const b = await buildCascadeBundle(SQL, { columns, rows: big }, cols, null, resolve({ depth: 2, childrenPerLevel: 8 }), run);
+    expect(b.truncated).toBe(true);
+    expect(b.queries).toBeLessThanOrEqual(48); // hard cap holds
+  });
 });

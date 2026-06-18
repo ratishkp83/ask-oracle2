@@ -82,7 +82,10 @@ export async function buildCascadeBundle(
 ): Promise<BundleSection>;
 ```
 Algorithm:
-1. **Resolve spec** → ordered dimension *names* + depth + caps (D-E). Compute a conservative **total-query estimate**; if it exceeds the hard cap, narrow children/depth and mark `truncated`.
+1. **Resolve spec** → ordered dimension *names* + depth + caps (D-E). The total-query and total-section
+   caps are enforced **reactively** during the walk (a running `queries`/`sections` counter; when a cap is
+   reached the walk stops descending and marks `truncated`) — not via a predictive pre-estimate. Equivalent
+   safety, simpler and exact (P10-R1-F1 doc-accuracy fix).
 2. **Root section** = parent result + `derive/*` (KPIs, chart, insights).
 3. For `dim[level]`: bucket parent (or child) rows by `dimKey`, **rank values by the lead measure** (`foldAgg` per bucket), take **top-N** (`childrenPerLevel`). The residual values become a **local "Others" rollup** (count + measure total) — **no query** (deterministic, cheap, honest).
 4. For each top-N value: `buildPullDetailSql(approvedSql, pathFilters)` → `run(...)` (the injected `/execute` client) → derive → **recurse** to the next dimension until `depth` is reached or no further splitting dimension exists.

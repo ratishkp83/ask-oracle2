@@ -14,9 +14,12 @@
 > invariants hold). **OUT/deferred:** conversational Ask, semantic layer, scheduling, LLM-phrased insight,
 > PDF/Excel, query history. Build plan B1 charter ✓ → B2 design + ADR-026/027 ✓ → B3 insight engine ✓ →
 > B4 fan-out + bundle + download ✓ → B5 (a backend cascade-persistence + `/reports/email-bundle`; b frontend
-> "Report" dialog Download/Email/Save + live fan-out) ✓ → **B6 docs + exit-gate = IN PROGRESS** (owner
-> approved B5; doc sweep + complete product test done — **`tsc --build` clean · vitest 158 · vite build ·
-> pytest 446 · OpenAPI 3.1.0 / 42 paths** — independent exit-gate review next). **Typecheck gate = `tsc --build`** (BUG-013: the previously-used
+> "Report" dialog Download/Email/Save + live fan-out) ✓ → **B6 = exit-gate r1 PASS-WITH-FIXES** (independent
+> reviewer ≠ author via spawned subagent, ADR-006; all 5 invariants HOLD; **4 findings, all S4, remediated**;
+> [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)). Gates re-run green: **`tsc --build` 0 ·
+> vitest 160 · vite build · pytest 446 · OpenAPI 3.1.0 / 42 paths**. **AWAITING owner final sign-off + the
+> live XE `AOR_DEMO` end-to-end leg** (generate → download → email, recipient-confirmed) to CLOSE Phase 10.
+> **Typecheck gate = `tsc --build`** (BUG-013: the previously-used
 > `tsc --noEmit -p tsconfig.json` is a **no-op** — root `tsconfig.json` has `files:[]` + project
 > references, so without `--build` it checks **zero** files; verified by a deliberate type error passing
 > it while `tsc --build` caught it). `*.tsbuildinfo` is git-ignored. **Local commits only; NO PUSH until the July reset.**

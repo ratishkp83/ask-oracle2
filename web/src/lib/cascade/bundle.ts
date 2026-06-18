@@ -58,6 +58,11 @@ export interface BundleResult {
 const MAX_TOTAL_QUERIES = 48; // live fan-out budget (P10-R1)
 const MAX_SECTIONS = 256; // bound local-mode explosion too
 
+// Mirror of the kpis.ts/insight.ts fallback so a section is RANKED by the same
+// aggregation it is NARRATED by (P10-R1-F4): when the SQL gave no exact agg, a
+// rate/duration/average-ish name averages, everything else sums.
+const AVG_HINT = /(pct|percent|rate|ratio|margin|avg|average|days|age|score|price)/;
+
 export async function buildCascadeBundle(
   approvedSql: string,
   parent: SectionResult,
@@ -69,7 +74,8 @@ export async function buildCascadeBundle(
 ): Promise<BundleResult> {
   const columns = parent.columns;
   const measure = rankMeasures(cols)[0];
-  const agg: Agg = measure?.agg ?? "sum";
+  const agg: Agg =
+    measure?.agg ?? (measure && AVG_HINT.test(measure.name.toLowerCase()) ? "avg" : "sum");
 
   let queries = 0;
   let sections = 0;

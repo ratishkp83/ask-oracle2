@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.24 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-15 (**Phase 10 B1–B5 complete**, B6 docs + independent exit-gate review in progress; complete product test green (`tsc --build`/vitest 158/vite/pytest 446). Prior: **BUG-013 FIXED** (`tsc --noEmit -p tsconfig.json` gate was a no-op → adopted `tsc --build`); **ITM-034 CLOSED**; **PHASE 9 CLOSED**)
+> **Document:** Issue Log · **Version:** 1.25 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-18 (**Phase 10 exit-gate r1 = PASS-WITH-FIXES** [reviewer ≠ author]; all 5 invariants hold; 4 S4 (F1–F4) remediated; gates `tsc --build`/vitest **160**/vite/pytest 446; awaiting owner sign-off + live XE leg to CLOSE. Prior: **BUG-013 FIXED**; **ITM-034 CLOSED**; **PHASE 9 CLOSED**)
 
 ## Bug workflow (mandatory)
 
