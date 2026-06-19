@@ -39,13 +39,23 @@ __all__ = [
 # answerable from the schema. Parsed back into a non-answerable NLSQLResult.
 CANNOT_ANSWER_PREFIX = "CANNOT_ANSWER:"
 
-SYSTEM_PROMPT = (
-    "You are an expert Oracle SQL generator. Using ONLY the provided schema, respond with:\n"
+_RULE_ORACLE = (
     "1. A single Oracle SELECT (or WITH … SELECT) query inside a ```sql code fence — "
     "named columns (no SELECT *), explicit JOINs using the given relationships, and Oracle "
     "date functions (TRUNC, ADD_MONTHS, SYSDATE) where needed. For row limits / top-N use "
     "FETCH FIRST n ROWS ONLY or ROWNUM — never LIMIT (Oracle has no LIMIT). Do not end the "
     "statement with a semicolon.\n"
+)
+
+_RULE_POSTGRES = (
+    "1. A single PostgreSQL SELECT (or WITH … SELECT) query inside a ```sql code fence — "
+    "named columns (no SELECT *), explicit JOINs using the given relationships, and standard "
+    "PostgreSQL functions (date_trunc, CURRENT_DATE, NOW(), interval) where needed. For row "
+    "limits / top-N use LIMIT n. Use the lower-case identifiers exactly as given in the schema. "
+    "Do not end the statement with a semicolon.\n"
+)
+
+_PROMPT_TAIL = (
     "2. Then a line beginning with 'Interpreted question:' that restates the user's request "
     "as you understood it — correct obvious typos, resolve ambiguity, phrase it as a single "
     "clear question, and make it faithfully describe what your SQL actually returns (so the "
@@ -68,6 +78,19 @@ SYSTEM_PROMPT = (
     "COUNT(*) for 'how many women') — decline.\n"
     "Otherwise, if the question maps to tables and columns that actually exist, attempt the SQL."
 )
+
+
+def _head(engine: str) -> str:
+    return f"You are an expert {engine} SQL generator. Using ONLY the provided schema, respond with:\n"
+
+
+# Oracle stays the default and keeps the name `SYSTEM_PROMPT` (back-compat).
+SYSTEM_PROMPT = _head("Oracle") + _RULE_ORACLE + _PROMPT_TAIL
+SYSTEM_PROMPT_POSTGRES = _head("PostgreSQL") + _RULE_POSTGRES + _PROMPT_TAIL
+
+
+def system_prompt_for(dialect: str) -> str:
+    return SYSTEM_PROMPT_POSTGRES if dialect == "postgres" else SYSTEM_PROMPT
 
 
 def _parse_sql_and_explanation(text: str) -> Tuple[str, Optional[str], Optional[str]]:
@@ -140,7 +163,7 @@ _PSEUDO_COLUMNS = {
 }
 
 
-def _unknown_columns(sql: str, schema: Schema) -> List[str]:
+def _unknown_columns(sql: str, schema: Schema, dialect: str = "oracle") -> List[str]:
     """Column names the SQL references that are NOT in the schema, NOT query-defined
     (SELECT aliases / CTE names / table aliases), and NOT Oracle pseudo-columns.
 
@@ -150,7 +173,7 @@ def _unknown_columns(sql: str, schema: Schema) -> List[str]:
     schema, returns ``[]`` so a valid query is never wrongly blocked (the SELECT-only
     chokepoint remains the hard safety boundary regardless)."""
     try:
-        tree = sqlglot.parse_one(sql, read="oracle")
+        tree = sqlglot.parse_one(sql, read=dialect)
     except Exception:  # noqa: BLE001 - unparseable → don't block
         return []
     if tree is None:
@@ -188,6 +211,7 @@ def generate_sql_from_nl(
     llm: Optional[LLMConfig] = None,
     policy: Optional[str] = None,
     ebs_modules: Optional[List[str]] = None,
+    dialect: str = "oracle",
 ) -> NLSQLResult:
     """Propose Oracle SQL (+ explanation + heuristic confidence) for a question.
 
@@ -230,7 +254,7 @@ def generate_sql_from_nl(
     )
 
     try:
-        raw = _complete_with_retry(provider, SYSTEM_PROMPT, user, model)
+        raw = _complete_with_retry(provider, system_prompt_for(dialect), user, model)
     except LLMError:
         raise  # already a clean, user-safe message
     except Exception as exc:  # noqa: BLE001 — provider/network/auth failure
@@ -249,7 +273,7 @@ def generate_sql_from_nl(
         return NLSQLResult(sql="", answerable=False, message=_decline_message(refusal.group(1)))
 
     sql, explanation, interpreted = _parse_sql_and_explanation(raw)
-    if not sql_is_safe_select(sql):
+    if not sql_is_safe_select(sql, dialect=dialect):
         # The model didn't return a usable read-only query — whether an explicit
         # decline (sentinel/prose), or non-SELECT / unparseable output. Always surface
         # the SAME graceful not-answerable notice (the owner's consistency
@@ -265,7 +289,7 @@ def generate_sql_from_nl(
     # Decline gracefully when the model fabricated a column that isn't in the schema
     # (F2): far better a calm "the data has no column for X" than a raw ORA-00904 at
     # run time. Fail-open — only fires on a confident, parseable unknown reference.
-    unknown = _unknown_columns(sql, schema)
+    unknown = _unknown_columns(sql, schema, dialect)
     if unknown:
         logger.info("nl2sql: SQL references column(s) not in schema %s; declining", unknown)
         cols_txt = ", ".join(unknown[:5])

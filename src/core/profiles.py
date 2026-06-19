@@ -29,24 +29,34 @@ from src.core.fileio import atomic_write_json
 from src.storage import DEFAULT_STORAGE_DIR
 
 Environment = Literal["DEV", "TEST", "PROD"]
+Engine = Literal["oracle", "postgres"]
 
 
 class ProfileCreate(BaseModel):
     """Inbound payload for creating a profile (carries the plaintext password)."""
 
     name: str = Field(..., min_length=1, max_length=120)
+    # Multi-engine (Phase 11): "oracle" (default) | "postgres" (Supabase). Postgres
+    # uses `database` (+ optional `sslmode`); Oracle uses `service_name`/`sid`.
+    # `current_schema` doubles as the Postgres search_path.
+    engine: Engine = "oracle"
     host: str = Field(..., min_length=1)
     port: int = Field(1521, ge=1, le=65535)
     service_name: Optional[str] = None
     sid: Optional[str] = None
+    database: Optional[str] = None
+    sslmode: Optional[str] = None
     current_schema: Optional[str] = Field(None, max_length=128)
     username: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
     environment: Environment = "DEV"
 
     @model_validator(mode="after")
-    def _require_service_or_sid(self) -> "ProfileCreate":
-        if not (self.service_name or self.sid):
+    def _require_target(self) -> "ProfileCreate":
+        if self.engine == "postgres":
+            if not self.database:
+                raise ValueError("A database name is required for a PostgreSQL connection.")
+        elif not (self.service_name or self.sid):
             raise ValueError("Either service_name or sid must be provided.")
         return self
 
@@ -56,10 +66,13 @@ class ProfilePublic(BaseModel):
 
     id: str
     name: str
+    engine: Engine = "oracle"
     host: str
     port: int
     service_name: Optional[str] = None
     sid: Optional[str] = None
+    database: Optional[str] = None
+    sslmode: Optional[str] = None
     current_schema: Optional[str] = None
     username: str
     environment: Environment
@@ -70,10 +83,13 @@ class StoredProfile(BaseModel):
 
     id: str
     name: str
+    engine: Engine = "oracle"
     host: str
     port: int
     service_name: Optional[str] = None
     sid: Optional[str] = None
+    database: Optional[str] = None
+    sslmode: Optional[str] = None
     current_schema: Optional[str] = None
     username: str
     environment: Environment
@@ -83,10 +99,13 @@ class StoredProfile(BaseModel):
         return ProfilePublic(
             id=self.id,
             name=self.name,
+            engine=self.engine,
             host=self.host,
             port=self.port,
             service_name=self.service_name,
             sid=self.sid,
+            database=self.database,
+            sslmode=self.sslmode,
             current_schema=self.current_schema,
             username=self.username,
             environment=self.environment,
@@ -96,10 +115,13 @@ class StoredProfile(BaseModel):
 class ResolvedConnection(BaseModel):
     """Internal-only: a profile with its decrypted password, ready to connect."""
 
+    engine: Engine = "oracle"
     host: str
     port: int
     service_name: Optional[str] = None
     sid: Optional[str] = None
+    database: Optional[str] = None
+    sslmode: Optional[str] = None
     current_schema: Optional[str] = None
     username: str
     password: str
@@ -174,10 +196,13 @@ class JsonFileProfileStore(ProfileStore):
             stored = StoredProfile(
                 id=profile_id,
                 name=data.name,
+                engine=data.engine,
                 host=data.host,
                 port=data.port,
                 service_name=data.service_name,
                 sid=data.sid,
+                database=data.database,
+                sslmode=data.sslmode,
                 current_schema=data.current_schema,
                 username=data.username,
                 environment=data.environment,
@@ -211,10 +236,13 @@ class JsonFileProfileStore(ProfileStore):
             if stored is None:
                 return None
             return ResolvedConnection(
+                engine=stored.engine,
                 host=stored.host,
                 port=stored.port,
                 service_name=stored.service_name,
                 sid=stored.sid,
+                database=stored.database,
+                sslmode=stored.sslmode,
                 current_schema=stored.current_schema,
                 username=stored.username,
                 password=decrypt_secret(stored.password_encrypted),
@@ -236,10 +264,13 @@ class InMemoryProfileStore(ProfileStore):
             stored = StoredProfile(
                 id=profile_id,
                 name=data.name,
+                engine=data.engine,
                 host=data.host,
                 port=data.port,
                 service_name=data.service_name,
                 sid=data.sid,
+                database=data.database,
+                sslmode=data.sslmode,
                 current_schema=data.current_schema,
                 username=data.username,
                 environment=data.environment,
@@ -267,10 +298,13 @@ class InMemoryProfileStore(ProfileStore):
             if stored is None:
                 return None
             return ResolvedConnection(
+                engine=stored.engine,
                 host=stored.host,
                 port=stored.port,
                 service_name=stored.service_name,
                 sid=stored.sid,
+                database=stored.database,
+                sslmode=stored.sslmode,
                 current_schema=stored.current_schema,
                 username=stored.username,
                 password=decrypt_secret(stored.password_encrypted),

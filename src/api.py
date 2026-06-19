@@ -58,6 +58,9 @@ from src.core.mailer import email_enabled, send_html_bundle_email, send_report_e
 _EBS_MODULES = set(get_args(Module))  # {"GL","AP","AR","PO","OM"}
 from src.schema import schema_from_dict, schema_to_dict
 from src.db import OracleClient, OracleConnectionConfig
+from src.core.db_factory import make_client
+from src.core.db_postgres import PostgresConnectionConfig
+from src.core.introspection_postgres import introspect_schema_postgres
 from src.nl2sql import LLMConfig, generate_sql_from_nl
 from src.utils import dataframe_to_csv_bytes, dataframe_to_excel_bytes
 from src.schema import (
@@ -192,16 +195,23 @@ _schema_store: SchemaStore = JsonFileSchemaStore()
 # Request/response models
 # --------------------------------------------------------------------------- #
 class ConnectionConfig(BaseModel):
+    engine: str = "oracle"  # "oracle" | "postgres"
     host: str
     port: int = 1521
     service_name: Optional[str] = None
     sid: Optional[str] = None
+    database: Optional[str] = None
+    sslmode: Optional[str] = None
+    current_schema: Optional[str] = None
     username: str
     password: str
 
     @model_validator(mode="after")
-    def _require_service_or_sid(self) -> "ConnectionConfig":
-        if not (self.service_name or self.sid):
+    def _require_target(self) -> "ConnectionConfig":
+        if self.engine == "postgres":
+            if not self.database:
+                raise ValueError("A database name is required for a PostgreSQL connection.")
+        elif not (self.service_name or self.sid):
             raise ValueError("Either service_name or sid must be provided.")
         return self
 
@@ -234,6 +244,9 @@ class NL2SQLRequest(BaseModel):
     ebs_modules: Optional[List[str]] = Field(
         None, description="Opt-in EBS module packs to add as curated metadata context (e.g. ['AP','GL'])"
     )
+    # Target SQL dialect so generation matches where the SQL will run ("oracle" |
+    # "postgres"). The client sends it from the selected connection's engine.
+    dialect: Optional[str] = Field(None, description='"oracle" (default) or "postgres"')
 
     @field_validator("ebs_modules")
     @classmethod
@@ -475,19 +488,17 @@ def test_profile(profile_id: str) -> Dict[str, Any]:
     resolved = _store.resolve(profile_id)
     if resolved is None:
         raise HTTPException(status_code=404, detail="Profile not found.")
-    client = OracleClient(
-        OracleConnectionConfig(
-            host=resolved.host,
-            port=resolved.port,
-            service_name=resolved.service_name,
-            sid=resolved.sid,
-            username=resolved.username,
-            password=resolved.password,
-            current_schema=resolved.current_schema,
-        )
+    cfg = _make_config(
+        engine=resolved.engine, host=resolved.host, port=resolved.port,
+        service_name=resolved.service_name, sid=resolved.sid,
+        database=resolved.database, sslmode=resolved.sslmode,
+        current_schema=resolved.current_schema, username=resolved.username,
+        password=resolved.password,
     )
+    client = make_client(cfg)
+    probe = "SELECT 1" if _dialect_for(cfg) == "postgres" else "SELECT 1 FROM DUAL"
     try:
-        result = client.run_select("SELECT 1 FROM DUAL")
+        result = client.run_select(probe)
     except Exception as exc:  # noqa: BLE001 - DB/connection errors (sanitized, ITM-015)
         raise _db_error(exc, "profile-test")
     audit.audit_profile_usage(profile_id, resolved.username, "test")
@@ -497,18 +508,16 @@ def test_profile(profile_id: str) -> Dict[str, Any]:
 @router.post("/test-connection")
 def test_connection(conn: ConnectionConfig) -> Dict[str, Any]:
     """Test an inline (unsaved) connection without persisting it."""
-    client = OracleClient(
-        OracleConnectionConfig(
-            host=conn.host,
-            port=conn.port,
-            service_name=conn.service_name,
-            sid=conn.sid,
-            username=conn.username,
-            password=conn.password,
-        )
+    cfg = _make_config(
+        engine=conn.engine, host=conn.host, port=conn.port,
+        service_name=conn.service_name, sid=conn.sid, database=conn.database,
+        sslmode=conn.sslmode, current_schema=conn.current_schema,
+        username=conn.username, password=conn.password,
     )
+    client = make_client(cfg)
+    probe = "SELECT 1" if _dialect_for(cfg) == "postgres" else "SELECT 1 FROM DUAL"
     try:
-        result = client.run_select("SELECT 1 FROM DUAL")
+        result = client.run_select(probe)
     except Exception as exc:  # noqa: BLE001 - DB/connection errors (sanitized, ITM-015)
         raise _db_error(exc, "test-connection")
     return {"ok": True, "elapsed_seconds": result.elapsed_seconds, "columns": result.columns, "rows": result.rows}
@@ -547,7 +556,8 @@ def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
 
         llm_cfg = LLMConfig(**req.llm.model_dump()) if req.llm else None
         result = generate_sql_from_nl(
-            req.natural_language, schema, model=req.model, llm=llm_cfg, ebs_modules=req.ebs_modules
+            req.natural_language, schema, model=req.model, llm=llm_cfg,
+            ebs_modules=req.ebs_modules, dialect=(req.dialect or "oracle"),
         )
         confidence = (
             {"level": result.confidence.level, "reasons": result.confidence.reasons}
@@ -579,58 +589,76 @@ def nl2sql(req: NL2SQLRequest) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # Execute (the single safe chokepoint for running SQL)
 # --------------------------------------------------------------------------- #
-def _resolve_target(
-    profile_id: Optional[str], connection: Optional[ConnectionConfig]
-) -> "tuple[OracleConnectionConfig, str, Optional[str]]":
-    """Resolve a (conn_cfg, username, profile_id) target from a stored profile
-    or an inline connection. Raises 404 for an unknown profile."""
+def _make_config(
+    *, engine, host, port, service_name, sid, database, sslmode, current_schema, username, password
+):
+    """Build the engine-specific connection config. Postgres uses database +
+    search_path (the saved current_schema); Oracle uses service_name/sid + the
+    ALTER SESSION default schema. Defaults to Oracle for back-compat."""
+    if (engine or "oracle") == "postgres":
+        return PostgresConnectionConfig(
+            host=host,
+            port=port,
+            database=database or "postgres",
+            username=username,
+            password=password,
+            sslmode=sslmode or "require",
+            search_path=current_schema,
+        )
+    return OracleConnectionConfig(
+        host=host,
+        port=port,
+        service_name=service_name,
+        sid=sid,
+        username=username,
+        password=password,
+        # Saved default schema so the AI's unqualified names resolve (ADR-018, BUG-008).
+        current_schema=current_schema,
+    )
+
+
+def _resolve_target(profile_id: Optional[str], connection: Optional[ConnectionConfig]):
+    """Resolve a (conn_cfg, username, profile_id) target — Oracle or Postgres —
+    from a stored profile or an inline connection. Raises 404 for an unknown profile."""
     if profile_id:
         resolved = _store.resolve(profile_id)
         if resolved is None:
             raise HTTPException(status_code=404, detail="Profile not found.")
-        return (
-            OracleConnectionConfig(
-                host=resolved.host,
-                port=resolved.port,
-                service_name=resolved.service_name,
-                sid=resolved.sid,
-                username=resolved.username,
-                password=resolved.password,
-                # Apply the saved schema so the AI's unqualified table names resolve
-                # to it (db.py runs ALTER SESSION SET CURRENT_SCHEMA, validated). Without
-                # this the field is silently dropped and unqualified SQL hits ORA-00942.
-                current_schema=resolved.current_schema,
-            ),
-            resolved.username,
-            profile_id,
+        cfg = _make_config(
+            engine=resolved.engine, host=resolved.host, port=resolved.port,
+            service_name=resolved.service_name, sid=resolved.sid,
+            database=resolved.database, sslmode=resolved.sslmode,
+            current_schema=resolved.current_schema, username=resolved.username,
+            password=resolved.password,
         )
+        return cfg, resolved.username, profile_id
     c = connection  # guaranteed present by the caller
-    return (
-        OracleConnectionConfig(
-            host=c.host,
-            port=c.port,
-            service_name=c.service_name,
-            sid=c.sid,
-            username=c.username,
-            password=c.password,
-        ),
-        c.username,
-        None,
+    cfg = _make_config(
+        engine=getattr(c, "engine", "oracle"), host=c.host, port=c.port,
+        service_name=c.service_name, sid=c.sid, database=c.database,
+        sslmode=c.sslmode, current_schema=c.current_schema,
+        username=c.username, password=c.password,
     )
+    return cfg, c.username, None
+
+
+def _dialect_for(conn_cfg) -> str:
+    return "postgres" if isinstance(conn_cfg, PostgresConnectionConfig) else "oracle"
 
 
 def _run_sql(
     *,
     sql: str,
-    conn_cfg: "OracleConnectionConfig",
+    conn_cfg,
     username: str,
     profile_id: Optional[str],
     binds: Optional[Dict[str, Any]],
     max_rows: Optional[int],
 ) -> Dict[str, Any]:
     """The shared chokepoint body used by /execute and /reports/{id}/run."""
-    # Safety gate: reject anything that is not a provably read-only SELECT/CTE.
-    safety = assert_safe_select(sql)
+    # Safety gate: reject anything that is not a provably read-only SELECT/CTE
+    # (engine dialect so the same guarantee holds for Oracle and Postgres).
+    safety = assert_safe_select(sql, dialect=_dialect_for(conn_cfg))
     if not safety.allowed:
         audit.audit_execution(
             source="api", sql=sql, allowed=False, profile_id=profile_id, username=username, reason=safety.reason
@@ -643,7 +671,7 @@ def _run_sql(
     if max_rows is not None:
         limits = limits.model_copy(update={"max_rows": max(1, min(max_rows, limits.max_rows))})
 
-    client = OracleClient(conn_cfg)
+    client = make_client(conn_cfg)
     try:
         result = client.run_select(sql, limits=limits, binds=binds)
     except SqlSafetyError as exc:
@@ -1004,9 +1032,12 @@ def delete_schema(schema_id: str) -> Response:
 @router.post("/schemas/introspect")
 def introspect(req: IntrospectRequest) -> Dict[str, Any]:
     conn_cfg, _username, profile_id = _resolve_target(req.profile_id, req.connection)
-    client = OracleClient(conn_cfg)
+    client = make_client(conn_cfg)
     try:
-        result = introspect_schema(client, owner=req.owner, table_like=req.table_like)
+        if _dialect_for(conn_cfg) == "postgres":
+            result = introspect_schema_postgres(client, schema=req.owner or "public")
+        else:
+            result = introspect_schema(client, owner=req.owner, table_like=req.table_like)
     except ValueError as exc:
         # Safe, intentional validation message (e.g. blank owner) — stays verbatim.
         raise HTTPException(status_code=400, detail=str(exc))
@@ -1040,37 +1071,57 @@ def profile(req: ProfileRequest) -> Dict[str, Any]:
     optional opt-in Channel-B value-domain sampling. Every query is SELECT-only
     through the chokepoint; value domains are stored server-side only (invariant 3)."""
     conn_cfg, _username, profile_id = _resolve_target(req.profile_id, req.connection)
-    client = OracleClient(conn_cfg)
+    client = make_client(conn_cfg)
+    is_pg = _dialect_for(conn_cfg) == "postgres"
     try:
-        result = profile_schema(client, owner=req.owner, table_like=req.table_like)
+        if is_pg:
+            # Postgres MVP: basic introspection (tables/columns/PK/FK). Enriched
+            # profiling (indexes/stats/value-domains) + the advisory are Oracle-only
+            # for now; readiness reflects only what we actually read.
+            intro = introspect_schema_postgres(client, schema=req.owner or "public")
+            schema_obj = intro.schema
+            warnings = list(intro.warnings)
+            truncated = intro.truncated
+            coverage = {
+                "columns": bool(schema_obj.tables),
+                "primary_keys": not any("Primary keys" in w for w in warnings),
+                "foreign_keys": not any("Foreign keys" in w for w in warnings),
+                "indexes": False, "partitions": False, "stats": False, "unique": False,
+            }
+        else:
+            result = profile_schema(client, owner=req.owner, table_like=req.table_like)
+            schema_obj = result.schema
+            warnings = list(result.warnings)
+            truncated = result.truncated
+            coverage = result.coverage
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:  # noqa: BLE001 - DB/connection errors (sanitized, ITM-015)
         raise _db_error(exc, "profile")
 
-    warnings = list(result.warnings)
-    # Channel B (opt-in): bounded value-domain sampling. Stored server-side only —
-    # NEVER part of the Schema/definition or any LLM context (invariant 3).
+    # Channel B (opt-in, Oracle MVP): bounded value-domain sampling. Stored
+    # server-side only — NEVER in the Schema/definition or any LLM context (inv 3).
     semantics: Dict[str, Any] = dict(req.semantics or {})
-    targets = []
-    for spec in req.sample_value_columns:
-        if "." in spec:
-            tname, cname = spec.split(".", 1)
-            targets.append((tname.strip().upper(), cname.strip().upper()))
-    if targets:
-        try:
-            domains, vd_warnings = capture_value_domains(client, req.owner.upper(), targets)
-        except Exception as exc:  # noqa: BLE001
-            raise _db_error(exc, "value_domains")
-        if domains:
-            merged = dict(semantics.get("value_domains") or {})
-            merged.update(domains)
-            semantics["value_domains"] = merged
-        warnings.extend(vd_warnings)
+    if not is_pg and req.sample_value_columns:
+        targets = []
+        for spec in req.sample_value_columns:
+            if "." in spec:
+                tname, cname = spec.split(".", 1)
+                targets.append((tname.strip().upper(), cname.strip().upper()))
+        if targets:
+            try:
+                domains, vd_warnings = capture_value_domains(client, req.owner.upper(), targets)
+            except Exception as exc:  # noqa: BLE001
+                raise _db_error(exc, "value_domains")
+            if domains:
+                merged = dict(semantics.get("value_domains") or {})
+                merged.update(domains)
+                semantics["value_domains"] = merged
+            warnings.extend(vd_warnings)
 
-    definition = schema_to_dict(result.schema)
-    advisory = [s.model_dump() for s in build_optimization_advisory(result.schema)]
-    readiness = compute_readiness(result.schema, semantics, result.coverage, req.enforcement)
+    definition = schema_to_dict(schema_obj)
+    advisory = [] if is_pg else [s.model_dump() for s in build_optimization_advisory(schema_obj)]
+    readiness = compute_readiness(schema_obj, semantics, coverage, req.enforcement)
 
     saved: Optional[Dict[str, Any]] = None
     if req.schema_id:
@@ -1098,8 +1149,8 @@ def profile(req: ProfileRequest) -> Dict[str, Any]:
         "definition": definition,
         "table_count": len(definition.get("tables") or {}),
         "warnings": warnings,
-        "truncated": result.truncated,
-        "coverage": result.coverage,
+        "truncated": truncated,
+        "coverage": coverage,
         "advisory": advisory,
         "readiness": readiness.model_dump(),
         "saved": saved,
