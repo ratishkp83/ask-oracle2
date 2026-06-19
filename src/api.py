@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional, get_args
 
 from dotenv import load_dotenv
@@ -1180,11 +1181,36 @@ def schema_readiness(schema_id: str) -> Dict[str, Any]:
     return {"readiness": readiness.model_dump()}
 
 
-# Mount every route twice: at the root (back-compat) and under /v1 (T-18).
-app.include_router(router)
+# The API is always served under /v1 (T-18). The root mount stays for back-compat
+# in dev / tests / API-only deployments. When SERVE_SPA bundles the React app, the
+# API is /v1-only (so the SPA owns the root paths) and the built dist is served.
 app.include_router(router, prefix="/v1")
+
+_SERVE_SPA = os.getenv("SERVE_SPA", "").lower() in ("1", "true", "yes")
+_DIST_DIR = Path(__file__).resolve().parent.parent / "dist"
+
+if _SERVE_SPA and (_DIST_DIR / "index.html").exists():
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
+
+    _assets = _DIST_DIR / "assets"
+    if _assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(_assets)), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def _serve_spa(full_path: str):
+        # Unknown /v1 API paths 404 rather than masquerading as the SPA shell.
+        if full_path == "v1" or full_path.startswith("v1/"):
+            raise HTTPException(status_code=404, detail="Not found.")
+        candidate = _DIST_DIR / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(str(candidate))
+        return FileResponse(str(_DIST_DIR / "index.html"))  # SPA client-route fallback
+else:
+    app.include_router(router)  # root back-compat (dev / tests / API-only)
 
 
 # Run: uvicorn src.api:app --reload --host 0.0.0.0 --port 8000
 # Bind/auth/CORS guidance for networked deployments: docs/07-deployment-plan.md
-# (APP_API_KEY enables auth; ALLOWED_ORIGINS restricts CORS).
+# (APP_API_KEY enables auth; ALLOWED_ORIGINS restricts CORS). SERVE_SPA serves the
+# built web/ SPA from <repo>/dist (Render single-service deploy).

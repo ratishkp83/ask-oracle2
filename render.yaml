@@ -1,139 +1,70 @@
+# Render Blueprint — ONE native-Python Web Service that serves the FastAPI API
+# (under /v1) AND the built React executive SPA (at root). No Docker.
+#
+# Build: install Python deps, then build the SPA (vite -> <repo>/dist).
+# Run:   uvicorn; SERVE_SPA=1 makes FastAPI serve dist at root, API at /v1 only.
+# See docs/DEPLOY-render.md for the full checklist + security notes.
+#
+# Preconditions (ADR-009, docs/07-deployment-plan.md): connect each client DB with
+# a least-privilege READ-ONLY account; set APP_SECRET_KEY (encrypts saved profile
+# passwords); for a public URL, set APP_API_KEY (gates the /v1 API).
+#
+# The legacy two-service layout (API + Streamlit admin) is in git history; the
+# React surface (Phase 9+) is now the primary UI. Streamlit can be added back as a
+# second service if you want the admin tool — see DEPLOY-render.md.
 services:
-  # ── FastAPI reporting API ────────────────────────────────────────────────────
-  # Accepts SQL execution, NL→SQL, profile management, schema tools.
-  # Deployment preconditions (docs/adr/ADR-009, docs/07-deployment-plan.md §5):
-  #   1. Connect only with a least-privilege, read-only Oracle account.
-  #   2. APP_SECRET_KEY must be set (profile-password encryption).
-  #   3. For any networked/non-localhost exposure: set APP_API_KEY and ALLOWED_ORIGINS.
-  #
-  # Storage / persistence (ITM-019):
-  #   The free plan has an ephemeral filesystem — STORAGE_DIR is wiped on every
-  #   redeploy. For production use, switch plan to 'starter' (or higher) and
-  #   uncomment the 'disk:' block below. The disk is billed separately (~$0.25/GB/mo).
-  #   Each service (api, ui) has its own disk; they do NOT share storage on Render.
   - type: web
-    name: ask-oracle2-api
+    name: ask-oracle-reports
     env: python
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: uvicorn src.api:app --host 0.0.0.0 --port $PORT
-    # Change to 'starter' (or higher) when adding the disk block below.
-    plan: free
-    healthCheckPath: /health
-    # disk:                                    # ← uncomment for persistent storage
-    #   name: ask-oracle2-api-storage          #   (requires plan: starter or higher)
-    #   mountPath: /opt/render/project/src/storage
-    #   sizeGB: 1
+    region: singapore            # match your users / Supabase region (oregon|ohio|frankfurt|singapore)
+    plan: starter                # a paid plan is required for the persistent disk below
+    autoDeploy: false            # deploy manually (respects the no-CI push posture)
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && npm ci && npm run build
+    startCommand: python -m uvicorn src.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /v1/health
+    disk:
+      name: aor-data             # persists connections/schemas/reports across deploys
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
-      # ── LLM credentials (at least one provider key required for NL→SQL) ──
-      - key: GROQ_API_KEY
-        sync: false
-      - key: GROQ_MODEL
-        value: llama3-70b-8192
-      # Uncomment to use OpenAI instead of Groq:
-      # - key: OPENAI_API_KEY
-      #   sync: false
-      # - key: OPENAI_MODEL
-      #   value: gpt-4o-mini
-
-      # ── Required secrets ─────────────────────────────────────────────────
-      # Derives the Fernet key used to encrypt saved profile passwords.
-      # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-      # WARNING: rotating this key invalidates all saved profiles (re-enter required).
-      - key: APP_SECRET_KEY
-        sync: false
-      # Enables X-API-Key authentication on every endpoint except /health.
-      # REQUIRED for any networked / non-localhost exposure (ADR-013).
-      # Leave unset only for trusted-network-only or local deployments.
-      - key: APP_API_KEY
-        sync: false
-
-      # ── CORS (required for direct browser-to-API access) ─────────────────
-      # Comma-separated explicit origins, e.g. https://myapp.example.com
-      # Do NOT use a bare "*" — that forfeits credentials (ADR-013).
-      # Blank/whitespace falls back to localhost defaults (local-only).
-      - key: ALLOWED_ORIGINS
-        sync: false
-
-      # ── Storage ──────────────────────────────────────────────────────────
-      # Free plan: ephemeral — data lost on redeploy.
-      # Paid plan + disk block above: this path lands on the persistent disk.
+      - key: SERVE_SPA
+        value: "1"
       - key: STORAGE_DIR
-        value: /opt/render/project/src/storage
-
-      # ── Logging ──────────────────────────────────────────────────────────
+        value: /var/data
+      - key: PYTHON_VERSION
+        value: "3.12.8"
       - key: LOG_LEVEL
         value: INFO
       - key: LOG_FORMAT
         value: json
-
-      # ── Python / runtime ─────────────────────────────────────────────────
-      - key: PYTHON_VERSION
-        value: "3.13.0"
-      - key: PYTHONPATH
-        value: /opt/render/project/src
-
-  # ── Streamlit UI ─────────────────────────────────────────────────────────────
-  # Browser-based interface: connect → introspect → ask / write SQL → review → run → export.
-  # Deployment preconditions same as above except APP_API_KEY/ALLOWED_ORIGINS
-  # (those govern the HTTP API; the UI runs Python directly, not via HTTP).
-  #
-  # Storage / persistence (ITM-019): same ephemeral / Render Disk pattern as api.
-  # The UI's disk is independent of the api service disk — profiles/reports created
-  # in the UI are not visible to the API and vice versa (separate filesystems on Render).
-  - type: web
-    name: ask-oracle2-ui
-    env: python
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: streamlit run src/app.py --server.address=0.0.0.0 --server.port=$PORT --server.headless=true --server.enableCORS=false --server.enableXsrfProtection=false
-    # Change to 'starter' (or higher) when adding the disk block below.
-    plan: free
-    # disk:                                    # ← uncomment for persistent storage
-    #   name: ask-oracle2-ui-storage           #   (requires plan: starter or higher)
-    #   mountPath: /opt/render/project/src/storage
-    #   sizeGB: 1
-    envVars:
-      # ── LLM credentials ──────────────────────────────────────────────────
+      # ── Required secret ──────────────────────────────────────────────────────
+      # Derives the Fernet key that encrypts saved profile passwords. Generate once:
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # WARNING: changing it invalidates all saved connections (re-add required).
+      - key: APP_SECRET_KEY
+        sync: false
+      # ── LLM (NL→SQL) ─────────────────────────────────────────────────────────
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
-        value: llama3-70b-8192
-
-      # ── Required secrets ─────────────────────────────────────────────────
-      - key: APP_SECRET_KEY
+        value: llama-3.3-70b-versatile
+      # ── Optional ─────────────────────────────────────────────────────────────
+      # Gate the /v1 API behind X-API-Key. The SPA shell/assets stay public; the
+      # bundle must be built with VITE_AOR_API_KEY=<same value> to call the API.
+      # (The key ends up in the public bundle — for real privacy front the service
+      # with Cloudflare Access / an IP allow-list instead. See DEPLOY-render.md.)
+      - key: APP_API_KEY
         sync: false
-
-      # ── Email follow-up action (Phase 8) ─────────────────────────────────
-      # Opt-in: "Send as email" is OFF until SMTP_USER + SMTP_PASSWORD are set.
-      # SMTP_PASSWORD is the Gmail App Password (account needs 2-Step Verification).
+      - key: ALLOWED_ORIGINS       # only if the API is called cross-origin (same-origin SPA needs none)
+        sync: false
+      # ── Email-a-report (optional; OFF until SMTP_USER + SMTP_PASSWORD set) ────
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_USER
         sync: false
-      - key: SMTP_PASSWORD
+      - key: SMTP_PASSWORD         # Gmail App Password
         sync: false
       - key: EMAIL_FROM
         sync: false
-      - key: EMAIL_ALLOWED_DOMAINS
-        sync: false
-      - key: EMAIL_MAX_ATTACHMENT_MB
-        value: "17"
-
-      # ── Storage ──────────────────────────────────────────────────────────
-      # Free plan: ephemeral — data lost on redeploy.
-      # Paid plan + disk block above: this path lands on the persistent disk.
-      - key: STORAGE_DIR
-        value: /opt/render/project/src/storage
-
-      # ── Logging ──────────────────────────────────────────────────────────
-      - key: LOG_LEVEL
-        value: INFO
-      - key: LOG_FORMAT
-        value: json
-
-      # ── Python / runtime ─────────────────────────────────────────────────
-      - key: PYTHON_VERSION
-        value: "3.13.0"
-      - key: PYTHONPATH
-        value: /opt/render/project/src
