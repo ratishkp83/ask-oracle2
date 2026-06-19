@@ -13,13 +13,18 @@ export type Health = z.infer<typeof HealthSchema>;
 // can't blank the picker.
 export const EnvironmentSchema = z.enum(["DEV", "TEST", "PROD"]).catch("DEV");
 
+export const EngineSchema = z.enum(["oracle", "postgres"]).catch("oracle");
+
 export const ProfilePublicSchema = z.object({
   id: z.string(),
   name: z.string(),
+  engine: EngineSchema.default("oracle"),
   host: z.string(),
   port: z.number(),
   service_name: z.string().nullable().optional(),
   sid: z.string().nullable().optional(),
+  database: z.string().nullable().optional(),
+  sslmode: z.string().nullable().optional(),
   current_schema: z.string().nullable().optional(),
   username: z.string(),
   environment: EnvironmentSchema,

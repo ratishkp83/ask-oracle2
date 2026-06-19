@@ -10,8 +10,9 @@ vi.mock("@/lib/api/endpoints", () => ({
   nl2sql: vi.fn(),
   execute: vi.fn(),
   getSchemas: vi.fn(),
+  getProfiles: vi.fn(),
 }));
-import { getSchemas, nl2sql } from "@/lib/api/endpoints";
+import { getProfiles, getSchemas, nl2sql } from "@/lib/api/endpoints";
 
 function renderSettings() {
   return render(
@@ -24,6 +25,7 @@ function renderSettings() {
 beforeEach(() => {
   window.localStorage.clear();
   vi.mocked(getSchemas).mockResolvedValue([]);
+  vi.mocked(getProfiles).mockResolvedValue([]);
   vi.mocked(nl2sql).mockReset();
 });
 afterEach(cleanup);

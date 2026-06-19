@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Info, Loader2, Sparkles, Zap } from "lucide-react";
 import { ResultsView } from "@/components/exec/ResultsView";
-import { nl2sql, execute } from "@/lib/api/endpoints";
+import { nl2sql, execute, getProfiles } from "@/lib/api/endpoints";
 import { friendlyError } from "@/lib/api/client";
 import type { Confidence, ExecuteResult } from "@/lib/api/schemas";
 import { buildPullDetailSql, PullFilter } from "@/lib/derive/pullDetail";
@@ -64,6 +65,10 @@ function toStepError(e: unknown): StepError {
 
 export function AskPage() {
   const { profileId, schemaId, autoRun, llm, setAutoRun } = useSession();
+  // The selected connection's engine drives the SQL dialect we ask the model for.
+  const { data: profiles } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
+  const dialect: "oracle" | "postgres" =
+    profiles?.find((p) => p.id === profileId)?.engine === "postgres" ? "postgres" : "oracle";
   const [q, setQ] = useState("");
   const [state, setState] = useState<AskState>({ kind: "idle" });
   const [error, setError] = useState<PhaseError>(null);
@@ -123,6 +128,7 @@ export function AskPage() {
       const proposal = await nl2sql({
         natural_language: question,
         schema_id: schemaId ?? undefined,
+        dialect,
         llm: llm ?? undefined,
       });
       // Off-topic guard: not a data question → calm notice, propose/run nothing

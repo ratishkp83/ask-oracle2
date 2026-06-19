@@ -37,10 +37,13 @@ export async function getProfiles() {
 // service_name or sid is required (enforced server-side; the form guides it).
 export type ProfileCreateBody = {
   name: string;
+  engine?: "oracle" | "postgres";
   host: string;
   port: number;
   service_name?: string | null;
   sid?: string | null;
+  database?: string | null;
+  sslmode?: string | null;
   current_schema?: string | null;
   username: string;
   password: string;
@@ -63,10 +66,14 @@ export async function testProfile(id: string) {
 // Test an unsaved connection before saving it — the password is sent once and
 // not persisted anywhere (the profile isn't created).
 export type InlineConnection = {
+  engine?: "oracle" | "postgres";
   host: string;
   port: number;
   service_name?: string | null;
   sid?: string | null;
+  database?: string | null;
+  sslmode?: string | null;
+  current_schema?: string | null;
   username: string;
   password: string;
 };
@@ -147,6 +154,9 @@ export async function nl2sql(body: {
   natural_language: string;
   schema_id?: string;
   ebs_modules?: string[];
+  // Target SQL dialect (matches the selected connection's engine) so generation
+  // produces Oracle vs Postgres SQL. Omitted → "oracle".
+  dialect?: "oracle" | "postgres";
   // Per-session model override (ADR-004); omitted → server's configured model.
   llm?: { provider?: string; model?: string; api_key?: string; base_url?: string };
 }) {

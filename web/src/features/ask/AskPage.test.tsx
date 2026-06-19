@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AskPage } from "./AskPage";
@@ -12,6 +12,7 @@ vi.mock("@/lib/api/endpoints", () => ({
   nl2sql: vi.fn(),
   execute: vi.fn(),
   getSchemas: vi.fn(),
+  getProfiles: vi.fn(),
   downloadXlsx: vi.fn(),
   emailReport: vi.fn(),
 }));
@@ -29,7 +30,7 @@ vi.mock("@/components/exec/DriverChart", () => ({
   ),
 }));
 
-import { nl2sql, execute, getSchemas } from "@/lib/api/endpoints";
+import { nl2sql, execute, getSchemas, getProfiles } from "@/lib/api/endpoints";
 
 const SCHEMA: SchemaSummary = {
   id: "s1",
@@ -74,6 +75,7 @@ beforeEach(() => {
   vi.mocked(nl2sql).mockReset();
   vi.mocked(execute).mockReset();
   vi.mocked(getSchemas).mockReset().mockResolvedValue([SCHEMA]);
+  vi.mocked(getProfiles).mockReset().mockResolvedValue([]);
 });
 afterEach(cleanup);
 
@@ -97,6 +99,24 @@ describe("AskPage state machine", () => {
     // nl2sql carried the schema_id from session context.
     expect(nl2sql).toHaveBeenCalledWith(
       expect.objectContaining({ natural_language: "Revenue by region", schema_id: "s1" }),
+    );
+  });
+
+  it("tags nl2sql with the postgres dialect when the active connection is postgres", async () => {
+    window.localStorage.setItem("aor.profileId", "pg1");
+    window.localStorage.setItem("aor.schemaId", "s1");
+    vi.mocked(getProfiles).mockResolvedValue([
+      { id: "pg1", name: "Supabase", engine: "postgres", host: "h", port: 6543, username: "u", environment: "DEV" } as any,
+    ]);
+    vi.mocked(nl2sql).mockResolvedValue(PROPOSAL);
+    const user = userEvent.setup();
+    renderAsk();
+
+    await user.type(screen.getByPlaceholderText(/Top 10 customers/i), "sales by region");
+    await user.click(screen.getByRole("button", { name: /generate sql/i }));
+
+    await waitFor(() =>
+      expect(nl2sql).toHaveBeenCalledWith(expect.objectContaining({ dialect: "postgres" })),
     );
   });
 
