@@ -44,3 +44,6 @@ venv/
 # Local runtime data (connection profiles, saved reports)
 storage/
 .pytest-storage/
+
+# Generated migration dumps (regenerable via scripts/xe_to_supabase.py)
+scripts/out/
