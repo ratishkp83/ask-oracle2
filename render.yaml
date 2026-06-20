@@ -17,20 +17,22 @@ services:
     name: ask-oracle-reports
     env: python
     region: singapore            # match your users / Supabase region (oregon|ohio|frankfurt|singapore)
-    plan: starter                # a paid plan is required for the persistent disk below
+    plan: free                   # demo: free instance, no card needed (sleeps after ~15m idle)
     autoDeploy: false            # deploy manually (respects the no-CI push posture)
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt && npm ci && npm run build
     startCommand: python -m uvicorn src.api:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /v1/health
-    disk:
-      name: aor-data             # persists connections/schemas/reports across deploys
-      mountPath: /var/data
-      sizeGB: 1
+    # For persistence across restarts/redeploys, switch plan -> starter and
+    # uncomment this disk + set STORAGE_DIR to /var/data (a paid plan; ~$7/mo + disk):
+    # disk:
+    #   name: aor-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
     envVars:
       - key: SERVE_SPA
         value: "1"
-      - key: STORAGE_DIR
-        value: /var/data
+      - key: STORAGE_DIR         # ephemeral on free (lost on restart); use /var/data with the disk above
+        value: /opt/render/project/src/storage
       - key: PYTHON_VERSION
         value: "3.12.8"
       - key: LOG_LEVEL
