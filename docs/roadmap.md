@@ -19,7 +19,25 @@ Each feature phase runs through the lifecycle micro-cycle (Discovery → Design 
 | 7 | **EBS Intelligence & 23ai enhancements** (optional) | ✅ Done | EBS metadata packs + glossary (ADR-015), opt-in NL→SQL context, `/packs`, `/v1` prefix (**T-18 closed**). Closed via gate (r1 PASS → F1/F2 remediated) 2026-06-12; **293 tests**. **23ai vector deferred** (ADR-016/ITM-018, needs a 23ai instance). EBS pack contents need real-EBS validation (ITM-012; validator + self-audit shipped). |
 
 ## Current focus
-**Phase 7 CLOSED (2026-06-12) — all planned phases are now complete.** Phase 7 shipped the EBS
+
+> **v2 track (branch `v2`, local-only until the July push) — the table above is the v1/`main` view through Phase 7.**
+> The v2 line of work continues on top of v1: **Phase 8 (email a report) CLOSED 2026-06-13** · **Phase 9
+> (React CXO UI) CLOSED 2026-06-15** (+ ITM-034 closed) · **Phase 10 (Cascading Report Deliverables + Local
+> Insight Narration) — 🎉 CLOSED 2026-06-18** ([charter](charters/phase-10-cascading-reports.md);
+> [design](cascading-reports-design.md); ADR-026/027): local insight band; client-orchestrated cascade fan-out
+> → single-file HTML bundle; Download/Email/Save "Report" dialog; live fresh-fetch + saved cascading reports.
+> Exit-gate r1 = **PASS-WITH-FIXES** (reviewer ≠ author; all 5 invariants hold; 4 S4 remediated;
+> [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)); gates `tsc --build`/vitest 160/vite/pytest
+> 446; **live XE end-to-end confirmed** (run → live fan-out → download → real email). **Phase 11
+> (Plan-Aware Query Intelligence + Resilient Execution) OPENED 2026-06-18** —
+> [charter](charters/phase-11-plan-aware-resilient.md) (B1) + [design](plan-aware-resilient-design.md) /
+> ADR-[028](adr/ADR-028-database-profiling.md)…[031](adr/ADR-031-privilege-gated-plan-reading.md) (B2)
+> **approved**; now building **B3** (read-only profiling + Optimization Advisory + soft-block setup
+> readiness gate). Two pillars (profiling+plan-aware generation; resilient async execution); the
+> semantic/metrics layer is **Phase 12** (deferred). Authoritative v2 state
+> lives in [HANDOFF.md](HANDOFF.md) (top banner). End goal: *fully intelligent + cascading reporting.*
+
+**Phase 7 CLOSED (2026-06-12) — all planned phases [on v1/`main`] are now complete.** Phase 7 shipped the EBS
 metadata packs + glossary, opt-in NL→SQL context, the `/packs` API, and the `/v1` prefix (closing
 T-18); exit-gate review r1 = PASS, two S4 findings remediated, **293 tests**. The 23ai vector
 track is **deferred** (ADR-016 / ITM-018 — needs an Oracle 23ai instance). **Phases 1–6, 6.5,

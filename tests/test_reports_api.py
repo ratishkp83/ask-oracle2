@@ -74,6 +74,67 @@ def test_report_crud_lifecycle():
     assert client.delete(f"/reports/{rid}").status_code == 404
 
 
+def test_param_lookup_sql_round_trips():
+    """A parameter's optional lookup_sql (value-picker query) persists verbatim."""
+    body = _make_report(
+        name="With lookup",
+        parameters=[
+            {
+                "name": "dept_id",
+                "label": "Department",
+                "type": "number",
+                "required": True,
+                "lookup_sql": "SELECT department_id, department_name FROM departments ORDER BY department_name",
+            }
+        ],
+    )
+    created = client.post("/reports", json=body)
+    assert created.status_code == 201
+    param = created.json()["parameters"][0]
+    assert param["lookup_sql"] == "SELECT department_id, department_name FROM departments ORDER BY department_name"
+    # Omitting it defaults to null (backward-compatible).
+    plain = client.post("/reports", json=_make_report(name="No lookup")).json()
+    assert plain["parameters"][0]["lookup_sql"] is None
+
+
+# --- cascade spec (Phase 10, ADR-026) ------------------------------------ #
+def test_report_cascade_round_trips_and_clamps():
+    """An additive cascade plan persists; out-of-range values are clamped (not rejected)."""
+    body = _make_report(
+        name="Cascading AR",
+        cascade={
+            "dimension_order": ["REGION", "CUSTOMER"],
+            "depth": 99,
+            "children_per_level": 0,
+            "rows_per_child": 0,
+        },
+    )
+    created = client.post("/reports", json=body)
+    assert created.status_code == 201
+    casc = created.json()["cascade"]
+    assert casc["dimension_order"] == ["REGION", "CUSTOMER"]
+    assert casc["depth"] == 5  # clamped to <= 5
+    assert casc["children_per_level"] == 1  # clamped to >= 1
+    assert casc["rows_per_child"] == 1  # clamped to >= 1
+
+
+def test_report_without_cascade_is_null():
+    created = client.post("/reports", json=_make_report(name="Plain report"))
+    assert created.status_code == 201
+    assert created.json()["cascade"] is None  # backward-compatible
+
+
+def test_report_update_sets_cascade():
+    rid = client.post("/reports", json=_make_report(name="To upgrade")).json()["id"]
+    upd = client.put(
+        f"/reports/{rid}",
+        json=_make_report(name="To upgrade", cascade={"dimension_order": ["X"], "depth": 3, "children_per_level": 5}),
+    )
+    assert upd.status_code == 200
+    assert upd.json()["cascade"]["dimension_order"] == ["X"]
+    assert upd.json()["cascade"]["depth"] == 3
+
+
 # --- run ------------------------------------------------------------------ #
 def test_run_report_with_inline_connection(no_db):
     rid = client.post("/reports", json=_make_report()).json()["id"]

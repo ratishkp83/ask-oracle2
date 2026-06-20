@@ -1,7 +1,85 @@
 # Ask Oracle Reports — HANDOFF (read me first)
 
-> **Document:** Session Handoff · **Version:** 3.3 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-12
+> **Document:** Session Handoff · **Version:** 4.0 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-18 (Phase 11 B3 done)
 > **Purpose:** the single entry point for any new/resumed session. Read this, then the linked governed docs, then continue. This file is updated at the end of every working session / phase.
+
+> ---
+> ### 🚧 v2 — Phase 11 IN PROGRESS — Plan-Aware Query Intelligence + Resilient Execution (B3 done, 2026-06-18)
+> **Phase 11** ([charter](charters/phase-11-plan-aware-resilient.md) B1 ✓ · [design](plan-aware-resilient-design.md)
+> + ADR-[028](adr/ADR-028-database-profiling.md)…[031](adr/ADR-031-privilege-gated-plan-reading.md) B2 ✓) attacks the
+> owner's real-life pain: on a real client DB, generated SQL isn't reliably accurate/fast and a heavy query
+> **times out the request**. **Two pillars:** P1 **Profiling + Plan-Aware Generation** (prevention/accuracy),
+> P2 **Resilient Execution** (async containment of timeouts). Semantic/metrics layer → **Phase 12**. Owner
+> additions: **D-K** advise-only Optimization Advisory (the app **never** runs DDL); **D-L** enriched metadata
+> mandatory at a **setup readiness gate** (**soft-block default**, hard-block configurable). **🟢 B3 COMPLETE +
+> live-verified vs XE `AOR_DEMO`:** the **two-channel** profiler (Channel A structure/stats → `Schema`/LLM-safe;
+> **Channel B** value-domains/semantics → separate `SchemaRecord.semantics`, **never** to the LLM — Invariant 3 by
+> construction); `profile_schema` (SELECT-only, privilege-degrading); `build_optimization_advisory` +
+> `compute_readiness`; `POST /schemas/profile` + `GET /schemas/{id}/advisory|readiness`; admin UI ReadinessBanner +
+> Advisory in the Data dictionary. **Gates `tsc --build` 0 / vitest 161 / vite / pytest 478 (+32);** live XE
+> proof = full coverage, readiness `not_optimized`/usable, a real high index advisory on `EMPLOYEES.DEPARTMENT_ID`.
+> **Local commits only (B1 `de13502` → B3 `ff898cd`); NO PUSH until the July reset. NEXT = B4 (plan-aware
+> generation) — pending the B3 packet sign-off.**
+>
+> ### 🟢 v2 — Phase 10 CLOSED (2026-06-18) · Phase 9 CLOSED
+> **Phase 10 — Cascading Report Deliverables + Local Insight Narration** ([charter](charters/phase-10-cascading-reports.md),
+> 🟢 approved). Advances the end goal "fully intelligent + cascading reporting": a **styled single-file HTML
+> bundle** (parent summary → narrated KPIs → nested per-value child sections) you can **download or email**,
+> plus **local, deterministic insight narration** (no LLM, no row egress). Decisions D-A…D-H resolved. Architecture:
+> **client-orchestrated fan-out reusing the TS `derive/*` layer**; each cascade child is a `pullDetail`-style
+> deterministic derivation of the **approved** parent through the existing `/execute` chokepoint (all five
+> invariants hold). **OUT/deferred:** conversational Ask, semantic layer, scheduling, LLM-phrased insight,
+> PDF/Excel, query history. Build plan B1 charter ✓ → B2 design + ADR-026/027 ✓ → B3 insight engine ✓ →
+> B4 fan-out + bundle + download ✓ → B5 (a backend cascade-persistence + `/reports/email-bundle`; b frontend
+> "Report" dialog Download/Email/Save + live fan-out) ✓ → **B6 = exit-gate r1 PASS-WITH-FIXES** (independent
+> reviewer ≠ author via spawned subagent, ADR-006; all 5 invariants HOLD; **4 findings, all S4, remediated**;
+> [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)). Gates re-run green: **`tsc --build` 0 ·
+> vitest 160 · vite build · pytest 446 · OpenAPI 3.1.0 / 42 paths**. **Live XE `AOR_DEMO` end-to-end CONFIRMED
+> 2026-06-18** (ran a saved cascading report → live fan-out "1 live query" via `/execute` → downloaded a
+> script-free HTML bundle → sent a **real** email with the HTML attachment via `/reports/email-bundle`). **+
+> owner closure sign-off → 🎉 PHASE 10 CLOSED.** Open backlog unchanged: ITM-026 (dynamic Ask chips), ITM-031
+> (frontend ESLint debt). **Typecheck gate = `tsc --build`** (BUG-013: the previously-used
+> `tsc --noEmit -p tsconfig.json` is a **no-op** — root `tsconfig.json` has `files:[]` + project
+> references, so without `--build` it checks **zero** files; verified by a deliberate type error passing
+> it while `tsc --build` caught it). `*.tsbuildinfo` is git-ignored. **Local commits only; NO PUSH until the July reset.**
+>
+> ### Phase 9: React CXO UI · B6 supporting screens COMPLETE (2026-06-15)
+> **Workspace:** `D:\Ratish\Personal\Project\ask-oracle-reports-main v2` (junction `…\aor-v2`),
+> branch **`v2`** — **local commits only; NO PUSH until the July limit reset.** Charter
+> [phase-9-react-cxo-ui.md](charters/phase-9-react-cxo-ui.md). The bespoke **React** executive surface
+> (`web/`) is built against the existing `/v1` FastAPI; Streamlit stays as the admin tool.
+> **B5b** (live Query Builder + intelligent cascading) closed earlier — exit-gate r1 = PASS; details in
+> [CHANGELOG.md](CHANGELOG.md) + [reviews/phase-9-b5b-review-r1.md](reviews/phase-9-b5b-review-r1.md).
+> **B6 — the four supporting screens — COMPLETE**, built one packet at a time with a review-gate +
+> HOLD-for-sign-off at every checkpoint (owner-driven): **Connections** (list/add/test/delete profiles,
+> default-schema, password posted once — closes the E10 handoff), **Data dictionary** (saved schemas with
+> table/column PK·FK detail + live introspect, and the curated EBS packs — closes E11), **Reports**
+> (saved-report list/run/create/edit/delete + start-from-template, reusing the executive Results view +
+> export/email), and **Settings** (per-session LLM override [ADR-004] wired into Ask + server-managed
+> status copy; no backend change). Cross-cutting: **user-readable errors everywhere**
+> ([ADR-024](adr/ADR-024-user-readable-error-presentation.md) — no developer text to users; `error_id`
+> kept), a shared **ConfirmDialog**, and **report parameter value-pickers**
+> ([ADR-023](adr/ADR-023-report-parameter-value-pickers.md) — explicit lookup + FK "Suggest" + **run-time
+> auto-derivation** from SQL binds × dictionary FKs, all via the SELECT-only chokepoint).
+> **428 backend / 128 frontend / tsc clean / vite build green.** Verified live end-to-end vs XE 21c
+> (AOR_DEMO): all four screens at 1366×768 (no full-page scroll), report run → Results, friendly DB-error
+> copy, and live FK dropdowns. **HEAD `74037d4`.** All five invariants hold (chokepoint; AI-proposes /
+> approve incl. Auto-run; schema-names-only to the LLM; no client DB secrets; sanitized `error_id` errors).
+> **B7 broader acceptance COMPLETE** ([reviews/phase-9-b7-acceptance.md](reviews/phase-9-b7-acceptance.md)) +
+> post-B7 owner-found fixes (user-readable errors [ADR-024], report value-pickers + run-time FK
+> auto-derivation [ADR-023], off-topic/missing-column/consistent-decline NL guard [ADR-025], Auto-run
+> toggle UX). **Owner CXO acceptance SIGNED OFF 2026-06-15** (criterion #3). **Independent exit-gate review
+> r1 = PASS-WITH-FIXES** (reviewer ≠ author, ADR-006; [reviews/phase-9-b6b7-review-r1.md](reviews/phase-9-b6b7-review-r1.md)):
+> all 4 gates re-run green + all 5 invariants verified; 5 findings, **all S4**, remediated/accepted →
+> **🎉 PHASE 9 CLOSED** (all §15 exit criteria met). **433 backend / 130 frontend / tsc clean / vite build.**
+> Open backlog (non-blocking): **ITM-026** (dynamic Ask chips), **ITM-031** (frontend ESLint debt).
+> **ITM-034 CLOSED 2026-06-15** — the Data dictionary's "Introspect" reworded to owner-approved
+> "Read from database" (display-only; code/API/`source` enum unchanged; gates 433/130; live-verified).
+> Ops: backend on **8010** (coexists with sentinel on 8000) via the
+> `ask-oracle-api` launch entry; dev servers proxy via `AOR_API_TARGET`. **All Phase-9 work is local-only
+> — still NO PUSH until the July reset.**
+> **Phase 8 (email) CLOSED 2026-06-13.** Everything in §0–§7 below is **v1 history on `main`**.
+> ---
 
 ## 0. How to work here (operating model)
 Run this project like a structured, Big-4-style delivery practice: **doc-first, phase-gated**. Keep code and governed docs updated together. Define **Next Actions** every turn. Pause and ask on scope-changing or destructive/outward-facing decisions. Maintain the task tracker, risk register, issue log, ADRs, and change log.
@@ -13,7 +91,7 @@ Run this project like a structured, Big-4-style delivery practice: **doc-first, 
 - **Local repo (git):** `D:\Ratish\Personal\Project\ask-oracle-reports-main` (branch `main`). Note: the *folder* name is legacy (`-reports-main`); it is not a tracked reference.
 - **Remote:** `origin` = https://github.com/ratishkp83/ask-oracle2 (branch `main`, in sync). Push with `git push` (upstream set). `gh` is **not** installed; auth works via cached Git Credential Manager. Commit per change; **push only when the owner asks.**
 - **OS/shell:** Windows / PowerShell. Python via `py -3`. Project virtualenv at `.venv` (deps installed; both `.venv` and `.env` are git-ignored).
-- **Run the suite (expect 293 passed):**
+- **Run the suite (expect 307 passed):**
   ```powershell
   $env:PYTHONPATH = "D:\Ratish\Personal\Project\ask-oracle-reports-main"
   $env:APP_SECRET_KEY = "test-secret-key-not-for-production"
@@ -160,15 +238,16 @@ still need real-EBS validation (ITM-012).
 
 Exit-gate review **r1 = PASS** → P7-R1-F1/F2 (S4) remediated → **293 tests**. **Phase 7 CLOSED.**
 
-**Open carries (four items; nothing is pending in code):**
-- **ITM-011** — list/multi-value bind parameters (feature gap; deferred indefinitely).
+**Open carries (two items; nothing is pending in code):**
 - **ITM-012** — EBS pack + template validation vs a real EBS 12.2 instance (tooling ready: `scripts/ebs_pack_validate.py` + `docs/reviews/ebs-pack-self-audit.md`; gated on access).
 - **ITM-018** — Oracle 23ai vector track (deferred per ADR-016; needs a 23ai instance to charter).
-- **ITM-019** — Render ephemeral storage: profiles/reports/schemas are lost on Render redeploy. Resolution options: (a) mount a Render Disk at `STORAGE_DIR`; (b) DB-backed store; (c) accept for pilots and document. Owner decision, no code needed until the path is chosen.
 
-**First steps on resume:** confirm the working tree is clean and **293 tests pass**
+**ITM-011 CLOSED (2026-06-12):** `expand_list_binds` in `src/db.py`; `"list"` ParamType in `reports.py`; 14 new tests → **307 total**.
+**ITM-019 CLOSED:** Render Disk decision; `render.yaml` commented `disk:` blocks; D7 §5.
+
+**First steps on resume:** confirm the working tree is clean and **307 tests pass**
 (`.\.venv\Scripts\python.exe -m pytest tests -q` with the env vars in §2). **Nothing is pending in
-code** — all planned phases are closed. Future work is owner-initiated: **ITM-012** (run
+code** — all planned phases + ITM-011/019 are closed. Future work is owner-initiated: **ITM-012** (run
 `scripts/ebs_pack_validate.py` against a real EBS 12.2 instance to validate pack/template contents)
 and **ITM-018** (open a chartered 23ai effort once a 23ai instance exists). *(XE setup persists on
 this box for the core product: listener `OracleOraDB21Home1TNSListener` must be running, then
@@ -202,6 +281,7 @@ localhost:8501 with the pre-loaded "XE (read-only)" profile.)*
 | 3.1 | 2026-06-12 | Delivery | Phase 7 Discovery OPENED — EBS metadata packs + glossary (primary) vs 23ai vector (decide-deliberately; XE 21c constraint) + optional fold-ins; next action = owner resolves decisions D-A…D-D before any code. |
 | 3.2 | 2026-06-12 | Delivery | Phase 7 build **B1…B7 COMPLETE** (285 tests; ADR-015/016; T-18 CLOSED; ITM-018): EBS packs + glossary, opt-in NL→SQL context, `/packs`, UI, `/v1` prefix, 23ai deferral. Next = R7.2 independent exit-gate review (owner-supplied). |
 | 3.3 | 2026-06-12 | Delivery | **Phase 7 CLOSED** — exit-gate review r1 = PASS (no blocking); P7-R1-F1/F2 (S4) remediated → 293 tests; ITM-012 validation method (validator + self-audit) shipped. **ALL PHASES CLOSED.** Carries: ITM-012, ITM-018 (need external access). |
-| 3.4 | 2026-06-12 | Delivery | **Deployment GA-readiness hardening COMPLETE** — DH-1…DH-6: render.yaml security vars + Python 3.13; Dockerfiles pinned to 3.13-slim; docker-compose profiles + named volume + Streamlit ui service; .env.example 6 missing vars; D7 v1.6. BUG-006 fixed (Dockerfiles were untracked). ITM-019 opened (Render ephemeral storage). Pushed `f353ebc`. Open carries: ITM-011/012/018/019. |
+| 3.4 | 2026-06-12 | Delivery | **Deployment GA-readiness hardening COMPLETE** — DH-1…DH-6: render.yaml security vars + Python 3.13; Dockerfiles pinned to 3.13-slim; docker-compose profiles + named volume + Streamlit ui service; .env.example 6 missing vars; D7 v1.6. BUG-006 fixed (Dockerfiles were untracked). ITM-019 RESOLVED (Render Disk). Pushed `f353ebc`. |
+| 3.5 | 2026-06-12 | Delivery | **ITM-011 CLOSED** — `expand_list_binds` in `src/db.py` (list→`:name_0,:name_1,…` safe expansion; safety check on original SQL); `validate_binds` accepts non-empty flat lists; `"list"` ParamType + `_coerce_value` in `reports.py`; 14 new tests → **307 total**. Open carries: ITM-012, ITM-018. |
 | 2.6 | 2026-06-11 | Delivery | **B2 ITM-006 CLOSED** (RISK-09 Closed): `connection.json` write path retired, read-and-delete migration; 245 tests. Next = B3 ITM-008. |
 | 2.7 | 2026-06-11 | Delivery | **B3 ITM-008 CLOSED**: `core/llm/pii.py` opt-in PII scrubbing (`SCRUB_PII`); 260 tests. All C1 code (B1–B3) done. Remaining: B4 CI confirm, B5 XE live pass, RC1 review, B6 verdict. |

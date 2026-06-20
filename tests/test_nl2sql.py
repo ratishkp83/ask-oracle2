@@ -48,10 +48,63 @@ def test_parses_sql_and_explanation_and_confidence(monkeypatch):
     assert result.confidence.level == "High"
 
 
-def test_rejects_non_select(monkeypatch):
+def test_non_select_generation_declines_gracefully(monkeypatch):
+    # A non-SELECT generation (even fenced) is never returned as runnable SQL. For
+    # consistency it surfaces as the same graceful not-answerable notice rather than
+    # a technical error (BUG-012); the SELECT-only chokepoint at /execute is the hard
+    # safety boundary regardless.
     _patch_provider(monkeypatch, "```sql\nDELETE FROM emp\n```\nExplanation: nope.")
-    with pytest.raises(ValueError):
-        nl2sql.generate_sql_from_nl("delete everything", _schema())
+    result = nl2sql.generate_sql_from_nl("delete everything", _schema())
+    assert result.answerable is False
+    assert result.sql == ""
+
+
+def test_off_topic_returns_not_answerable(monkeypatch):
+    # The model declines a non-data question with the sentinel → no SQL, no run.
+    _patch_provider(monkeypatch, "CANNOT_ANSWER: I can only answer questions about your database.")
+    result = nl2sql.generate_sql_from_nl("how to swim", _schema())
+    assert result.answerable is False
+    assert result.sql == ""
+    assert "database" in (result.message or "").lower()
+    assert result.confidence is None
+
+
+def test_system_prompt_forbids_proxy_for_missing_columns():
+    # The guard must also cover data-shaped questions needing a column the schema
+    # lacks (e.g. 'women' with no gender column) — decline, never fabricate a proxy.
+    p = nl2sql.SYSTEM_PROMPT.lower()
+    assert nl2sql.CANNOT_ANSWER_PREFIX.lower() in p
+    assert "proxy" in p
+    assert "gender" in p  # the canonical missing-attribute example
+
+
+def test_prose_refusal_without_sentinel_declines(monkeypatch):
+    # The model declines in plain prose (no CANNOT_ANSWER sentinel, no SQL fence) —
+    # must surface as a graceful not-answerable notice, NOT the technical
+    # "Generated SQL is not a SELECT/CTE" safety error (consistency, BUG-012).
+    _patch_provider(monkeypatch, "There is no column in the provided schema to determine the gender of an employee.")
+    result = nl2sql.generate_sql_from_nl("count of women", _schema())
+    assert result.answerable is False
+    assert result.sql == ""
+    assert "gender" in (result.message or "").lower()
+
+
+def test_unfenced_non_select_declines_without_proposing_sql(monkeypatch):
+    # An unfenced SQL-shaped non-SELECT (e.g. attempted DML) is never proposed as
+    # runnable SQL — it declines gracefully (logged server-side), no raise.
+    _patch_provider(monkeypatch, "DELETE FROM emp WHERE 1=1")
+    result = nl2sql.generate_sql_from_nl("remove everyone", _schema())
+    assert result.answerable is False
+    assert result.sql == ""
+
+
+def test_off_topic_sentinel_ignored_when_sql_present(monkeypatch):
+    # Conservative: if the model returns BOTH a SQL fence and the sentinel, prefer
+    # the SQL so a real question is never blocked.
+    _patch_provider(monkeypatch, "```sql\nSELECT emp_id FROM emp\n```\nCANNOT_ANSWER: maybe")
+    result = nl2sql.generate_sql_from_nl("show emp ids", _schema())
+    assert result.answerable is True
+    assert result.sql.lower().startswith("select")
 
 
 def test_graceful_when_no_provider(monkeypatch):

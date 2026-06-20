@@ -1,0 +1,24 @@
+@import "./styles/tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+    /* Tabular, aligned numerals everywhere (financial legibility, B-2). */
+    font-feature-settings: "tnum" 1, "cv05" 1;
+  }
+  /* Lining tabular numerals for KPI figures and grid numbers. */
+  .num {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+}

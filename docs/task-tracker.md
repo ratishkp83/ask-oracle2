@@ -1,6 +1,8 @@
 # D11 — Task Tracker
 
-> **Document:** Task Tracker · **Version:** 1.0 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-11
+> **Document:** Task Tracker · **Version:** 1.52 · **Status:** Living · **Owner:** Delivery Lead · **Last updated:** 2026-06-15
+>
+> **Phase 9 (React CXO UI) is tracked in its [charter](charters/phase-9-react-cxo-ui.md) §14 build plan**, not in the task table below. As of 2026-06-15: B5b + **B6 (the four supporting screens) COMPLETE**; B7 (broader acceptance + owner CXO review) remains.
 
 Status: Planned · In Progress · Blocked · Completed.
 
@@ -191,6 +193,29 @@ track = EBS metadata packs + glossary (no new infrastructure); 23ai vector = dec
 | R7.3 | Remediate r1 findings + regression | ✅ Done | F1 `ebs_modules` unknown→422 (+case-normalize); F2 `/v1` POST auth tests; **+4 → 293** |
 | P7-CLOSE | Phase-7 closure sign-off | ✅ Completed | **gate PASSED 2026-06-12**: r1 = PASS (no blocking), F1/F2 remediated, 293 tests, governed docs current. **Phase 7 CLOSED.** EBS packs need real-EBS validation (ITM-012, method defined); 23ai deferred (ITM-018). |
 
+## Phase 8 — Follow-up Actions: Email a Report (✅ v2 — exit gate passed 2026-06-13)
+
+Charter: [phase-8-charter.md](charters/phase-8-charter.md) · Design:
+[email-followup-action-design.md](email-followup-action-design.md). **First v2 feature** (v2 branch;
+local commits only, no push until the July limit reset). SELECT-only chokepoint + schema redaction
+untouched; **no LLM on the email path**. Owner directive: a real, demoable send.
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| P8-0 | Open Phase 8 Discovery charter | ✅ Completed | objectives/scope/risks + decisions D-A…D-F; grounding verified against the v2 tree |
+| P8-D | Owner approval + decisions (D-A…D-F) | ✅ Completed | SMTP+App Password; single shared mailbox; CSV/Excel user-pick; free-form + smart quick-pick; UI+service, no HTTP endpoint; optional `EMAIL_ALLOWED_DOMAINS` |
+| P8-DES | Design + build sequence (approved) | ✅ Completed | `docs/email-followup-action-design.md`; `core/mailer/` package (stdlib SMTP, **no new dependency**) |
+| P8-1 | **B1** mailer core (config/message/recipients) + tests | ✅ Completed | `0abbaca`; opt-in `email_enabled`; validation + CRLF/header-injection guard + allow-list + size cap + `EmailMessage` (reuses CSV/Excel helpers); smart quick-pick; 50 tests (**357 total**) |
+| P8-2 | **B2** SMTP transport (`sender.py`) + errors/metrics + tests | ✅ Completed | `6e72fe8`; `send_report_email` → `SendResult` (ok/rejected/error); audit-log metadata-only; `emails_sent/failed/rejected`; sanitized transport errors (`GENERIC_EMAIL_DETAIL`+`error_id`); 8 mocked-SMTP tests (**365 total**) |
+| P8-3 | **B3** "Send as email" UI in query/report views | ✅ Completed | `320da37`; opt-in expander rendered from `last_results` (survives reruns); quick-pick chips, free-form To/Cc, CSV/Excel toggle; app.py compiles |
+| P8-4 | **B4** live-demo enablement (smoke + config/deploy) | ✅ Completed | `53a4264`; `scripts/p8_email_smoke.py`; `.env.example` + `render.yaml` (UI service, secrets sync:false); **live send verified end-to-end against Gmail** (success criterion 6) |
+| P8-5 | **B5** governed-doc sweep (ADR-017, RISK-20/21, ITM-020/021, CHANGELOG, registers, HANDOFF) | ✅ Completed | this entry; docs in lockstep |
+| R8.1 | Prepare exit-gate review package | ✅ Completed | [reviews/phase-8-review-package.md](reviews/phase-8-review-package.md); range `640bd92..HEAD` |
+| R8.2 | Independent adversarial exit-gate review (r1) | ✅ Done | verdict **PASS-WITH-FIXES** ([reviews/phase-8-review-r1.md](reviews/phase-8-review-r1.md)); no S1/S2; all 8 security invariants hold; 2 S3 (F1/F2) + 2 S4 (F3/F4) |
+| R8.3 | Remediate r1 findings + regression | ✅ Done | F1 cap default 20→17 (base64 headroom under Gmail 25 MB); F2 `_CONTROL_RE`→`[\x00-\x1f\x7f]`; F3 doc; F4 From control-strip; **+6 → 371 tests** |
+| P8-CLOSE | Phase-8 closure sign-off | ✅ Completed | **gate PASSED 2026-06-13**: r1 PASS-WITH-FIXES (no blocking), F1–F4 remediated, 371 tests, governed docs current. **Phase 8 CLOSED.** |
+| P8-DEMO | Owner live demo to an intended recipient | 🔜 Pending | path already proven (criterion 6); owner sends to a chosen recipient via the UI / smoke script |
+
 ## Standing per-phase review gate (applies to EVERY phase)
 
 Instantiated as `R<phase>.1…7` at each phase exit (see [external-review-gate](process/external-review-gate.md)):
@@ -224,10 +249,14 @@ No app-code or chokepoint changes; 293 tests remain green. Committed `f353ebc` (
 | T-18 | API `/v1` versioning prefix | Phase 3/4 | ✅ Completed (Phase 7 / B5) |
 | T-19 | Migrate legacy `connection.json` → encrypted profiles | Phase 2 follow-up | ✅ Completed (Round C1 / B2; RISK-09 Closed) |
 | T-20 | Saved reports: profile binding + parameters | Phase 4 | ✅ Completed (Phase 4 / P4-1/P4-5) |
-| ITM-011 | List/multi-value bind parameters | Feature | 📋 Open (deferred; no customer demand yet) |
+| ITM-011 | List/multi-value bind parameters | Feature | ✅ Closed (2026-06-12; `expand_list_binds` in `src/db.py`; `"list"` ParamType in `reports.py`; 14 new tests → 307 total) |
 | ITM-012 | EBS pack + template validation vs real EBS 12.2 | External | 📋 Open (tooling ready; gated on EBS instance access) |
 | ITM-018 | Oracle 23ai vector track | Feature | 📋 Deferred (ADR-016; needs a 23ai instance) |
-| ITM-019 | Render persistent storage (Render Disk or DB-backed store) | Ops | 📋 Open (deployment architecture decision; no code needed until owner decides tier) |
+| ITM-019 | Render persistent storage → Render Disk | Ops | ✅ Resolved (Render Disk; render.yaml disk blocks + D7 §5 runbook; no code change) |
+| ITM-020 | Gmail API (OAuth2) + per-user sender | Feature (v2) | 📋 Deferred (ADR-017; SMTP+App Password ships now; OAuth pairs with multi-tenant identity) |
+| ITM-021 | AI-drafted email body | Feature (v2) | 📋 Deferred (ADR-017; would send row data to the LLM — needs an explicit opt-in / local summary) |
+| ITM-022 | Query Builder NL mode layout: scrolling to run | UX (v2) | ✅ Closed (2026-06-14; "Run SQL" moved below SQL editor + confidence/explanation; 401 tests) |
+| ITM-023 | Email form not cleared after successful send | UX (v2) | ✅ Closed (2026-06-14; form fields popped from session_state on `result.ok`; 401 tests) |
 
 ## Dependencies & critical path
 
@@ -293,3 +322,7 @@ No app-code or chokepoint changes; 293 tests remain green. Committed `f353ebc` (
 | 1.46 | 2026-06-12 | Delivery | ITM-012 validation method (P7-V): EBS pack self-audit (`reviews/ebs-pack-self-audit.md`) + automated live validator (`scripts/ebs_pack_validate.py`, offline-tested); 289 tests. Live EBS run gated on instance access. |
 | 1.47 | 2026-06-12 | Delivery | **Phase 7 CLOSED** — exit-gate review r1 = PASS (no blocking); P7-R1-F1/F2 (S4) remediated → 293 tests. **All phases (1–6 + 6.5 + C1 + 7) closed.** Open carries: ITM-012 (EBS live validation, method defined), ITM-018 (23ai deferred). |
 | 1.48 | 2026-06-12 | Delivery | **Deployment GA-readiness hardening COMPLETE** — DH-1…DH-6 + BUG-006 fixed; backlog T-12/T-18/T-19/T-20 marked completed; ITM-011/012/018/019 carried as the only open items. Pushed `f353ebc`. |
+| 1.49 | 2026-06-13 | Delivery | **v2 Phase 8 — Email a Report follow-up action: build B1–B5 complete** (`0abbaca..53a4264` on branch `v2`; local commits only, no push). `core/mailer/` stdlib-SMTP package + UI + smoke; 58 new tests (**365 total**); ADR-017; RISK-20/21; ITM-020/021 deferred. **Live send verified end-to-end against Gmail.** Remaining: P8-6 independent exit-gate review (owner-supplied) + P8-DEMO owner live demo to an intended recipient. |
+| 1.50 | 2026-06-13 | Delivery | **v2 Phase 8 CLOSED** — exit-gate review r1 = **PASS-WITH-FIXES** (no S1/S2; all 8 security invariants hold). Remediated: F1 (size cap default 20→17 MB for base64 headroom under Gmail 25 MB), F2 (`_CONTROL_RE` widened to `[\x00-\x1f\x7f]`), F3 (subject-wording doc), F4 (From control-strip); **+6 → 371 tests**. Remaining: **P8-DEMO** owner live demo (path already proven). |
+| 1.51 | 2026-06-13 | Delivery | **v2 Phase-8 UI demo — DONE** (owner: NL→SQL → review → run → email with attachment, end-to-end). Two demo-surfaced fixes committed: **BUG-007** (NL→SQL emitted `;`/`LIMIT` → ORA-00933; trailing-terminator strip + Oracle-dialect prompt; +7 → 378) and **[ADR-018](adr/ADR-018-per-profile-default-schema.md)** — per-profile **default schema** (`ALTER SESSION SET CURRENT_SCHEMA`) so unqualified names resolve under the ADR-009 grant-based read-only account; injection-safe `validate_schema_name`; chokepoint untouched; verified live vs XE; +23 → **401 tests**. |
+| 1.52 | 2026-06-15 | Delivery | **v2 Phase 9 B6 — supporting screens COMPLETE** (Connections/Dictionary/Reports/Settings), tracked in the [charter](charters/phase-9-react-cxo-ui.md) §14. Owner-requested extras: user-readable errors ([ADR-024](adr/ADR-024-user-readable-error-presentation.md), BUG-009), shared ConfirmDialog, report parameter value-pickers ([ADR-023](adr/ADR-023-report-parameter-value-pickers.md)). **428 backend / 128 frontend / tsc clean / vite build green;** verified live vs XE. Remaining: B7 + independent exit-gate review. |

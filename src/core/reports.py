@@ -35,7 +35,7 @@ from src.core.errors import log_error, new_error_id
 from src.core.fileio import atomic_write_json
 from src.storage import DEFAULT_STORAGE_DIR
 
-ParamType = Literal["string", "number", "date"]
+ParamType = Literal["string", "number", "date", "list"]
 
 # Oracle bind/identifier names: a letter or underscore, then word chars; capped at
 # 30 to stay within the classic Oracle identifier limit.
@@ -51,6 +51,11 @@ class ReportParam(BaseModel):
     type: ParamType = "string"
     required: bool = True
     default: Optional[Any] = None
+    # Optional value-picker: a SELECT returning the allowed values (column 1 = the
+    # bind value, optional column 2 = a display label). Drives a live dropdown in
+    # the run dialog, fetched through the SELECT-only chokepoint at run time. The
+    # query is not executed here; it is only persisted with the report.
+    lookup_sql: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -69,6 +74,35 @@ class ReportParam(BaseModel):
         return self
 
 
+class CascadeSpec(BaseModel):
+    """Persisted cascade plan for a report (Phase 10, ADR-026).
+
+    **Metadata only** — output column names + integers; it is never executed and
+    never reaches the SELECT-only chokepoint as SQL. Bounds mirror the frontend
+    resolver (``web/src/lib/cascade/spec.ts``); values are clamped, not rejected.
+    """
+
+    dimension_order: List[str] = Field(default_factory=list)
+    depth: int = 2
+    children_per_level: int = 8
+    rows_per_child: Optional[int] = None
+
+    @field_validator("depth")
+    @classmethod
+    def _clamp_depth(cls, v: int) -> int:
+        return max(1, min(5, v))
+
+    @field_validator("children_per_level")
+    @classmethod
+    def _clamp_children(cls, v: int) -> int:
+        return max(1, min(50, v))
+
+    @field_validator("rows_per_child")
+    @classmethod
+    def _clamp_rows(cls, v: Optional[int]) -> Optional[int]:
+        return None if v is None else max(1, v)
+
+
 class ReportCreate(BaseModel):
     """Inbound payload for creating/updating a report (no id/timestamps)."""
 
@@ -78,6 +112,7 @@ class ReportCreate(BaseModel):
     parameters: List[ReportParam] = Field(default_factory=list)
     default_profile_id: Optional[str] = None
     template_id: Optional[str] = None
+    cascade: Optional[CascadeSpec] = None
 
 
 class Report(BaseModel):
@@ -90,6 +125,7 @@ class Report(BaseModel):
     parameters: List[ReportParam] = Field(default_factory=list)
     default_profile_id: Optional[str] = None
     template_id: Optional[str] = None
+    cascade: Optional[CascadeSpec] = None
     created_at: str
     updated_at: str
 
@@ -108,6 +144,7 @@ def _new_report(data: ReportCreate, *, report_id: Optional[str] = None) -> Repor
         parameters=data.parameters,
         default_profile_id=data.default_profile_id,
         template_id=data.template_id,
+        cascade=data.cascade,
         created_at=now,
         updated_at=now,
     )
@@ -141,6 +178,17 @@ def _coerce_value(ptype: ParamType, name: str, value: Any) -> Any:
             return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
         except ValueError:
             raise ValueError(f"Parameter '{name}' must be a date (YYYY-MM-DD).")
+    if ptype == "list":
+        if isinstance(value, list):
+            if not value:
+                raise ValueError(f"Parameter '{name}' requires at least one value.")
+            return value
+        if isinstance(value, str):
+            items = [s.strip() for s in value.split(",") if s.strip()]
+            if not items:
+                raise ValueError(f"Parameter '{name}' requires at least one value.")
+            return items
+        raise ValueError(f"Parameter '{name}' must be a list or comma-separated string.")
     return str(value)
 
 
@@ -297,6 +345,7 @@ class JsonFileReportStore(ReportStore):
                 parameters=data.parameters,
                 default_profile_id=data.default_profile_id,
                 template_id=data.template_id,
+                cascade=data.cascade,
                 created_at=existing.created_at,
                 updated_at=_now_iso(),
             )
@@ -352,6 +401,7 @@ class InMemoryReportStore(ReportStore):
                 parameters=data.parameters,
                 default_profile_id=data.default_profile_id,
                 template_id=data.template_id,
+                cascade=data.cascade,
                 created_at=existing.created_at,
                 updated_at=_now_iso(),
             )

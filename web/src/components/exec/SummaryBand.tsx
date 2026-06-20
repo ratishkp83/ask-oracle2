@@ -1,0 +1,65 @@
+import { useState } from "react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
+import { ExecuteResult } from "@/lib/api/schemas";
+import { formatInt, formatMs } from "@/lib/format";
+
+// Band 1 (B-6): the question as headline + deterministic run meta + the exact SQL
+// behind a disclosure. No LLM-written prose — everything here is computed locally.
+// Phase 11: when the model restated the request (typo-corrected / disambiguated),
+// the headline is that *interpreted* question so the result correlates to intent;
+// the raw text is shown beneath when it differs so a misinterpretation is visible.
+export function SummaryBand({
+  question,
+  sql,
+  result,
+  interpretedQuestion,
+}: {
+  question: string;
+  sql: string;
+  result: ExecuteResult;
+  interpretedQuestion?: string | null;
+}) {
+  const [showSql, setShowSql] = useState(false);
+  const interp = interpretedQuestion?.trim();
+  const headline = interp || question;
+  const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+  const showAsked = !!interp && norm(interp) !== norm(question);
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+        {interp ? "Showing results for" : "Result"}
+      </div>
+      <h1 className="mt-1 font-display text-[21px] font-semibold leading-tight tracking-[-0.015em] text-ink">
+        {headline}
+      </h1>
+      {showAsked && (
+        <p className="mt-1 text-[12px] text-ink-faint">
+          You asked: <span className="italic">“{question}”</span>
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-ink-muted">
+        <span className="num">
+          {formatInt(result.row_count)} rows · {result.columns.length} columns · {formatMs(result.elapsed_seconds)}
+        </span>
+        {result.truncated && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FBEEDD] px-2.5 py-0.5 text-[11.5px] font-medium text-warn">
+            <AlertTriangle className="h-3 w-3" /> First {formatInt(result.row_count)} shown
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => setShowSql((s) => !s)}
+          className="inline-flex items-center gap-1 font-medium text-brand"
+        >
+          <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showSql ? "rotate-90" : ""}`} />
+          {showSql ? "Hide SQL" : "View SQL"}
+        </button>
+      </div>
+      {showSql && (
+        <pre className="mt-2 max-h-24 overflow-auto rounded-control bg-surface-sunken px-3 py-2 font-mono text-[12px] leading-relaxed text-ink-muted">
+          {sql}
+        </pre>
+      )}
+    </div>
+  );
+}

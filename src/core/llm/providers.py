@@ -13,7 +13,8 @@ from src.core.llm.base import LLMConfig, LLMError
 
 # Groq is OpenAI-API-compatible; we point the same client at its base URL.
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-DEFAULT_GROQ_MODEL = "llama3-70b-8192"
+# Keep current — Groq decommissions older models (llama3-70b-8192 was retired).
+DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 
 _BLOCKED_HOSTS = {"localhost", "metadata.google.internal", "metadata"}

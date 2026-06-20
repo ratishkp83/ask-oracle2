@@ -91,6 +91,41 @@ def test_execute_via_profile(no_db, fresh_store):
     assert resp.status_code == 200
 
 
+def _capture_schema(monkeypatch, seen):
+    """Run /execute without a DB but record the conn_cfg the client would use."""
+
+    def capture(self, sql, limits=None, binds=None):
+        seen["current_schema"] = self.config.current_schema
+        return QueryResult(columns=["N"], rows=[(1,)], elapsed_seconds=0.01, truncated=False, row_count=1)
+
+    monkeypatch.setattr(OracleClient, "run_select", capture)
+
+
+def test_execute_via_profile_applies_current_schema(fresh_store, monkeypatch):
+    """F-3c-live regression: a profile's current_schema must reach the execution
+    connection so the AI's unqualified table names resolve (db.py then runs the
+    validated ALTER SESSION SET CURRENT_SCHEMA). Previously dropped → ORA-00942."""
+    seen: dict = {}
+    _capture_schema(monkeypatch, seen)
+    public = fresh_store.create(
+        ProfileCreate(name="S1", host="db", service_name="XE", username="u", password="p", current_schema="AOR_DEMO")
+    )
+    resp = client.post("/execute", json={"sql": "SELECT 1 FROM DUAL", "profile_id": public.id})
+    assert resp.status_code == 200
+    assert seen["current_schema"] == "AOR_DEMO"
+
+
+def test_execute_via_profile_without_schema_passes_none(fresh_store, monkeypatch):
+    seen: dict = {}
+    _capture_schema(monkeypatch, seen)
+    public = fresh_store.create(
+        ProfileCreate(name="S2", host="db", service_name="XE", username="u", password="p")
+    )
+    resp = client.post("/execute", json={"sql": "SELECT 1 FROM DUAL", "profile_id": public.id})
+    assert resp.status_code == 200
+    assert seen["current_schema"] is None
+
+
 def test_nl2sql_provider_failure_is_clean(monkeypatch):
     """F2 at the HTTP layer — provider failure must not return RetryError/internal repr or the key."""
     from src import nl2sql

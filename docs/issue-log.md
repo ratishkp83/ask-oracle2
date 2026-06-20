@@ -1,6 +1,6 @@
 # D12 — Issue / Bug Log
 
-> **Document:** Issue Log · **Version:** 1.0 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-12 (Deployment GA-readiness hardening)
+> **Document:** Issue Log · **Version:** 1.26 · **Status:** Living · **Owner:** Engineering · **Last updated:** 2026-06-18 (**🎉 PHASE 10 CLOSED** — exit-gate r1 = PASS-WITH-FIXES [reviewer ≠ author]; all 5 invariants hold; 4 S4 (F1–F4) remediated; gates `tsc --build`/vitest **160**/vite/pytest 446; **live XE end-to-end confirmed** [run → live fan-out → download → real email]. Open backlog: ITM-026, ITM-031. Prior: **BUG-013 FIXED**; **ITM-034 CLOSED**; **PHASE 9 CLOSED**)
 
 ## Bug workflow (mandatory)
 
@@ -19,6 +19,14 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 | BUG-005 | App crashes (`StreamlitDuplicateElementId`) once a profile exists — duplicate `Delete selected` button across Connections + Saved Reports tabs | S2 | UI unusable whenever ≥1 saved profile | **Fixed** | Workflow: Identified+Reproduced by `test_app_smoke.py`; RCA = identical auto-generated widget IDs across tabs; Fix = unique `key=` on colliding widgets (+`sys.path` shim); Validated green (51/51). |
 | BUG-006 | `Dockerfile.api.local` and `Dockerfile.local` excluded from git tracking by the `*.local` glob in `.gitignore` (a Vite-generated catch-all pattern) | S3 | Anyone cloning the repo had no Dockerfiles — `docker compose up` would fail immediately; deploy artifacts silently missing since repo init | **Fixed** — added negation exceptions `!Dockerfile.local` + `!Dockerfile.*.local` to `.gitignore`; both files committed for the first time in `f353ebc` (2026-06-12 deployment hardening). |
 
+| BUG-007 | NL→SQL emitted non-Oracle SQL — a trailing `;` (and `LIMIT` for top-N), both rejected by Oracle as **ORA-00933** at execution (surfaced in the v2 Phase-8 UI demo) | S3 | NL→SQL unusable for top-N and for any query the model terminated with `;`; the generic sanitized error gave no hint | **Fixed** — `_parse_sql_and_explanation` strips a trailing statement terminator (`re.sub(r"[;\s]+\Z", "", sql)`); `SYSTEM_PROMPT` now mandates `FETCH FIRST n ROWS ONLY`/`ROWNUM` (never `LIMIT`) and no trailing semicolon. 7 tests (`tests/test_nl2sql_sql_cleanup.py`); SELECT-only chokepoint untouched. Pre-existing (shared with v1). |
+| BUG-008 | A saved profile's `current_schema` was silently dropped at execution: `_resolve_target` + `test_profile` built `OracleConnectionConfig` without it, so `db.py`'s `ALTER SESSION SET CURRENT_SCHEMA` never ran. Surfaced in the Phase-9 Inc-3 live e2e — the AI's natural **unqualified** SQL (`FROM EMPLOYEES`) hit **ORA-00942** while schema-qualified SQL worked. | S3 | The AI's own proposed SQL wouldn't run without manual schema-qualification, undercutting propose→approve→run; ADR-018's per-profile default schema was inert on the API path (only the Streamlit path applied it). | **Fixed** — pass `current_schema=resolved.current_schema` into the `OracleConnectionConfig` in both `_resolve_target` (profile branch) and `test_profile`; value still validated by `validate_schema_name`; SELECT-only chokepoint untouched. Regression: `tests/test_execute_endpoint.py::test_execute_via_profile_applies_current_schema` (+ `_without_schema_passes_none`); 427 tests. Verified live vs XE: unqualified `SELECT COUNT(*) FROM EMPLOYEES` 200, and the full ask→run happy-path now succeeds on the model's unqualified SQL. |
+| BUG-009 | A failed report run showed the backend's operator-facing sanitized message **"Database error — see server logs."** to the end user (found in owner testing of the Phase-9 B6 Reports screen). | S3 | Developer-facing copy leaked to a CXO user; not actionable and not on-brand. | **Fixed** ([ADR-024](adr/ADR-024-user-readable-error-presentation.md)) — `_db_error` detail is now friendly + support-oriented (full driver detail still logged server-side; `error_id` unchanged), and a single frontend policy (`friendlyError`/`errorMessage` in `web/src/lib/api/client.ts`) passes safe server messages through with the reference id while substituting a generic "contact IT support" message only for network/bodyless failures. 3 backend assertions updated; `web/src/lib/api/errorMessage.test.ts` added. Verified live (friendly copy + ref shown). |
+| BUG-010 | An off-topic prompt (e.g. **"how to swim"**) still generated a `SELECT` and ran it (immediately under Auto-run) — NL→SQL had no relevance gate, only the SELECT-only safety check (found in owner testing of the Ask flow). | S3 | Irrelevant questions returned bogus results instead of a clear "not a data question" notice; wasted live runs. | **Fixed** ([ADR-025](adr/ADR-025-off-topic-nl-guard.md)) — conservative off-topic guard: the model emits a `CANNOT_ANSWER:` sentinel for non-data questions; the generator returns `NLSQLResult(answerable=False, message=…)` (only when no SQL fence — prefer SQL if both); `POST /nl2sql` returns `answerable`+`message` (additive); the Ask page shows a calm notice and proposes/runs nothing (incl. Auto-run). Chokepoint unchanged. 2 backend + 1 frontend test added. Verified live (Groq): "how to swim" declined, real questions still answered. |
+| BUG-011 | A data-*shaped* question needing a column the schema lacks — **"what is count of woman"** with no gender column — produced a **fabricated proxy** (`WHERE SUBSTR(EMAIL, LENGTH(EMAIL)-1, 1) = 'a'`) and ran it (found in owner testing). | S3 | Returned a confident but meaningless answer to a question the data can't support. | **Fixed** ([ADR-025](adr/ADR-025-off-topic-nl-guard.md), guard strengthened) — `SYSTEM_PROMPT` now forbids inventing columns / fabricating a proxy and declines (`CANNOT_ANSWER`) when answering needs information the schema doesn't contain. Prompt-content test added. Verified live: "count of women" → declined ("no column … to determine gender"); "count of employees"/"headcount by department"/"average salary" still answered. |
+| BUG-012 | **Inconsistent** decline: the same off-topic/unanswerable prompt (e.g. "what is count of woman") sometimes showed the calm notice and sometimes the technical **"Generated SQL is not a SELECT/CTE. Aborting for safety." + reference id** (model nondeterminism — it declined in prose / a non-SELECT shape without the sentinel, which fell through to the safety error). Found in owner testing under Auto-run. | S3 | Inconsistent, developer-facing error for what should be one calm "can't answer" notice. | **Fixed** ([ADR-025](adr/ADR-025-off-topic-nl-guard.md)) — the generator now resolves **all** non-usable generations (sentinel / prose / non-SELECT / unparseable) to the same `answerable=False` notice, logs the rejected output server-side (`ask_oracle` logger), and **never** raises the technical "not a SELECT" error to the user. SELECT-only `/execute` chokepoint unchanged (the hard boundary). Streamlit shows the notice too. Tests updated (non-SELECT now declines gracefully). Verified live: 6/6 clean declines. |
+| BUG-013 | The frontend **typecheck gate** `tsc --noEmit -p tsconfig.json` is a **no-op**: the root `tsconfig.json` has `"files": []` + project `references`, so without `--build` it type-checks **zero** files. Proven by a deliberate `const x: number = "string"` passing it while `tsc --build` caught it. Found in Phase-10 B4 after the no-op gate let a **missing required JSX prop** (`reportRows` on the top-level `<ResultScope>`) reach runtime (the cascade download threw `undefined.length`). | S3 | "tsc clean" was meaningless across Phase 9 — real type errors + missing props went uncaught; surfaced one pre-existing error (`web/src/lib/derive/sql.test.ts:98`, unused `@ts-expect-error`). | **Fixed** (owner-approved) — adopt **`tsc --build`** as the real typecheck gate; fixed the pre-existing `sql.test.ts:98`; added `*.tsbuildinfo` to `.gitignore`; updated the gate command in HANDOFF + the Phase-10 charter; added a component regression test (`ResultsView.cascade.test.tsx`) that fails if the cascade download props are unwired. `tsc --build` now exit 0. |
+
 ## Open items (non-defect, tracked)
 
 - ITM-005: Streamlit UI not browser-verified — see [RISK-04](risk-register.md).
@@ -27,7 +35,7 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 - ITM-008: (deferred from F3) optional NL-question PII scrubbing before external send. Current mitigation: question text is sent by design; tenants set `LLM_POLICY=external_disabled`. Rationale: the question is the user's own intent; scrubbing risks degrading legitimate queries. Revisit with the redaction/policy work. **✅ CLOSED — Round C1 / B3 (charter D-C):** built behind a **default-off `SCRUB_PII`** env flag — when on, the NL question is masked (email/SSN/card/phone → typed placeholders) **on the external path only** (local stays verbatim) via `src/core/llm/pii.py`, complementing the schema-name redaction. Patterns kept conservative precisely because over-masking can degrade queries (hence opt-in). Validated by `tests/test_pii.py`.
 - ITM-009: pre-existing CORS `allow_origins=["*"]` + `allow_credentials=True` + `0.0.0.0` bind (`src/api.py`) — harden (specific origins, auth) before any multi-tenant deployment. Flagged by Phase-3 reviewer §5; out of Phase-3 scope. **r2: deferral confirmed acceptable** (pre-existing, inert for single-session posture) — hard precondition for any networked/multi-tenant deployment ([RISK-12](risk-register.md)). **✅ CLOSED — Phase 6.5 / B1 ([ADR-013](adr/ADR-013-network-edge-hardening.md)):** opt-in `X-API-Key` auth (`APP_API_KEY`; `/health` exempt for liveness, `/metrics` gated) + explicit env-driven CORS (`ALLOWED_ORIGINS`, localhost default; a literal `*` forfeits credentials, so the flagged combination is unrepresentable). The `0.0.0.0` bind is a deployment choice — the network-exposure rule lives in [D7 §2](07-deployment-plan.md). Validated by `tests/test_auth.py`.
 - ITM-010: (F7, from r2) `validate_base_url` (`src/core/llm/providers.py`) only checks canonical IP literals via `ipaddress.ip_address`, so integer/hex/octal encodings of loopback (`2130706433`, `0x7f000001`, `017700000001` = 127.0.0.1) are treated as hostnames and allowed. Severity **S4** — **not exploitable on the tested stack** (`getaddrinfo` does not resolve those forms → fails closed at the network layer); platform/resolver-dependent. Fix: reject bare-integer/`0x…` hosts or normalize via `getaddrinfo` + re-apply the private/loopback check. Tracked under [RISK-11](risk-register.md) residual. **✅ CLOSED — Phase 6.5 / B2:** `_numeric_host_to_ipv4` decodes `inet_aton`-style numeric hosts (decimal/hex/octal, 1–4 dot-groups; ASCII-strict) **before** the private/loopback checks, independent of platform resolver behaviour; an all-numeric host that is not a valid IPv4 is rejected **fail-closed**. Validated by the encoding matrix in `tests/test_llm_providers.py`. **Phase-6.5 review r1/R1 hardening:** the host is **NFKC-folded** before the checks, so Unicode compatibility digit forms (e.g. fullwidth `１２７.0.0.1`) collapse to ASCII and are caught too (a genuine internationalized hostname still survives as a hostname). DNS-rebinding remains the separately documented RISK-11 residual.
-- ITM-011: (Phase 4, charter D-B) **list / multi-value bind parameters deferred.** v1 supports scalar binds only (string/number/date); `IN (:list)` expansion needs a safe design (e.g. generating `:p0,:p1,…` binds, not interpolation). Severity S4 (feature gap). Revisit when a report needs multi-value filters.
+- ITM-011: (Phase 4, charter D-B) **list / multi-value bind parameters deferred.** v1 supports scalar binds only (string/number/date); `IN (:list)` expansion needs a safe design (e.g. generating `:p0,:p1,…` binds, not interpolation). Severity S4 (feature gap). Revisit when a report needs multi-value filters. **✅ CLOSED — 2026-06-12:** `expand_list_binds(sql, binds)` in `src/db.py` rewrites each list-valued bind `:name` → `:name_0, :name_1, …` via regex (no string interpolation; expanded names are bind placeholders, not values). `validate_binds` now accepts non-empty flat lists of scalars and rejects empty lists (Oracle `IN ()` is invalid), nested lists, and non-scalar items. Safety check runs on the **original** SQL before expansion (invariant preserved). `ParamType` in `src/core/reports.py` gains `"list"`; `_coerce_value` parses comma-separated strings into lists. 14 new tests in `tests/test_bind_safety.py` (307 total). The SELECT/CTE-only chokepoint and `assert_no_values` redaction tripwire are unaffected.
 - ITM-012: (Phase 4; **extended Phase 7**) **EBS template SQL + metadata-pack contents not validated against a live EBS instance.** The template catalog (Phase 4) and the EBS metadata packs (Phase 7, `core/ebs_packs.py`) reference standard R12.2 table/column names that vary by version/customization; both are review-before-run. The catalog is proven safe (every template passes `assert_safe_select`) and param-consistent; packs are proven internally consistent + redaction-safe (`test_ebs_packs.py`). **Validation method (defined Phase 7):** (1) **knowledge-based self-audit** done — [reviews/ebs-pack-self-audit.md](reviews/ebs-pack-self-audit.md) (all table names High-confidence; two columns flagged to verify first); (2) **automated live check** — `scripts/ebs_pack_validate.py` introspects a real EBS 12.2 instance through the SELECT-only chokepoint and diffs every pack table/column against `ALL_TAB_COLUMNS` (offline-tested via `test_ebs_pack_validate.py`; needs an instance to run). **Close criteria:** run the validator against a real EBS (a customer/pilot dev-test, an Oracle **Vision** demo, or an OCI EBS image) with a least-privilege read-only account → resolve any `[MISSING …]` → re-run clean → record the output as evidence; likewise spot-run representative templates. There is **no lightweight EBS** (unlike XE/23ai Free), so this remains gated on access to an EBS environment. Tracked alongside [RISK-04](risk-register.md) / [RISK-14](risk-register.md).
 - ITM-013: (Phase 4 r1, R1 — S4) **File-store durability/concurrency.** `JsonFileReportStore._save_locked` (and the mirror in `profiles.py`) do a non-atomic truncate+write with a per-process lock — crash-during-write can corrupt the JSON; >1 worker can lose updates. Fix before multi-worker/Phase 7: write temp + `os.replace`, add a file lock, or move to SQLite. Tracked under [RISK-16](risk-register.md). **✅ CLOSED (durability) — Phase 6.5 / B3 ([ADR-014](adr/ADR-014-file-store-durability.md)):** `core/fileio.py::atomic_write_json` (same-dir temp + fsync + `os.replace`) adopted by all four JSON stores; an interrupted write leaves the old or the new complete file, never a torn one (`tests/test_fileio.py`). The **multi-worker concurrency half is deliberately not solved**: one-worker-per-store-directory is the documented deployment constraint (D7); SQLite is the revisit point if a multi-worker deployment is planned.
 - ITM-014: (Phase 4 r1, R2 — S4) **Legacy-migration robustness.** `_deserialize` treats any record missing `id`/`name` as legacy and raises uncaught on a malformed v2 record (→ 500 on `list/get`). Harden: distinguish "legacy shape" from "corrupt v2"; skip+log bad records. Add a malformed-store test. **✅ CLOSED — Phase 6.5 / B4 ([ADR-014](adr/ADR-014-file-store-durability.md) §3):** corrupt records (v2 **or** unparseable legacy) are **quarantined** — skipped from serving, logged once per process with an `error_id` (record key + exception type only), and **preserved verbatim on save** (incl. through the in-place legacy-migration save) so corruption never becomes silent data loss. The profile and schema stores had the same uncaught-raise mode and received the same treatment. Validated by `tests/test_store_robustness.py`.
@@ -45,17 +53,182 @@ Each defect is logged with **severity** (S1 critical … S4 trivial), **impact**
 
 - ITM-019: (Deployment GA-readiness hardening — S3/ops) **Render free-tier filesystems are
   ephemeral** — any data written to `STORAGE_DIR` (profiles, reports, schemas) is lost on service
-  redeploy or restart. The current `render.yaml` points `STORAGE_DIR` to
-  `/opt/render/project/src/storage`, which lives inside the ephemeral container filesystem.
-  **Impact:** a user who creates connection profiles or saved reports on Render will lose them on
-  the next redeploy. **Mitigation options (in order of preference):**
-  (1) Mount a **Render Disk** (paid Render feature, ~$1/month) at the `STORAGE_DIR` path — zero
-  code change; (2) Switch to a DB-backed store (SQLite on a persistent disk, or Render PostgreSQL)
-  — requires a store-adapter implementation; (3) Accept ephemeral state for short-lived pilots and
-  document it clearly. The current `render.yaml` and D7 §1 include inline warnings. This item is
-  **not a code issue** — it is a deployment architecture decision for the owner to make before
-  production use of the Render path. Severity: S3 (data-loss on redeploy in the Render deployment
-  path).
+  redeploy or restart. **✅ RESOLVED — 2026-06-12:** decision = **Render Disk** (no code change;
+  the existing JSON+atomic-write stores are production-quality per ADR-014; SQLite still needs a
+  disk; PostgreSQL adds an external DB dependency that conflicts with the product identity).
+  `render.yaml` now includes commented `disk:` blocks for both services (uncomment + upgrade plan
+  to `starter` to activate); D7 §5 "Render persistent storage" documents the setup steps, disk
+  independence between services, and rollback guidance. Free-tier pilots remain ephemeral by
+  design — acknowledged, documented, not a defect. **Close criteria met.**
+
+- ITM-020: (Phase 8 / v2, charter D-A/D-B — S4/feature) **Gmail API (OAuth2) + per-user sender
+  deferred.** v2 Phase 8 ships email via **SMTP + App Password, single shared mailbox**
+  ([ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md)) — the fastest path to a real,
+  demoable send with no Google verification gate. The "integrated" Gmail API path (OAuth consent,
+  the `gmail.send` sensitive scope, app-verification for external/commercial release) and a
+  **per-user sender** (each decision-maker sends as their own Gmail) are deferred to a future
+  increment; both pair with the multi-tenant identity layer ([RISK-07](risk-register.md)).
+  Non-blocking — the SMTP path is fully functional and tested.
+
+- ITM-021: (Phase 8 / v2 — S4/feature) **AI-drafted email body deferred.** An optional
+  LLM-drafted summary/recommendation in the email body was deliberately left **OUT** of Phase 8
+  because it would send **row data to the external LLM**, brushing the "schema-names-only"
+  redaction line. The MVP body is user-typed only and **no LLM is called on the email path**. If
+  added later it must be behind an **explicit opt-in** and either summarize locally or be recorded
+  as a sanctioned exception ([ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md)). Non-blocking.
+
+- ITM-022: (v2 Phase-8 UI demo — S4/UX) **Query Builder requires scrolling to run a query.** In
+  `draw_query_builder` (NL mode, `src/app.py`), the Generate/Run controls and the results sit far
+  apart, forcing the user to scroll to run and again to see output. **✅ CLOSED:** removed the
+  `col1`/`col2` split — "Generate SQL" is now a standalone button above the SQL editor; "Run SQL"
+  (`type="primary"`) moved to below the SQL text area and explanation, directly above results. No
+  logic change; 401 tests pass.
+
+- ITM-023: (v2 Phase-8 UI demo — S4/UX) **Email form not cleared after a successful send.** After
+  "Send email" succeeds in `_render_email_action` (`src/app.py`), the To/Cc/Subject/Body values
+  persist in `st.session_state`, so the recipient stays filled. **✅ CLOSED:** on `result.ok`,
+  `email_to`/`email_cc`/`email_subject`/`email_body` are popped from `st.session_state`; on the
+  next render the fields reset to their defaults (blank To/Cc, date-stamped Subject, default Body).
+  401 tests pass.
+
+- ITM-024: (v2 UX review 2026-06-14 — S3/UX) **Every screen required vertical page scroll.** All
+  seven pages in `src/app.py` stacked controls + content vertically, so any non-trivial interaction
+  (e.g. typing a question, generating SQL, viewing results, browsing a template) required scrolling.
+  The sidebar also spilled into scroll when the manual-connection form was open.
+  **✅ CLOSED:** Full two-panel layout (`st.columns([1, 2])` or `[1, 1]`) applied to every screen:
+  controls/inputs in the left panel, content/results in the right panel. Key changes:
+  (a) **Query Builder** — NL prompt/EBS-mods/Generate in left; SQL editor + Run SQL (primary) +
+  Results/Explanation tabs in right; results at `height=220` (no page push).
+  (b) **Connections** — add-profile form left, saved-profiles table + test/delete right.
+  (c) **Schema Sources** — Upload/Introspect/Library tabs left, active-schema table browser right.
+  (d) **Data Dictionary** — Search/EBS-packs tabs + export buttons left, table detail + FK refs right.
+  (e) **Reports** — saved-report selector left, Run/Save-new tabs right.
+  (f) **Templates** — module + radio list left, SQL preview + Load/Save right.
+  (g) **Settings** — LLM form left, active-config + email/safety status right.
+  (h) **Email action** migrated from inline `st.expander` to `@st.dialog` — opens as a modal
+  overlay so it never adds page height.
+  (i) **Sidebar** — manual-entry form wrapped in `st.expander(expanded=False)`; sidebar never
+  scrolls in the default (profile-selected) state.
+  `_run_and_display` refactored into `_execute_query` (stores to `session_state`) +
+  `_render_results` (renders in calling context); `_render_email_action` removed (superseded by
+  `@st.dialog`). 401 tests pass (no logic change).
+
+- ITM-025: (Phase 9 — backend gap) **Email not exposed via the API.** The Phase-8 mailer lived only
+  in the Streamlit app (`src/core/mailer/`); the React surface had no way to send. **✅ CLOSED (B2):**
+  `POST /reports/email` (root + `/v1`, auth-gated) reuses `send_report_email` unchanged — no LLM,
+  no re-query, opt-in 503; SendResult→HTTP mapping; `tests/test_email_api.py`. A pre-build row/column
+  cap (100k×1k → 400) was added on review. 414 tests pass.
+
+- ITM-026: (Phase 9 — Ask landing UX, OPEN/enhancement) **Make the example-question chips dynamic.**
+  The three chips under the Ask box are currently static placeholders; per owner request (2026-06-14)
+  they should reflect the user's **recent / most-run questions** instead. Blocked on query-history
+  persistence (not yet built). Deferred to a later increment; wire the chips to history once it exists.
+
+- ITM-027: (Phase 9 — Inc 3 Packet 3a internal review, ✅ **FIXED** 2026-06-14 / robustness, Low) **`/profiles` Zod parse is
+  strict on `environment`.** `ProfilePublicSchema.environment` is `z.enum(["DEV","TEST","PROD"])`; any
+  unexpected value (or other schema drift) fails the whole list parse and drops the connection picker to
+  the E10 zero-state instead of degrading gracefully. Values come from our own `Literal` so drift is
+  unlikely. Fix-when-it-fits: wrap the env field (or the list parse) in `.catch()` for graceful
+  degradation. Owner-approved deferral (2026-06-14). File: `web/src/lib/api/schemas.ts`.
+
+- ITM-028: (Phase 9 — Inc 3 Packet 3a internal review, ✅ **FIXED** 2026-06-14 / config, Low) **`ADMIN_URL` defaults to a
+  hardcoded `http://localhost:8501` in the bundle.** It is env-overridable (`VITE_AOR_ADMIN_URL`) and a
+  beta-only affordance for the E10 "add a connection in admin" link, so acceptable now. Fix-when-it-fits:
+  source the admin URL from server/runtime config (or hide the link when unconfigured) before GA.
+  Owner-approved deferral (2026-06-14). File: `web/src/lib/config.ts`.
+
+- ITM-029: (Phase 9 — Inc 3 Packet 3a internal review, ✅ **FIXED** 2026-06-14 / a11y, Nit) **Connection-picker listbox lacks
+  roving arrow-key navigation.** Options are focusable buttons (Tab/Enter/Escape + outside-click all
+  work), but there is no ↑/↓ roving-tabindex pattern within the `listbox`. Functional for beta.
+  Fix-when-it-fits: add arrow-key navigation (or adopt the shadcn/Radix `Select` if its jsdom friction is
+  resolved). Owner-approved deferral (2026-06-14). Files: `web/src/app/ConnectionPicker.tsx`,
+  `web/src/features/ask/SchemaPicker.tsx` (same pattern).
+
+- ITM-030: (Phase 9 — Inc 3 Packet 3b internal review, ✅ **FIXED** 2026-06-14 / UX, Low/cosmetic) **Schema picker shows the
+  E11 "no schema selected" notice on a transient `/schemas` list-fetch error even when a valid `schemaId`
+  is remembered.** The remembered id is still in session and is sent to `nl2sql` (so SQL accuracy is
+  unaffected — the id is valid), but the name can't be resolved without the list, so the calm E11 notice
+  appears. Error edge only; non-blocking. Fix-when-it-fits: resolve the active name via a `/schemas/{id}`
+  fallback, or suppress E11 when `schemaId` is set-but-unresolved. (The same strict-enum parse class as
+  ITM-027 also applies to `SchemaSummarySchema.source` — covered by ITM-027's remedy.) Owner-approved
+  deferral (2026-06-14). File: `web/src/features/ask/SchemaPicker.tsx`.
+
+- **F3** (Phase 9 — B5b-3 Inc 1 internal review, Low → **RESOLVED in Inc 4 / Packet 4c**, 2026-06-14):
+  a **date-dimension cascade level** rendered a non-clickable Recharts trend line and, because the chart
+  was non-null, the "Pull live detail" leaf never appeared — so a trailing/standalone date dimension had
+  **no path to detail**. **Fixed:** `ResultsView` now renders a compact **Pull-live-detail** affordance
+  beside any trend line (pulls the current drill scope via the Decision-3 wrap), and passes the leaf
+  context at the top level too (`NoBreakdown` stays drilled-only). 3 RTL tests
+  (`web/src/components/exec/ResultsView.f3.test.tsx`); verified live with a crafted date-aliased query.
+
+- ITM-025: **confirmed CLOSED** (B2 — `POST /reports/email`); re-verified at the Phase-9 B5b exit gate.
+
+- ITM-031: (Phase 9 — B5b exit-gate complete product test, OPEN/lint-debt, Low) **Frontend ESLint shows
+  21 findings** (`eslint web/src`): 8 `react-refresh/only-export-components` warnings + 2
+  `no-empty-object-type` errors are all in **vendored shadcn `components/ui/*`** primitives; the 11
+  `no-explicit-any` errors are in pre-existing `lib/api/client.ts` + `components/exec/DriverChart.tsx`
+  and in test-mock signatures (`({...}: any)`) that follow the repo's established cascade-test pattern.
+  **ESLint is not a configured CI gate** (the gates are pytest/vitest/tsc/vite build — all green), and
+  none of the findings are in new production logic. Fix-when-it-fits: type the test mocks + `client.ts`
+  helpers, and either relocate shared exports or accept the vendored-primitive warnings (or scope ESLint
+  to exclude `components/ui`). Logged at the B5b close (2026-06-14).
+
+- ITM-032: (Phase 9 — B5b exit-gate review r1 / P9B-R1-F2, ✅ **FIXED** 2026-06-14 / robustness, Low) **Pull-detail wrap can be
+  ambiguous on a duplicate or unaliased output column.** `buildPullDetailSql` wraps as
+  `SELECT * FROM (<approved>) WHERE "COL" = :p`; if the approved `SELECT` has two output columns with the
+  same name (or a colliding unaliased expression), the inline view raises **ORA-00918/-00960**. **Not a
+  security issue** — stays a bound SELECT, chokepoint-revalidated, surfaces as a sanitized E9 the user can
+  edit. Pre-noted in the 4a internal review. Fix-when-it-fits: alias-dedupe the wrapped projection or
+  detect collisions client-side. File: `web/src/lib/derive/pullDetail.ts`.
+
+- ITM-034: (Phase 9 — B7 acceptance, **CLOSED 2026-06-15**, S4) **"Introspect" was mild jargon.** The Data
+  Dictionary action/dialog said "Introspect schema"; charter bar B-4 suggested plainer wording (e.g.
+  "Read from the database"). Logged at the B7 acceptance pass
+  ([reviews/phase-9-b7-acceptance.md](reviews/phase-9-b7-acceptance.md)). **Resolution (owner-approved
+  wording "Read from database"):** all user-facing strings reworded in `IntrospectDialog.tsx` (trigger
+  "Read from database", title "Read a schema from the database", submit "Read & save"/"Reading…",
+  placeholder "… (from database)") and `DataDictionaryPage.tsx` (empty-rail / delete-note / empty-state
+  + a display-only `sourceLabel()` mapping the `source` badge "introspection"→"From database",
+  "upload"→"Uploaded"). The code/API contract is **unchanged** — component name `IntrospectDialog`,
+  `introspectSchema`, `POST /schemas/introspect`, and the stored `source` enum all stay (display-only
+  mapping). Button-label tests updated. Gates green (pytest 433 / vitest 130 / tsc clean / vite build);
+  live-verified vs XE `AOR_DEMO` (no "introspect" text remains user-visible). Owner signed off 2026-06-15.
+
+## Phase 9 (v2) — B5b-3 exit-gate review & remediation (r1)
+
+Source: [reviews/phase-9-b5b-review-r1.md](reviews/phase-9-b5b-review-r1.md) — **independent** reviewer
+(reviewer ≠ author, ADR-006; owner chose a spawned reviewer). Verdict **PASS** (no S1/S2 blocking). The
+reviewer independently re-ran all four gates (**427 backend / 69 frontend / tsc clean / vite build green**,
+all matching) and adversarially verified all 5 invariants HOLD (SELECT-only chokepoint incl. the
+pull-detail wrap; AI-proposes/approve + auto-run read-only-safe & default-off; schema-names-only/no rows to
+LLM; no client DB secrets; sanitized `error_id`). BUG-008 + the pull wrap confirmed injection-safe; docs
+accurate. Six non-blocking findings:
+
+| ID | Sev | Finding | Disposition |
+|----|-----|---------|-------------|
+| P9B-R1-F1 | S3 | `vitest run` gate brittle on the junction/spaced path (Vite `%20` canonicalization) | **Fixed** — `preserveSymlinks: true` added to `vitest.config.ts` (mirrors `vite.config.ts`) |
+| P9B-R1-F2 | S4 | Pull-detail wrap ambiguous on duplicate/unaliased output column (not security) | **Fixed** (ITM-032) — `ResultsView` withholds the live pull when `result.columns` has duplicates (`schemas`/RTL: `ResultsView.f3.test.tsx`) |
+| P9B-R1-F3 | S4 | Strict Zod enums fail whole-list parse on drift | **Fixed** (ITM-027) — `Environment`/`SchemaSource` use `.catch(default)` (`schemas.test.ts`) |
+| P9B-R1-F4 | S4 | `ADMIN_URL` hardcoded default in bundle | **Fixed** (ITM-028) — default only in `import.meta.env.DEV`, else empty + the affordance renders text not a link |
+| P9B-R1-F5 | S4 | Listbox dropdowns lack arrow-key roving nav | **Fixed** (ITM-029) — `useListboxNav` (Arrow/Home/End + focus-on-open) on both pickers (`ConnectionPicker.test.tsx`) |
+| P9B-R1-F6 | S4 | Cosmetic `confidence: undefined` vs `null` in AskPage review entries | **Fixed** — `editSql` now uses `null` |
+
+**Post-review remediation (all six findings closed, 2026-06-14):** all findings above are now fixed
+(F1/F6 at review close; F2–F5 immediately after, owner-directed). Also fixed **ITM-030** (schema E11
+suppressed on a transient `/schemas` error when a `schemaId` is remembered). Gates after remediation:
+**427 backend / 74 frontend / tsc clean / vite build green.** Remaining open ITMs: **ITM-026** (dynamic
+example chips — needs query history) and **ITM-031** (frontend ESLint debt — not a CI gate).
+
+## Phase 8 (v2) — independent review findings & remediation (r1)
+
+Source: [reviews/phase-8-review-r1.md](reviews/phase-8-review-r1.md) — verdict **PASS-WITH-FIXES** (no S1/S2; all 8 security invariants hold). Package: [reviews/phase-8-review-package.md](reviews/phase-8-review-package.md). Remediated post-review; **371 tests green**.
+
+| ID | Sev | Finding | Disposition |
+|----|-----|---------|-------------|
+| P8-R1-F1 | S3 | Attachment size cap measured **raw** bytes; default 20 MB → ~26.7 MB base64 > Gmail's 25 MB (user got the generic transport error instead of a clean pre-send rejection) | **Fixed** — `DEFAULT_MAX_ATTACHMENT_MB` 20→**17** (raw, with base64 headroom); `.env.example` / runtime `.env` / `render.yaml` / ADR-017 / design updated |
+| P8-R1-F2 | S3 | `validate_address` control-char guard was only `[\r\n\t\x00]`; other C0 / DEL chars passed both guards | **Fixed** — `_CONTROL_RE` widened to `[\x00-\x1f\x7f]`; 5 regression cases (embedded control char rejected). *(Not header injection — CR/LF required — but closes the "illegal char → rejected" contract.)* |
+| P8-R1-F3 | S4 | Spec said subjects are "rejected" for control chars; code **collapses** them to spaces (safe, but not the stated behaviour) | **Fixed (doc)** — design §6 now states: addresses are rejected, subject control chars are collapsed (a stray tab shouldn't fail a send) |
+| P8-R1-F4 | S4 | Operator-set `EMAIL_FROM` From header was unvalidated (operator-trust boundary; hardening only) | **Fixed** — From is control-stripped in `build_message`; regression test |
 
 ## Phase 3 — independent review findings & remediation (r1 → r2)
 
@@ -178,4 +351,9 @@ EBS-context tripwire-safety). Two S4 observations, both remediated. Post-remedia
 | 1.12 | 2026-06-12 | Engineering | ITM-012 extended to cover EBS packs + **validation method defined**: self-audit done (`reviews/ebs-pack-self-audit.md`) + automated live validator (`scripts/ebs_pack_validate.py`, offline-tested); close criteria = run vs a real EBS 12.2, remediate, record evidence. |
 | 1.13 | 2026-06-12 | Engineering | Phase 7 exit-gate review r1 = PASS (no blocking); P7-R1-F1 (`ebs_modules` unknown→422) + P7-R1-F2 (`/v1` POST auth tests) remediated; 293 tests. |
 | 1.14 | 2026-06-12 | Engineering | Deployment GA-readiness hardening: **BUG-006 logged + FIXED** (Dockerfiles untracked since init due to `*.local` gitignore; added negation exceptions, first-committed in `f353ebc`); **ITM-019 added** (Render ephemeral storage / no persistence across redeployments — deployment architecture decision for owner). |
+| 1.15 | 2026-06-12 | Engineering | **ITM-019 RESOLVED** — Render Disk selected (no code change); `render.yaml` disk blocks added; D7 §5 runbook written. |
 | 1.3 | 2026-06-10 | Engineering | Phase 4: ITM-011 (list/multi-value binds deferred) + ITM-012 (templates not live-EBS validated) logged. |
+| 1.16 | 2026-06-15 | Engineering | Phase 9 **B6 complete** (Connections/Dictionary/Reports/Settings screens): **BUG-009** logged + FIXED (error-readability, ADR-024); report parameter value-pickers shipped (ADR-023). ITM-026 + ITM-031 remain open. |
+| 1.21 | 2026-06-15 | Engineering | Phase 9 **B7 + post-B7 fixes** (BUG-010/011/012, ADR-025) FIXED; **owner CXO sign-off** + **independent exit-gate r1 = PASS-WITH-FIXES** (reviewer ≠ author; gates 433/130; all 5 invariants hold). 5 S4 findings (F-1 stale counts, F-2 multi-bind IN, F-3 stale comment, F-4 latent effect, F-5 model-compliance) remediated/accepted. **PHASE 9 CLOSED.** Open: ITM-026/031/034. |
+| 1.22 | 2026-06-15 | Engineering | **ITM-034 CLOSED** — "Introspect" reworded to owner-approved "Read from database" across the Data dictionary (display-only; code/API/`source` enum unchanged); button-label tests updated; gates green (433/130/tsc/vite); live-verified vs XE. Open backlog now: ITM-026, ITM-031. |
+| 1.23 | 2026-06-15 | Engineering | **BUG-013 FIXED** — the frontend typecheck gate `tsc --noEmit -p tsconfig.json` was a **no-op** (root `tsconfig.json` `files:[]` + references → checks 0 files); adopted **`tsc --build`** as the real gate (owner-approved), fixed the pre-existing `sql.test.ts:98`, git-ignored `*.tsbuildinfo`, updated HANDOFF + Phase-10 charter; `tsc --build` exit 0. Surfaced during Phase-10 B4. |

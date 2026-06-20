@@ -15,11 +15,18 @@ degrades gracefully when constraint views are not visible to the account.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.core.config import SafetyLimits
-from src.schema import ColumnDefinition, RelationshipDefinition, Schema, TableDefinition
+from src.schema import (
+    ColumnDefinition,
+    IndexDefinition,
+    RelationshipDefinition,
+    Schema,
+    TableDefinition,
+)
 
 logger = logging.getLogger("ask_oracle.introspection")
 
@@ -31,12 +38,96 @@ Binds = Dict[str, Any]
 # --------------------------------------------------------------------------- #
 def columns_sql(owner: str, table_like: str) -> Tuple[str, Binds]:
     sql = (
-        "SELECT owner, table_name, column_name, data_type, column_id "
+        "SELECT owner, table_name, column_name, data_type, column_id, "
+        "nullable, data_length, data_precision, data_scale "
         "FROM all_tab_columns "
         "WHERE owner = :owner AND table_name LIKE :table_like "
         "ORDER BY table_name, column_id"
     )
     return sql, {"owner": owner, "table_like": table_like}
+
+
+# --------------------------------------------------------------------------- #
+# Phase 11 profiling builders (Channel A — structure/statistics only; ADR-028).
+# All read-only SELECTs over ALL_* views; bind-parameterized; privilege-degrading.
+# --------------------------------------------------------------------------- #
+def indexes_sql(owner: str, table_like: str) -> Tuple[str, Binds]:
+    sql = (
+        "SELECT i.table_name, i.index_name, i.uniqueness, "
+        "ic.column_name, ic.column_position "
+        "FROM all_indexes i "
+        "JOIN all_ind_columns ic ON ic.index_owner = i.owner AND ic.index_name = i.index_name "
+        "WHERE i.owner = :owner AND i.table_name LIKE :table_like "
+        "ORDER BY i.table_name, i.index_name, ic.column_position"
+    )
+    return sql, {"owner": owner, "table_like": table_like}
+
+
+def partition_keys_sql(owner: str, table_like: str) -> Tuple[str, Binds]:
+    sql = (
+        "SELECT name AS table_name, column_name, column_position "
+        "FROM all_part_key_columns "
+        "WHERE owner = :owner AND object_type = 'TABLE' AND name LIKE :table_like "
+        "ORDER BY name, column_position"
+    )
+    return sql, {"owner": owner, "table_like": table_like}
+
+
+def table_stats_sql(owner: str, table_like: str) -> Tuple[str, Binds]:
+    sql = (
+        "SELECT table_name, num_rows, last_analyzed "
+        "FROM all_tables "
+        "WHERE owner = :owner AND table_name LIKE :table_like"
+    )
+    return sql, {"owner": owner, "table_like": table_like}
+
+
+def unique_constraints_sql(owner: str, table_like: str) -> Tuple[str, Binds]:
+    sql = (
+        "SELECT cc.table_name, cc.column_name "
+        "FROM all_constraints c "
+        "JOIN all_cons_columns cc ON cc.owner = c.owner AND cc.constraint_name = c.constraint_name "
+        "WHERE c.owner = :owner AND c.constraint_type = 'U' AND cc.table_name LIKE :table_like"
+    )
+    return sql, {"owner": owner, "table_like": table_like}
+
+
+_IDENT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_$#]*$")
+
+
+def _ident(name: str) -> str:
+    """Validate an Oracle identifier (owner/table/column) before interpolation.
+
+    Owner/table/column cannot be bind variables, so a value-domain query must
+    interpolate them. They originate from the catalog (trusted), but this is a
+    fail-closed backstop so a crafted schema name can never inject SQL.
+    """
+    candidate = _s(name)
+    if not _IDENT_RE.match(candidate):
+        raise ValueError(f"Unsafe identifier: {name!r}")
+    return candidate
+
+
+def value_domain_sql(
+    owner: str, table: str, column: str, sample_percent: float = 10.0, cap: int = 25
+) -> Tuple[str, Binds]:
+    """A bounded distinct-value sample for one low-cardinality column (Channel B).
+
+    Read-only SELECT through the chokepoint, capped by ``SAMPLE`` (so it never
+    scans a huge table) and ``FETCH FIRST cap``. The returned values are stored
+    **server-side only** (semantics / Channel B) and are **never** sent to the LLM.
+    """
+    o, t, c = _ident(owner), _ident(table), _ident(column)
+    pct = float(sample_percent)
+    if not 0 < pct <= 100:
+        pct = 10.0
+    cap = max(1, min(int(cap), 200))
+    sql = (
+        f"SELECT {c} AS code, COUNT(*) AS cnt "
+        f"FROM {o}.{t} SAMPLE({pct}) "
+        f"GROUP BY {c} ORDER BY cnt DESC FETCH FIRST {cap} ROWS ONLY"
+    )
+    return sql, {}
 
 
 def primary_keys_sql(owner: str, table_like: str) -> Tuple[str, Binds]:
@@ -69,6 +160,15 @@ def _s(value: Any) -> str:
     return str(value).strip() if value is not None else ""
 
 
+def _opt_int(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def build_columns(rows: List[Dict[str, Any]]) -> Schema:
     schema = Schema()
     for r in rows:
@@ -76,8 +176,15 @@ def build_columns(rows: List[Dict[str, Any]]) -> Schema:
         if not tname or not cname:
             continue
         dtype = r.get("DATA_TYPE")
+        nullable_raw = r.get("NULLABLE")  # 'Y' / 'N' in ALL_TAB_COLUMNS; absent for uploads
         col = ColumnDefinition(
-            table_name=tname, column_name=cname, data_type=_s(dtype) or None
+            table_name=tname,
+            column_name=cname,
+            data_type=_s(dtype) or None,
+            nullable=(_s(nullable_raw).upper() == "Y") if nullable_raw is not None else None,
+            data_length=_opt_int(r.get("DATA_LENGTH")),
+            data_precision=_opt_int(r.get("DATA_PRECISION")),
+            data_scale=_opt_int(r.get("DATA_SCALE")),
         )
         schema.tables.setdefault(tname, TableDefinition(name=tname, columns=[])).columns.append(col)
     return schema
@@ -114,6 +221,80 @@ def apply_foreign_keys(schema: Schema, rows: List[Dict[str, Any]]) -> Schema:
                 relationship_type="many-to-one",
             )
         )
+    return schema
+
+
+# --------------------------------------------------------------------------- #
+# Phase 11 mappers (Channel A). Pure functions; tolerant of partial rows.
+# --------------------------------------------------------------------------- #
+def apply_indexes(schema: Schema, rows: List[Dict[str, Any]]) -> Schema:
+    """Group index rows into per-table IndexDefinitions; mark leading columns indexed."""
+    index = _column_index(schema)
+    grouped: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for r in rows:
+        t, name, col = _s(r.get("TABLE_NAME")), _s(r.get("INDEX_NAME")), _s(r.get("COLUMN_NAME"))
+        if not (t and name and col):
+            continue
+        g = grouped.setdefault(
+            (t, name),
+            {"is_unique": _s(r.get("UNIQUENESS")).upper() == "UNIQUE", "cols": []},
+        )
+        pos = _opt_int(r.get("COLUMN_POSITION"))
+        g["cols"].append((pos if pos is not None else len(g["cols"]) + 1, col))
+    for (t, name), g in grouped.items():
+        table = schema.tables.get(t)
+        if table is None:
+            continue
+        ordered = [c for _, c in sorted(g["cols"], key=lambda x: x[0])]
+        table.indexes.append(IndexDefinition(name=name, columns=ordered, is_unique=g["is_unique"]))
+        if ordered:  # the leading column is the one that helps equality/range predicates
+            lead = index.get((t, ordered[0]))
+            if lead is not None:
+                lead.is_indexed = True
+    return schema
+
+
+def apply_partition_keys(schema: Schema, rows: List[Dict[str, Any]]) -> Schema:
+    for r in rows:
+        t, col = _s(r.get("TABLE_NAME")), _s(r.get("COLUMN_NAME"))
+        if not (t and col):
+            continue
+        table = schema.tables.get(t)
+        if table is not None and col not in table.partition_keys:
+            table.partition_keys.append(col)
+    return schema
+
+
+def apply_table_stats(schema: Schema, rows: List[Dict[str, Any]]) -> Schema:
+    for r in rows:
+        table = schema.tables.get(_s(r.get("TABLE_NAME")))
+        if table is None:
+            continue
+        num_rows = _opt_int(r.get("NUM_ROWS"))
+        table.row_count_estimate = num_rows
+        # Stale/absent stats: NUM_ROWS is only as good as the last GATHER_STATS.
+        table.stats_stale = num_rows is None or r.get("LAST_ANALYZED") is None
+    return schema
+
+
+def apply_unique(schema: Schema, rows: List[Dict[str, Any]]) -> Schema:
+    index = _column_index(schema)
+    for r in rows:
+        col = index.get((_s(r.get("TABLE_NAME")), _s(r.get("COLUMN_NAME"))))
+        if col is not None:
+            col.is_unique = True
+    return schema
+
+
+def derive_fk_cardinality(schema: Schema) -> Schema:
+    """Set ``fan_out`` on each relationship: a join fans out unless the child
+    (referencing) column is itself unique/PK (then it is 1:1)."""
+    index = _column_index(schema)
+    for rel in schema.relationships:
+        child = index.get((rel.from_table, rel.from_column))
+        child_unique = bool(child and (child.is_primary_key or child.is_unique))
+        rel.fan_out = not child_unique
+        rel.relationship_type = "one-to-one" if child_unique else "many-to-one"
     return schema
 
 
@@ -183,3 +364,102 @@ def introspect_schema(
         warnings.append("Foreign keys unavailable for this account.")
 
     return IntrospectionResult(schema=schema, warnings=warnings, truncated=truncated)
+
+
+# --------------------------------------------------------------------------- #
+# Phase 11 profiling orchestrator (ADR-028). Layers indexes/partitions/stats/
+# unique/cardinality on top of introspect_schema; each step degrades gracefully.
+# --------------------------------------------------------------------------- #
+@dataclass
+class ProfileResult:
+    schema: Schema
+    warnings: List[str] = field(default_factory=list)
+    truncated: bool = False
+    coverage: Dict[str, bool] = field(default_factory=dict)
+
+
+def profile_schema(
+    client: Any,
+    owner: str,
+    table_like: str = "%",
+    limits: Optional[SafetyLimits] = None,
+) -> ProfileResult:
+    """Profile ``owner``'s tables into an enriched :class:`Schema` (Channel A).
+
+    Builds the base schema (columns + PK + FK) via :func:`introspect_schema`, then
+    layers index, partition-key, table-statistic, and unique-constraint metadata,
+    and derives FK cardinality. Every layer is **SELECT-only through the chokepoint**
+    and **privilege-degrading**: a view the read-only account cannot see yields a
+    generic warning and ``coverage[step] = False`` (the raw error is logged only).
+    Value domains / business semantics (Channel B) are captured separately and are
+    **never** part of this Schema (invariant 3).
+    """
+    base = introspect_schema(client, owner, table_like, limits)
+    schema = base.schema
+    warnings = list(base.warnings)
+    truncated = base.truncated
+    coverage: Dict[str, bool] = {
+        "columns": bool(schema.tables),
+        "primary_keys": not any("Primary keys unavailable" in w for w in warnings),
+        "foreign_keys": not any("Foreign keys unavailable" in w for w in warnings),
+    }
+    if not schema.tables:
+        return ProfileResult(schema=schema, warnings=warnings, truncated=truncated, coverage=coverage)
+
+    owner_u = _s(owner).upper()
+    table_like_u = (_s(table_like) or "%").upper()
+    steps = (
+        ("Indexes", indexes_sql, apply_indexes, "indexes"),
+        ("Partition keys", partition_keys_sql, apply_partition_keys, "partitions"),
+        ("Table statistics", table_stats_sql, apply_table_stats, "stats"),
+        ("Unique constraints", unique_constraints_sql, apply_unique, "unique"),
+    )
+    for label, builder, mapper, cov_key in steps:
+        try:
+            sql, binds = builder(owner_u, table_like_u)
+            res = client.run_select(sql, limits=limits, binds=binds)
+            truncated = truncated or bool(getattr(res, "truncated", False))
+            mapper(schema, _rows_as_dicts(res))
+            coverage[cov_key] = True
+        except Exception as exc:  # noqa: BLE001 - the view may not be visible to the account
+            logger.info("%s profiling unavailable for %s: %s", label, owner_u, exc)
+            warnings.append(f"{label} unavailable for this account.")
+            coverage[cov_key] = False
+
+    derive_fk_cardinality(schema)
+    return ProfileResult(schema=schema, warnings=warnings, truncated=truncated, coverage=coverage)
+
+
+def capture_value_domains(
+    client: Any,
+    owner: str,
+    targets: List[Tuple[str, str]],
+    limits: Optional[SafetyLimits] = None,
+    sample_percent: float = 10.0,
+    cap: int = 25,
+) -> Tuple[Dict[str, Any], List[str]]:
+    """Sample distinct values for the given ``(table, column)`` targets (Channel B).
+
+    **Opt-in, bounded, default OFF** (the caller decides whether to invoke this).
+    Returns ``({ "TABLE.COL": {"codes": [{code, count}], "sampled": True} }, warnings)``.
+    The result is **server-side only** — it is stored in the schema record's
+    ``semantics`` and is NEVER part of the ``Schema`` sent to the LLM (invariant 3).
+    """
+    domains: Dict[str, Any] = {}
+    warnings: List[str] = []
+    for table, column in targets:
+        try:
+            sql, binds = value_domain_sql(owner, table, column, sample_percent, cap)
+            res = client.run_select(sql, limits=limits, binds=binds)
+            rows = _rows_as_dicts(res)
+            codes = [
+                {"code": _s(r.get("CODE")), "count": _opt_int(r.get("CNT"))}
+                for r in rows
+                if _s(r.get("CODE"))
+            ]
+            if codes:
+                domains[f"{_s(table)}.{_s(column)}"] = {"codes": codes, "sampled": True}
+        except Exception as exc:  # noqa: BLE001 - column may be high-cardinality / not visible
+            logger.info("Value-domain sampling unavailable for %s.%s: %s", table, column, exc)
+            warnings.append(f"Value domains unavailable for {table}.{column}.")
+    return domains, warnings

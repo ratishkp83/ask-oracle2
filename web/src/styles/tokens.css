@@ -1,0 +1,51 @@
+/* Phase 9 executive design system — single source of truth (ADR-019).
+   Approved palette (owner, 2026-06-14): warm-paper canvas, near-black ink, one
+   deep-petrol brand accent; financial green/red reserved for deltas only.
+   Values are HSL triplets so shadcn's `hsl(var(--token))` and Tailwind's opacity
+   plumbing both work. shadcn's semantic vars are aliased to these so vendored
+   primitives inherit the look. Light-only for beta (D-4). */
+:root {
+  /* Surfaces & ink */
+  --canvas: 45 17% 96%;          /* #F7F6F3 warm paper */
+  --surface: 0 0% 100%;          /* #FFFFFF cards */
+  --surface-sunken: 43 17% 93%;  /* #F1EFEA wells / zebra */
+  --ink: 220 17% 10%;            /* #16191F primary text / KPI figures */
+  --ink-muted: 214 7% 38%;       /* #5A6068 labels, secondary */
+  --ink-faint: 216 7% 57%;       /* #8A9099 meta, placeholders */
+  --hairline: 42 16% 88%;        /* #E5E2DB 1px borders */
+
+  /* Brand & semantics */
+  --brand: 185 75% 22%;          /* #0E5C63 deep petrol */
+  --brand-weak: 180 23% 91%;     /* #E4EEEE tinted fills / active nav */
+  --gain: 155 66% 30%;           /* #1A7F55 positive delta only */
+  --loss: 4 76% 40%;             /* #B42318 negative delta only */
+  --warn: 30 90% 37%;            /* #B25E09 warnings (truncation, caps) */
+
+  /* shadcn semantic aliases (so vendored primitives adopt the palette) */
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
+  --primary-foreground: 0 0% 100%;
+  --secondary: var(--surface-sunken);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-sunken);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--brand-weak);
+  --accent-foreground: var(--brand);
+  --destructive: var(--loss);
+  --destructive-foreground: 0 0% 100%;
+  --border: var(--hairline);
+  --input: var(--hairline);
+  --ring: var(--brand);
+
+  /* Radius & elevation */
+  --radius: 0.75rem;
+  --r-card: 12px;
+  --r-control: 8px;
+  --e-1: 0 1px 2px rgba(20, 25, 31, 0.04), 0 1px 1px rgba(20, 25, 31, 0.03);
+  --e-2: 0 8px 24px -12px rgba(20, 25, 31, 0.18);
+}

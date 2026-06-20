@@ -38,7 +38,17 @@ def require_api_key(request: Request) -> None:
     expected = os.environ.get(API_KEY_ENV) or ""
     if not expected:
         return
-    if request.url.path in EXEMPT_PATHS:
+    path = request.url.path
+    if path in EXEMPT_PATHS:
+        return
+    # When the bundled SPA is served at root (SERVE_SPA), the API lives under /v1
+    # ONLY — so the static app shell + assets (every non-/v1 path) stay public and
+    # the app can load; the SPA itself sends the key on its /v1 calls.
+    if (
+        os.getenv("SERVE_SPA", "").lower() in ("1", "true", "yes")
+        and path != "/v1"
+        and not path.startswith("/v1/")
+    ):
         return
     provided = request.headers.get(API_KEY_HEADER) or ""
     if not provided or not hmac.compare_digest(provided, expected):

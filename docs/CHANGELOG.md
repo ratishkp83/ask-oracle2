@@ -4,6 +4,374 @@ All notable changes are recorded here. Format based on [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Phase 11 (Plan-Aware Query Intelligence + Resilient Execution) — 🚧 IN PROGRESS (B3 done)
+- **B1 charter + B2 design/ADRs approved** ([charter](charters/phase-11-plan-aware-resilient.md);
+  [design](plan-aware-resilient-design.md); ADR-[028](adr/ADR-028-database-profiling.md)…[031](adr/ADR-031-privilege-gated-plan-reading.md)).
+  Two pillars (profiling + plan-aware generation; resilient async execution); the semantic/metrics
+  layer is deferred to Phase 12. Owner additions: **D-K** advise-only Optimization Advisory (the app
+  never runs DDL) and **D-L** enriched metadata mandatory at a setup **readiness gate** (soft-block default).
+- **B3 — Database Profiling + Advisory + Readiness ([ADR-028](adr/ADR-028-database-profiling.md)):**
+  - **Two-channel metadata** — Channel A (structure/stats: indexes, partition keys, row-count magnitude,
+    nullability, unique, FK cardinality) enriches `Schema`/`definition` and may reach the LLM; **Channel B**
+    (business glossary + sampled value domains) lives in a **separate** `SchemaRecord.semantics` field that
+    is **never** read by `schema_from_dict` / the prompt path — Invariant 3 enforced by construction.
+  - New introspection readers + `profile_schema` orchestrator (SELECT-only through the chokepoint,
+    bind-parameterized, privilege-degrading with a coverage map). `src/core/profiling.py`:
+    `build_optimization_advisory` (ranked, advise-only — FK-no-index / large-unpartitioned / stale-stats /
+    no-PK; comment-only DDL candidates) and `compute_readiness` (soft-block default, hard-block opt-in).
+    Opt-in, bounded value-domain sampling (`value_domain_sql` / `capture_value_domains`, server-side only).
+  - API: `POST /schemas/profile`, `GET /schemas/{id}/advisory`, `GET /schemas/{id}/readiness` (root + `/v1`,
+    auth-gated, sanitized errors). Admin UI: a ReadinessBanner + Optimization-Advisory section in the React
+    Data dictionary (profiled schemas only). Additive + back-compatible (old saved schemas still load).
+  - **Gates:** `tsc --build` 0 · vitest 161 · vite build · pytest 478 (+32). **Live-verified vs XE `AOR_DEMO`**
+    (full coverage; readiness `not_optimized`/usable; a real high-severity index advisory on
+    `EMPLOYEES.DEPARTMENT_ID`). **Next: B4 (plan-aware generation) — pending B3 packet sign-off.**
+
+### Phase 10 (Cascading Report Deliverables + Local Insight) — 🎉 CLOSED (2026-06-18)
+- **Independent exit-gate review** (reviewer ≠ author, ADR-006; spawned subagent;
+  [reviews/phase-10-review-r1.md](reviews/phase-10-review-r1.md)): all four gates re-run green
+  (**`tsc --build` 0 · vitest 160 · vite build · pytest 446**), the **BUG-013** no-op-gate claim
+  independently confirmed, **all five invariants HOLD** under adversarial probing (no unescaped HTML sink,
+  no bind interpolation, no non-SELECT via cascade, no `SMTP_PASSWORD`/transport-text leak, no allow-list /
+  opt-in / size-cap bypass, no fan-out explosion past the caps, `Report.cascade` additive/back-compatible).
+  **4 findings, all S4** (non-blocking) — **all remediated:** F1 design §3.3 reworded to the reactive cap;
+  F2 added escaping-sink coverage (title / SQL / column-name / KPI); F3 added a `truncated`-cap test; F4
+  aligned `rankGroups`' aggregation with the insight/KPI AVG name-hint. **+2 frontend tests (158 → 160).**
+- **Live XE `AOR_DEMO` end-to-end CONFIRMED (2026-06-18):** ran a saved cascading report live through the UI →
+  Report dialog built the bundle with **"1 live query"** (`onRunSql` → `/execute` fan-out) → downloaded a
+  script-free HTML bundle → sent a **real email** (4.9 KB HTML attachment) via `/reports/email-bundle` to a
+  confirmed recipient. **Owner closure sign-off → Phase 10 CLOSED.** (Local commits only; no push until the
+  July reset. Open backlog: ITM-026, ITM-031.)
+
+### Added (Phase 10 — cascading report deliverables + local insight; B3–B5)
+- **B5 — delivery + persistence.** **B5a (backend):** additive **`Report.cascade`** (`CascadeSpec`:
+  dimension_order / depth / children_per_level / rows_per_child; metadata-only, clamped not rejected;
+  back-compatible) and a new **`POST /reports/email-bundle`** (+`/v1`, auth-gated) that emails a prebuilt
+  HTML bundle as an `.html` attachment via the Phase-8 mailer chokepoint (`send_html_bundle_email` +
+  `build_html_message`) — allow-list, header-injection guard, size cap, audit, `SendResult`→HTTP all
+  reused; **no LLM, no re-query**; opt-in `503`, oversized `400`. **B5b (frontend):** the cascading-report
+  actions consolidate into one **"Report" dialog** (`web/src/components/exec/CascadeReportDialog.tsx`) —
+  **Download** (client Blob), **Email** (`emailBundle` → `/reports/email-bundle`), and **Save as report**
+  (persists SQL + cascade). **Live fresh-fetch fan-out**: `ResultsView` gains `onRunSql` (wired in Ask +
+  Reports to `execute`) so child slices are fetched fresh + un-truncated via the chokepoint when connected,
+  else local. A **saved cascading report** regenerates the same bundle when run from Reports
+  (`Report.cascade` → `cascadeSpec` via `fromPersistedSpec`). `CascadePersisted` Zod + camelCase↔snake_case
+  mappers. Tests: email-bundle API (10) + cascade round-trip (3) backend; CascadeReportDialog
+  (download/email/save) + mapper round-trip + dialog regression frontend.
+
+### Added (Phase 10 — cascading report deliverables + local insight; B3–B4)
+- **B3 — local insight narration ([ADR-027](adr/ADR-027-local-insight-narration.md)):**
+  `web/src/lib/derive/insight.ts` `deriveInsights()` emits a ranked, threshold-gated set of
+  deterministic facts (total / top+concentration / date-trend / spread / coverage) from the
+  already-fetched result — **no LLM, no row egress**. Rendered as a brand-tinted **Insight band**
+  (`web/src/components/exec/InsightBand.tsx`) above the KPI cards, recomputed per drill level.
+- **B4 — cascading report deliverable ([ADR-026](adr/ADR-026-cascading-report-deliverable.md)):**
+  `web/src/lib/cascade/{spec,bundle,renderHtml}.ts` — client-orchestrated fan-out that descends the
+  auto-derived dimension order (top-N per level + a local "Others" rollup, bounded depth/queries),
+  each child a `buildPullDetailSql` derivation of the **approved** parent through the `/execute`
+  chokepoint (live mode) or a local filter (offline/demo). Renders a **self-contained, script-free,
+  inline-SVG HTML bundle** (every value HTML-escaped) downloaded client-side via `downloadHtml`. A
+  top-level **"Report"** toolbar action builds + downloads it. Tests: fan-out, renderer, full-pipeline,
+  and a component download regression. *(Live fresh-fetch fan-out + Save/run/email land in B5.)*
+
+### Fixed (BUG-013 — the `tsc` typecheck gate was a no-op)
+- The frontend typecheck gate `tsc --noEmit -p tsconfig.json` checked **zero files** (root
+  `tsconfig.json` has `"files": []` + project `references`, so without `--build` nothing is compiled) —
+  proven by a deliberate `const x: number = "string"` passing it while `tsc --build` caught it. It had
+  let a missing required JSX prop reach runtime (the B4 cascade download threw). **Adopted `tsc --build`
+  as the real gate** (owner-approved), **fixed the pre-existing** `web/src/lib/derive/sql.test.ts:98`
+  (unused `@ts-expect-error`), added `*.tsbuildinfo` to `.gitignore`, and updated the gate command in
+  HANDOFF + the Phase-10 charter. `tsc --build` now exits 0.
+
+### Changed (ITM-034 — plain-language Data dictionary wording)
+- The Data dictionary's developer term **"Introspect"** is reworded to the owner-approved **"Read from
+  database"** across every user-facing surface: the trigger button, dialog title ("Read a schema from the
+  database"), submit button ("Read & save" / "Reading…"), the save-as placeholder, and the empty-rail /
+  delete-note / empty-state copy (`IntrospectDialog.tsx`, `DataDictionaryPage.tsx`). A new **display-only**
+  `sourceLabel()` maps the saved-schema `source` badge (`"introspection"` → "From database",
+  `"upload"` → "Uploaded"). The **code/API contract is unchanged** — the component name `IntrospectDialog`,
+  `introspectSchema`, the `POST /schemas/introspect` endpoint, and the stored `source` enum all stay; only
+  the *display* is mapped. Button-label tests updated. Gates green (**pytest 433 · vitest 130 · tsc clean ·
+  vite build**); live-verified vs XE `AOR_DEMO` (no "introspect" text remains user-visible). **Closes
+  ITM-034** (charter bar B-4). Open frontend backlog now: ITM-026 (dynamic Ask chips), ITM-031 (ESLint debt).
+
+### Phase 9 (React CXO UI) — CLOSED (2026-06-15)
+- **Owner CXO acceptance signed off** (criterion #3) and the **independent exit-gate review r1 = PASS-WITH-FIXES**
+  (reviewer ≠ author, ADR-006; [reviews/phase-9-b6b7-review-r1.md](reviews/phase-9-b6b7-review-r1.md)): all four
+  gates re-run green (**pytest 433 · vitest 130 · tsc clean · vite build**), all five invariants verified, 5
+  findings — **all S4** — remediated/accepted. All §15 exit criteria met → **Phase 9 closed.** (Local commits
+  only; no push until the July reset.)
+
+### Fixed (Phase 9 — off-topic NL guard, [ADR-025](adr/ADR-025-off-topic-nl-guard.md))
+- An off-topic prompt (e.g. **"how to swim"**) still produced a `SELECT` that ran (immediately under
+  Auto-run). NL→SQL now has a **conservative off-topic guard**: the model emits a `CANNOT_ANSWER:` sentinel
+  when a request isn't answerable from the schema; the generator returns `NLSQLResult(answerable=False,
+  message=…)` (only when no SQL fence is present — prefer SQL if both), `POST /nl2sql` returns
+  `answerable`+`message` (additive, defaulted), and the Ask page shows a calm notice while **proposing/
+  running nothing — including under Auto-run**. The SELECT-only chokepoint is unchanged. The guard also
+  covers **data-shaped questions that need a column the schema lacks** — e.g. "count of women" with no
+  gender column previously produced a fabricated proxy (`SUBSTR(EMAIL …) = 'a'`); the prompt now forbids
+  inventing columns / proxies and declines instead. Verified live (Groq `llama-3.3-70b`): "how to swim" and
+  "count of women" declined; "count of employees" / "headcount by department" / "average salary" answered.
+  (BUG-010.)
+  - **Consistency (BUG-012):** the model declines in different shapes (sentinel, plain prose, or an
+    unparseable/non-SELECT reply); under Auto-run the same prompt sometimes surfaced the technical
+    *"Generated SQL is not a SELECT/CTE. Aborting for safety."* error instead of the calm notice. The
+    generator now resolves **all** non-usable generations to the same `answerable=False` notice (logged
+    server-side), and **never** raises that technical error to the user. The `/execute` SELECT-only
+    chokepoint remains the hard safety boundary. Verified live: "count of women" declined cleanly 6/6.
+
+### Added (Phase 9 — B6 supporting screens + Reports value-pickers)
+- **The four supporting screens** replace their `PlaceholderPage` routes — each built as its own packet
+  (build → gates → internal review → HOLD for owner sign-off), bound to the existing `/v1` endpoints:
+  - **Connections** (`web/src/features/connections/*`): list / add / test / delete saved profiles
+    (`GET·POST /profiles`, `DELETE /profiles/{id}`, `POST /profiles/{id}/test`, `POST /test-connection`),
+    with the **default-schema** field ([ADR-018](adr/ADR-018-per-profile-default-schema.md)); the password
+    is posted once to create/test and **never stored client-side** (invariant 4). Closes the **E10** handoff.
+  - **Data dictionary** (`web/src/features/dictionary/*`): master-detail browser of saved schemas
+    (`GET /schemas`, `/schemas/{id}` table/column detail with **PK/FK + references**, `DELETE`) + live
+    **introspect-and-save** (`POST /schemas/introspect`, closes **E11**) + the curated **EBS packs**
+    (`GET /packs`, `/packs/{module}`) with table notes + glossary. Metadata only (invariant 3).
+  - **Reports** (`web/src/features/reports/*`): saved-report **list / run / create / edit / delete** +
+    **start-from-template** (`GET·POST·PUT·DELETE /reports`, `POST /reports/{id}/run` with binds,
+    `GET /templates`); running reuses the executive **Results view** (KPIs/chart/grid + CSV/Excel/email).
+    Rows show the bound connection; the run dialog has a **"View SQL"** peek.
+  - **Settings** (`web/src/features/settings/*`): a **per-session LLM override**
+    ([ADR-004](adr/ADR-004-per-user-llm-config.md)) — provider/model/api_key/base_url held **in memory only**
+    (never localStorage; the key is sent per-request) and **wired into the Ask `/nl2sql` call** — plus
+    honest read-only "managed on the server" status copy (no `/settings` endpoint; admin-configured).
+- **Report parameter value-pickers ([ADR-023](adr/ADR-023-report-parameter-value-pickers.md)):** a parameter
+  can carry a `lookup_sql` (additive backend field on `ReportParam`); the run dialog renders a **live
+  dropdown** by running it through the SELECT-only chokepoint (value + label), falling back to a typed input.
+  The editor offers a **"Suggest…"** that derives the lookup from a foreign key in the active dictionary, and
+  the run dialog **auto-derives** a lookup with zero setup by mapping each `:bind` to its column
+  (`web/src/lib/derive/paramLookup.ts`) and matching the dictionary's FKs. Precedence: explicit → auto → text.
+- **Shared `ConfirmDialog`** (`web/src/components/ConfirmDialog.tsx`): one destructive-confirm component
+  replaces the three near-identical delete dialogs (Connections / Dictionary / Reports).
+
+### Fixed (Phase 9 — user-readable errors, [ADR-024](adr/ADR-024-user-readable-error-presentation.md))
+- A failed report run surfaced the backend's operator-facing **"Database error — see server logs."** to the
+  end user. `_db_error`'s user-facing detail is now friendly + support-oriented (full driver detail still
+  logged server-side; `error_id` unchanged), and a single frontend policy (`friendlyError`/`errorMessage`)
+  passes safe server messages through with the reference id while substituting a generic "contact IT
+  support" message only for network/bodyless failures. Routed every error surface through it.
+
+- **Tests:** **+59 frontend** since B5b → **128 frontend** green (the 4 screens, ConfirmDialog, error
+  policy, value-pickers incl. the SQL-bind parser); backend **428** (+1 lookup round-trip). `tsc` clean;
+  `vite build` green. Verified live vs XE 21c (AOR_DEMO) at 1366×768.
+
+### Added (Phase 9 — React CXO executive UI; B5b — live Query Builder + intelligent cascading)
+- **B5b-1 — SQL-aware deterministic derivation ([ADR-021](adr/ADR-021-sql-aware-derivation-and-cascade.md)):**
+  `web/src/lib/derive/sql.ts` reads the proposed `SELECT` (GROUP BY → dimensions; SUM/AVG/COUNT/MIN/MAX →
+  measures + exact aggregation) and overrides the name heuristics in `columns.ts`/`kpis.ts`/`chart.ts`;
+  falls back to name+value heuristics on `SELECT *`/CTE/set-ops/window-aggs/count-mismatch (never throws).
+  **Reads SQL only — never row data to any LLM** (invariant 3). Fixed a real bug (AVG/MIN/MAX were summed
+  across groups).
+- **B5b-2 — edge-case hardening:** E1 empty (calm "No rows matched" + SQL disclosure + Refine), E2 1×1
+  hero, E3 single row, E4 50k rows (O(n), chart cap), E5 300 cols, E6 nulls/mixed (`formatCell`→"—"),
+  E7 all-null, E8 AVG/MIN/MAX-not-summed. Vitest + RTL set up.
+- **Inc 1 — multi-level cascading drill-down:** pure drill-stack model `web/src/lib/derive/cascade.ts`
+  (`dimensionOrder` = GROUP BY order; `filterRows` ANDs the stack; shared `dimKey`/`NULL_KEY` so a NULL/"—"
+  bucket drills correctly). `pickChart` skips a dimension constant in the drilled scope so 3+ dim cascades
+  reach detail. `ResultsView` holds a `DrillLevel[]` stack: every breakdown chart is clickable, the view
+  re-scopes at each level, a clickable breadcrumb walks back up, the deepest dim / single record reaches a
+  pull-detail leaf. All local/deterministic.
+- **Inc 2 — `schema_id` on `POST /nl2sql`:** the handler loads a saved schema (unknown id → clean 404),
+  rebuilds it via `schema_from_dict` (**names only**), `schema_csv` still wins; chokepoint untouched.
+- **Inc 3 — live Query Builder wiring ([ADR-019](adr/ADR-019-react-cxo-surface.md)):** `SessionProvider`
+  (profile + schema persisted to localStorage — **ids only, never a secret**); **TopBar connection picker**
+  (`GET /profiles`, default remembered→first, **E10** zero-profiles → admin); **inline schema picker**
+  (`GET /schemas`, default-to-sole, **E11** no-schema notice); typed clients + Zod (`getProfiles`,
+  `getSchemas`, `schema_id` on nl2sql, `binds` on execute). **Ask state machine** `idle → proposing →
+  review → running → results`: the editable **proposed-SQL review** is the approve-before-run gate
+  (invariant 2) with a collapsible confidence chip + explanation; wires `nl2sql(schema_id) → review →
+  execute(profile_id) → ResultsView`. **E9** per-step sanitized `error_id` banners. "See a sample result"
+  demo preserved. Verified live against XE end-to-end.
+- **Inc 4 — live Pull-detail + Auto-run + F3:**
+  - **Decision 3 — live "Pull <value> data":** `web/src/lib/derive/pullDetail.ts` deterministically wraps
+    the approved SQL — `SELECT * FROM (<approved>) WHERE <dim> = :v [AND …]` over the active drill stack
+    (binds, `IS NULL` for the NULL bucket) — routed through the review step for **re-approval** before
+    `/execute`. A fresh, un-truncated, server-side fetch of that slice; **no new LLM call**; still a SELECT
+    (chokepoint re-validates).
+  - **Auto-run toggle ([ADR-022](adr/ADR-022-auto-run-mode.md), owner-requested):** persisted, **default
+    OFF**. When on, asking converts + fetches in the background via a seamless loader (no review flash);
+    falls back to the review when no connection is set. An **"Edit SQL"** action on results pulls the query
+    up to edit + re-run. Reframes Invariant 2 (human chooses the mode; chokepoint never bypassed).
+  - **F3:** a date dimension renders a non-drillable trend line; it now shows a **Pull-live-detail**
+    affordance beside it (pulls the current scope), so a trailing/standalone date dim has a path to detail.
+- **Tests:** 27 new frontend tests this phase (cascade, pull wrap, live wiring, auto-run, F3, pickers) →
+  **69 frontend** green; backend **427** (incl. BUG-008 regression); `tsc` clean; `vite build` green.
+
+### Fixed (Phase 9 — BUG-008, profile current_schema dropped at execution)
+- `_resolve_target` + `test_profile` built `OracleConnectionConfig` **without** `current_schema`, so
+  [ADR-018](adr/ADR-018-per-profile-default-schema.md)'s `ALTER SESSION SET CURRENT_SCHEMA` never ran on
+  the API path — the AI's unqualified SQL hit **ORA-00942** (the field was inert outside Streamlit).
+  **Fixed:** pass `current_schema=resolved.current_schema` in both; SELECT-only chokepoint untouched;
+  2 regression tests. Found in the Inc-3 live e2e; verified live (unqualified SQL now runs).
+
+### Added (Phase 9 — React CXO executive UI; B1–B5a)
+- **B5a — executive Results view (the core, ADR-019):** the four-band hierarchy
+  built as real components — **summary band** (question headline + deterministic
+  run meta + SQL disclosure), **auto-derived KPI cards**, **driver chart**
+  (Recharts bar/line, auto-picked), and a **virtualized detail grid** (TanStack
+  Table + Virtual, the only scroll region). All KPI/summary/chart derivation is
+  **local, deterministic math in `web/src/lib/derive/*` — no row data to any LLM**.
+  Toolbar: client-side CSV export + a real **Email** action (POST /reports/email,
+  recipient-confirmed). A "See a sample result" affordance previews the design
+  without a live DB. Verified in-app at 1366×768: `pageScroll: 0`, grid fills the
+  viewport, premium tokens render. Two derivation bugs caught + fixed on review
+  (currency-hint `due` matched `overdue`; chart picked the first measure not the
+  priority one) → fixed by tokenized name classification + a shared `rankMeasures`.
+- **B5a review fixes (owner):** integer columns (days, counts) now format their
+  averages as **whole numbers** (`isInteger` flag → `Days overdue 24`, not 23.60).
+  Added a direct **Excel download** alongside CSV (for sharing outside email) —
+  new auth-gated `POST /reports/export` builds CSV/xlsx server-side via openpyxl
+  (no spreadsheet lib in the browser; filename sanitized; same row cap; no LLM,
+  no re-query), `tests/test_export_api.py` (8 tests). Suite **414 → 422**.
+- **Drill-down (owner):** clicking a chart bar scopes the whole view — KPIs +
+  an auto-picked **breakdown chart** (the next dimension) + the filtered grid +
+  export/email — to that value, with a **Back to report** button. A value with
+  no further breakdown shows a clear "no breakdown" state + a **Pull [value]
+  data** action that seeds a live query (B5b). Local filtering only — no new
+  query, no LLM. The sample is category-level so the drill has real sub-data.
+
+- **B3 — `web/` scaffold (ADR-019):** the React app now lives under `web/`; the
+  generic Lovable mock components were removed and the 49 shadcn/ui primitives
+  relocated to `web/src/components/ui`, so `src/` is pure Python again. The repo
+  root stays the npm/Vite project (reuses the installed `node_modules`) with Vite
+  `root: 'web'` and a dev proxy `/v1 → 127.0.0.1:8000`. Design system in
+  `web/src/styles/tokens.css` (warm-paper canvas, deep-petrol brand, Inter +
+  Fraunces, tabular numerals) re-aliases shadcn's vars so primitives inherit the
+  look. App shell (slim left rail + top bar with a live `/health` badge), router,
+  TanStack Query provider, and a typed `/v1` client + Zod schemas. Verified: build
+  green, renders single-viewport at 1366×768, "API connected" via the proxy,
+  Fraunces headline + petrol `#0E5C63` button confirmed by computed styles.
+  Vite pinned to `^5.4.20` (the `^5.4.1` dev dep-optimizer crashes on the
+  spaced node_modules path under Node 24); `preserveSymlinks` + `process.cwd()`
+  roots keep Vite on the space-free junction.
+- **Review fixes (B2+B3 gate):** `POST /reports/email` now caps payload pre-build
+  (100k rows × 1k cols → 400) so an oversized body can't spike memory before the
+  mailer's byte-cap (414 tests). Ask landing shifted up so the input sits at
+  eye-level (~45% from top). Dynamic example chips tracked as **ITM-026** (needs
+  query history).
+
+- **Charter** `docs/charters/phase-9-react-cxo-ui.md` approved by owner (design system, executive
+  results-hierarchy spec, scope, risks, build plan; D-1…D-5 resolved as recommended — Fraunces,
+  deep petrol `#0E5C63`, `POST /reports/email`, light-only beta, core-first phasing). Streamlit
+  stays as the admin/power-user tool during beta; the React surface is built against the `/v1` API.
+- **Backend gap closed (ITM-025): `POST /reports/email`** (mounted at root **and** `/v1`, auth-gated)
+  — exposes the Phase-8 mailer over HTTP. The client posts the *exact result already shown*
+  (`columns` + `rows`); the handler rebuilds the DataFrame and calls `send_report_email` unchanged.
+  **No LLM on this path**, no re-query; header-injection guard, allow-list, size cap, and audit log
+  all apply. Opt-in (`email_enabled`): `503` when unconfigured. SendResult→HTTP mapping: `ok`→200,
+  `rejected`→400 (safe verbatim), transport/auth `error`→502 with the mailer's `error_id`.
+- **Tests:** `tests/test_email_api.py` (12 tests, SMTP fully mocked) — gating, mapping,
+  allow-list / newline-injection / bad-format rejections, ragged-result 400, `/v1` auth gate.
+  Suite **401 → 413 green**.
+
+### Changed (ITM-024 — No-scroll two-panel UI redesign, v2 UX)
+- **All seven screens** rewritten to a two-panel (`st.columns`) layout: controls/inputs in the
+  left panel, content/results in the right panel. Page-level scroll eliminated on every screen.
+- **Query Builder:** NL prompt + EBS-module multiselect + Generate SQL in left panel; SQL editor +
+  primary "Run SQL" button + Results/Explanation tabs (results at fixed `height=220`) in right
+  panel. The Explanation is now a tab beside Results, not a full-page expander.
+- **Connections:** add-profile form left, scrollable profiles table + test/delete right.
+- **Schema Sources:** Upload/Introspect/Library tabs left, active-schema table browser right.
+- **Data Dictionary:** Search/EBS-packs tabs + export buttons left, table detail + FK refs right.
+- **Reports:** saved-report selector left, Run/Save-new tabs right.
+- **Templates:** module + radio list left, SQL preview + Load/Save buttons right.
+- **Settings:** LLM form left, active-config + email/safety status right.
+- **Email action** moved from `st.expander` (inline page height) to `@st.dialog` (modal overlay)
+  — the dialog never contributes to page scroll; form fields cleared on successful send (ITM-023).
+- **Sidebar** manual-entry form wrapped in `st.expander(expanded=False)` — sidebar does not scroll
+  when a saved profile is selected.
+- `_run_and_display` refactored into `_execute_query` (stores result in `session_state`) +
+  `_render_results` (renders in calling context); `_render_email_action` removed (superseded by
+  `@st.dialog`). 401 tests pass; no security-path changes.
+
+### Fixed (ITM-022 — Query Builder layout, v2 UX polish)
+- **NL mode:** removed the `col1`/`col2` split that placed "Run SQL" above the SQL editor.
+  "Generate SQL" is now a standalone button at the top; "Run SQL" (`type="primary"`) moves to
+  just below the SQL text area and confidence/explanation expander — directly above results.
+  Users no longer need to scroll up to run or down to see output. No logic change; 401 tests
+  unchanged.
+
+### Fixed (ITM-023 — Email form cleared after successful send, v2 UX polish)
+- After `send_report_email` returns `result.ok`, the four session-state fields
+  (`email_to`, `email_cc`, `email_subject`, `email_body`) are cleared so the next time
+  the "Send as email" expander is opened the form starts blank.
+
+### Added (Phase 8 / v2 — Email a report follow-up action)
+- **`src/core/mailer/` package (stdlib SMTP, no new dependency):** after a report runs, a user
+  can email the result with the output attached. Modules: `config` (opt-in `email_enabled` gate
+  from `SMTP_*` env), `message` (address validation + CRLF/header-injection guard, `EMAIL_ALLOWED_DOMAINS`
+  allow-list, size cap, `EmailMessage` assembly reusing the CSV/Excel export helpers), `recipients`
+  (smart quick-pick of email-like values from the result columns), `sender`
+  (`send_report_email`: validate → build → Gmail SMTP STARTTLS/SSL → audit-log → metrics; returns
+  a `SendResult` of kind ok/rejected/error; transport errors sanitized to `GENERIC_EMAIL_DETAIL` +
+  `error_id`). See [ADR-017](adr/ADR-017-email-report-via-gmail-smtp.md).
+- **UI:** a "Send as email (follow-up action)" expander in `src/app.py`, shown after a report runs
+  when SMTP is configured — quick-pick recipient chips, free-form To/Cc, CSV/Excel toggle; rendered
+  from `st.session_state.last_results` so it survives Streamlit reruns.
+- **Metrics:** `emails_sent` / `emails_failed` / `emails_rejected` counters in `core/metrics.py`.
+- **Live demo:** `scripts/p8_email_smoke.py` sends one real email through the product code (creds
+  from `.env`; the password is never printed). Live send verified end-to-end against Gmail.
+- **Config:** `SMTP_HOST/PORT/USER/PASSWORD`, `EMAIL_FROM`, `EMAIL_ALLOWED_DOMAINS`,
+  `EMAIL_MAX_ATTACHMENT_MB` documented in `.env.example` and added to `render.yaml` (UI service,
+  secrets `sync: false`).
+- **Tests:** 58 new (`test_mailer_{config,message,recipients,sender}.py`) — full suite **365 passed**.
+- **Security:** the SELECT-only chokepoint and schema-redaction posture are untouched; **no LLM on
+  the email path**; `SMTP_PASSWORD` is env-only and never logged or returned. New risks
+  **RISK-20/21**; deferred future increments **ITM-020** (Gmail API/OAuth + per-user sender),
+  **ITM-021** (AI-drafted body).
+
+### Fixed (Phase 8 exit-gate review r1 — PASS-WITH-FIXES)
+- **P8-R1-F1 (S3):** attachment size-cap default 20 → **17 MB** (raw) so the base64-encoded
+  message stays under Gmail's 25 MB; `.env.example` / `render.yaml` / ADR-017 / design updated.
+- **P8-R1-F2 (S3):** `validate_address` control-char guard widened `[\r\n\t\x00]` → `[\x00-\x1f\x7f]`.
+- **P8-R1-F3 (S4):** design clarified — subject control chars are *collapsed* (not rejected).
+- **P8-R1-F4 (S4):** operator-set `EMAIL_FROM` is control-stripped in `build_message`.
+- **+6 regression tests → 371 total.** Verdict: PASS-WITH-FIXES (no S1/S2; all 8 invariants hold).
+
+### Fixed (BUG-007 — NL→SQL produced non-Oracle SQL)
+- The NL→SQL output ended with a trailing `;` and used `LIMIT` for top-N, both of which Oracle
+  rejects (**ORA-00933**) at execution. `_parse_sql_and_explanation` now strips a trailing
+  statement terminator, and `SYSTEM_PROMPT` mandates `FETCH FIRST n ROWS ONLY` / `ROWNUM` (never
+  `LIMIT`) and no trailing semicolon. 7 new tests (`test_nl2sql_sql_cleanup.py`) → **378 total**.
+  SELECT-only chokepoint untouched. (Surfaced in the v2 Phase-8 UI demo; pre-existing, shared with v1.)
+
+### Added (ADR-018 — Per-profile default schema)
+- Optional `current_schema` on a connection/profile. When set, the client runs
+  `ALTER SESSION SET CURRENT_SCHEMA = <schema>` on connect, so **unqualified** table names resolve
+  against a granted business schema — fixing the ADR-009 least-privilege read-only pattern
+  (`aor_readonly` + grants on `AOR_DEMO`), where bare names otherwise raise **ORA-00942**. New UI
+  field "Default schema (optional)" on the manual sidebar connection and the add-profile form.
+  `validate_schema_name` restricts the value to the Oracle identifier charset (injection-safe — a
+  schema name can't be a bind variable). It is a **session setting only**; the SELECT-only chokepoint
+  is untouched. Verified live against XE 21c. +23 tests (`test_current_schema.py`) → **401 total**.
+  See [ADR-018](adr/ADR-018-per-profile-default-schema.md).
+
+### Changed (LLM default model)
+- `DEFAULT_GROQ_MODEL` bumped `llama3-70b-8192` (decommissioned by Groq) → `llama-3.3-70b-versatile`,
+  so NL→SQL works out-of-the-box on a current Groq model when `GROQ_MODEL` is unset.
+
+### Added (ITM-011 — List/multi-value bind parameters)
+- **`expand_list_binds(sql, binds)` in `src/db.py`:** rewrites each list-valued bind `:name` →
+  `:name_0, :name_1, …` using a word-boundary regex (not string interpolation). Expanded names are
+  new bind placeholders; the values reach the driver as typed scalars, never spliced into SQL text.
+  Called in `run_select` **after** `assert_safe_select` (safety check on the original SQL) and
+  **after** `validate_binds`. Scalar binds pass through unchanged.
+- **`validate_binds` updated:** now accepts non-empty flat lists of scalars for IN-clause expansion.
+  Empty lists (Oracle `IN ()` is invalid), nested lists, and non-scalar items are rejected with
+  `SqlSafetyError`. New `_validate_scalar` helper reduces duplication.
+- **`ParamType = Literal["string","number","date","list"]`** in `src/core/reports.py`: the `"list"`
+  type parses a comma-separated string into a list or accepts a list directly. At least one element
+  is required.
+- **Tests** (`tests/test_bind_safety.py`): 14 new tests — 3 list-accept cases, 3 new list-reject
+  cases in the bad-cases parametrize, 6 `expand_list_binds` unit tests, 1 `run_select`-expansion
+  integration test, 1 DML-with-list-bind rejection. **307 total** (was 293). SELECT/CTE-only
+  chokepoint and `assert_no_values` redaction tripwire are unaffected.
+
 ### Changed (Deployment GA-readiness hardening)
 - **`render.yaml`:** added `APP_SECRET_KEY`, `APP_API_KEY`, `ALLOWED_ORIGINS` (all `sync: false`),
   `LOG_LEVEL` (INFO), `LOG_FORMAT` (json), and `STORAGE_DIR` to both services; bumped `PYTHON_VERSION`
