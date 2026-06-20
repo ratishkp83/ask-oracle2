@@ -1,7 +1,11 @@
 name: CI
 
 on:
+  # Scoped to main (+ PRs) so feature branches like v2 don't consume Actions
+  # minutes on every push (the v2 push-freeze rationale). main stays fully tested;
+  # CI also runs on any PR into it.
   push:
+    branches: [main]
   pull_request:
 
 jobs:
