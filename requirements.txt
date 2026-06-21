@@ -15,6 +15,12 @@ pydantic==2.13.4
 python-dotenv==1.0.1
 tenacity==8.5.0
 openai==1.43.0
+# httpx is a RUNTIME constraint, not dev-only: openai==1.43.0's client passes the
+# `proxies` kwarg that httpx 0.28 removed, so an unpinned floor resolves to 0.28+
+# and crashes NL→SQL with "Client.__init__() got an unexpected keyword argument
+# 'proxies'" (seen on Render where only requirements.txt is installed). Bump this
+# with openai if moving to httpx 0.28+.
+httpx>=0.27,<0.28
 requests==2.32.3
 numpy==2.2.6
 plotly==5.23.0
