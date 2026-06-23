@@ -30,6 +30,17 @@ class EmailConfig:
     sender: str  # EMAIL_FROM; defaults to ``user``
     allowed_domains: FrozenSet[str]  # lowercased, no leading '@'; empty = allow any
     max_attachment_bytes: int
+    # Backend: "smtp" (Gmail, default) or "brevo" (Brevo HTTP API over HTTPS:443).
+    # Brevo is the path that works on hosts which block outbound SMTP (e.g. Render).
+    provider: str = "smtp"
+    api_key: str = ""  # BREVO_API_KEY (only used when provider == "brevo")
+
+    @property
+    def is_configured(self) -> bool:
+        """True when this backend has what it needs to send."""
+        if self.provider == "brevo":
+            return bool(self.api_key and self.sender)  # verified Brevo sender required
+        return bool(self.user and self.password)
 
 
 def _clean(value: Optional[str]) -> str:
@@ -37,8 +48,12 @@ def _clean(value: Optional[str]) -> str:
 
 
 def email_enabled() -> bool:
-    """True only when both ``SMTP_USER`` and ``SMTP_PASSWORD`` are set (default off)."""
-    return bool(_clean(os.environ.get("SMTP_USER")) and _clean(os.environ.get("SMTP_PASSWORD")))
+    """True when a usable email backend is configured (Brevo HTTP API **or** SMTP).
+
+    Default off. Brevo wins when ``BREVO_API_KEY`` is set (+ a verified ``EMAIL_FROM``
+    sender); otherwise SMTP needs ``SMTP_USER`` + ``SMTP_PASSWORD``.
+    """
+    return load_config().is_configured
 
 
 def _parse_allowed_domains(raw: Optional[str]) -> FrozenSet[str]:
@@ -71,6 +86,8 @@ def load_config() -> EmailConfig:
     # Gmail App Passwords are shown in space-separated groups; strip them.
     password = _clean(os.environ.get("SMTP_PASSWORD")).replace(" ", "")
     sender = _clean(os.environ.get("EMAIL_FROM")) or user
+    api_key = _clean(os.environ.get("BREVO_API_KEY"))
+    provider = "brevo" if api_key else "smtp"
     return EmailConfig(
         host=_clean(os.environ.get("SMTP_HOST")) or DEFAULT_HOST,
         port=_parse_port(os.environ.get("SMTP_PORT")),
@@ -79,4 +96,6 @@ def load_config() -> EmailConfig:
         sender=sender,
         allowed_domains=_parse_allowed_domains(os.environ.get("EMAIL_ALLOWED_DOMAINS")),
         max_attachment_bytes=_parse_max_mb(os.environ.get("EMAIL_MAX_ATTACHMENT_MB")) * 1024 * 1024,
+        provider=provider,
+        api_key=api_key,
     )

@@ -15,11 +15,12 @@ return value. Transport/auth exceptions are logged server-side keyed by an
 
 from __future__ import annotations
 
+import base64
 import smtplib
 import ssl
 from dataclasses import dataclass
 from email.message import EmailMessage
-from email.utils import parseaddr
+from email.utils import getaddresses, parseaddr
 from typing import List, Optional
 
 import pandas as pd
@@ -40,6 +41,12 @@ from src.core.mailer.message import (
 
 _audit = get_logger("audit")
 _SMTP_TIMEOUT = 30  # seconds
+_HTTP_TIMEOUT = 30  # seconds (Brevo HTTP API)
+_BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email"
+_NOT_CONFIGURED = (
+    "Email is not configured on the server — set BREVO_API_KEY + EMAIL_FROM "
+    "(or SMTP_USER + SMTP_PASSWORD)."
+)
 
 
 @dataclass(frozen=True)
@@ -71,7 +78,61 @@ def _attachment_size(msg: EmailMessage) -> int:
     return 0
 
 
+def _brevo_send(cfg: EmailConfig, msg: EmailMessage) -> None:
+    """Send the assembled message via the Brevo HTTP API (HTTPS:443).
+
+    This is the path that works on hosts which block outbound SMTP (e.g. Render).
+    The message is already built and validated (same guards as the SMTP path); we
+    just translate it into Brevo's JSON shape. Raises on any non-2xx so the
+    caller's existing handler sanitizes it into a ``SendResult(error)`` with an
+    ``error_id``. The API key is only ever a request header — never logged, never
+    placed in the raised message (its body is the API's response, which has no key).
+    """
+    import requests  # lazy: only the Brevo path needs it
+
+    from_name, from_email = parseaddr(cfg.sender)
+    sender = {"email": from_email or cfg.user}
+    if from_name:
+        sender["name"] = from_name
+    to = [{"email": a} for _, a in getaddresses(msg.get_all("To", []))]
+    cc = [{"email": a} for _, a in getaddresses(msg.get_all("Cc", []))]
+    body_part = msg.get_body(preferencelist=("plain",))
+    text = body_part.get_content() if body_part is not None else ""
+
+    attachments = []
+    for att in msg.iter_attachments():
+        payload = att.get_payload(decode=True) or b""
+        attachments.append({
+            "name": att.get_filename() or "report",
+            "content": base64.b64encode(payload).decode("ascii"),
+        })
+
+    payload = {
+        "sender": sender,
+        "to": to,
+        "subject": msg["Subject"] or "",
+        "textContent": text or "(see the attached report)",
+    }
+    if cc:
+        payload["cc"] = cc
+    if attachments:
+        payload["attachment"] = attachments
+
+    resp = requests.post(
+        _BREVO_ENDPOINT,
+        json=payload,
+        headers={"api-key": cfg.api_key, "accept": "application/json", "content-type": "application/json"},
+        timeout=_HTTP_TIMEOUT,
+    )
+    if resp.status_code >= 300:
+        # resp.text is the API's error body (no secret — the key is request-only).
+        raise RuntimeError(f"Brevo API returned {resp.status_code}: {resp.text[:300]}")
+
+
 def _transport_send(cfg: EmailConfig, msg: EmailMessage, envelope: List[str]) -> None:
+    if cfg.provider == "brevo":
+        _brevo_send(cfg, msg)
+        return
     context = ssl.create_default_context()
     from_addr = parseaddr(cfg.sender)[1] or cfg.user
     if cfg.port == 465:
@@ -103,11 +164,8 @@ def send_report_email(
     ``to`` / ``cc`` are free-form strings (comma/semicolon/whitespace separated).
     """
     cfg = config or load_config()
-    if not (cfg.user and cfg.password):
-        return SendResult(
-            kind="rejected",
-            message="Email is not configured — set SMTP_USER and SMTP_PASSWORD in .env.",
-        )
+    if not cfg.is_configured:
+        return SendResult(kind="rejected", message=_NOT_CONFIGURED)
 
     # --- validate + assemble (no network) --------------------------------- #
     try:
@@ -178,11 +236,8 @@ def send_html_bundle_email(
     re-query**. Reuses every guard (allow-list, header-injection, size cap, audit).
     """
     cfg = config or load_config()
-    if not (cfg.user and cfg.password):
-        return SendResult(
-            kind="rejected",
-            message="Email is not configured — set SMTP_USER and SMTP_PASSWORD in .env.",
-        )
+    if not cfg.is_configured:
+        return SendResult(kind="rejected", message=_NOT_CONFIGURED)
 
     try:
         to_list = parse_recipients(to)

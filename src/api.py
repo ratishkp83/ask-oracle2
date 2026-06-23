@@ -817,7 +817,7 @@ def email_report(req: EmailReportRequest):
     if not email_enabled():
         raise HTTPException(
             status_code=503,
-            detail="Email is not configured — set SMTP_USER and SMTP_PASSWORD on the server.",
+            detail="Email is not configured on the server — set BREVO_API_KEY + EMAIL_FROM (or SMTP_USER + SMTP_PASSWORD).",
         )
 
     # Bound the in-memory DataFrame build before the mailer's byte-cap can reject
@@ -882,7 +882,7 @@ def email_report_bundle(req: EmailBundleRequest):
     if not email_enabled():
         raise HTTPException(
             status_code=503,
-            detail="Email is not configured — set SMTP_USER and SMTP_PASSWORD on the server.",
+            detail="Email is not configured on the server — set BREVO_API_KEY + EMAIL_FROM (or SMTP_USER + SMTP_PASSWORD).",
         )
 
     # Reject an oversized bundle cheaply, before the mailer encodes it. The mailer's
