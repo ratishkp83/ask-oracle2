@@ -60,6 +60,26 @@ that name already exists, so it's safe on a paid disk too. After seeding, you st
 ephemeral on free; the connection is what env-seed restores). Leave the `SEED_*` vars
 unset to disable.
 
+## Email on Render — use Brevo, not SMTP
+**Render blocks outbound SMTP** (ports 25/465/587), so the Gmail/SMTP email path fails
+with `[Errno 101] Network is unreachable`. The app therefore supports a **Brevo HTTP API
+backend** (HTTPS:443, which Render allows). When `BREVO_API_KEY` is set, the app sends
+over HTTP automatically — no code change, same "Email" button, same guards (allow-list,
+header-injection, size cap, audit).
+
+Setup (~5 min, no DNS):
+1. Sign up free at [brevo.com](https://www.brevo.com) (300 emails/day).
+2. **Senders & IP → Senders** → add and **verify your sender email** (click the link
+   Brevo emails you). This is the address the report comes from.
+3. **SMTP & API → API Keys** → create an API key.
+4. Render → Environment: set **`BREVO_API_KEY`** = the key, **`EMAIL_FROM`** = your
+   verified sender → save (redeploys).
+
+The key lives only in the platform env (never the repo); it's only ever a request
+header (never logged). To go back to SMTP on a host that allows it, unset `BREVO_API_KEY`
+and set `SMTP_USER`/`SMTP_PASSWORD`. `email_enabled()` reports true when **either** backend
+is configured.
+
 ## Security (important for a public URL)
 The app has no login yet (RISK-07). Options:
 - **Personal/demo:** leave `APP_API_KEY` unset and keep the URL private. Anyone with

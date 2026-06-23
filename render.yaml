@@ -59,7 +59,17 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS       # only if the API is called cross-origin (same-origin SPA needs none)
         sync: false
-      # ── Email-a-report (optional; OFF until SMTP_USER + SMTP_PASSWORD set) ────
+      # ── Email-a-report ───────────────────────────────────────────────────────
+      # IMPORTANT: Render BLOCKS outbound SMTP (ports 25/465/587), so the Gmail/SMTP
+      # path below does NOT work on Render. Use the Brevo HTTP API instead (HTTPS:443,
+      # which Render allows): set BREVO_API_KEY + EMAIL_FROM (a Brevo-verified sender)
+      # and the app sends over HTTPS automatically. The SMTP_* vars are kept only for
+      # platforms that permit SMTP egress.
+      - key: BREVO_API_KEY         # https://app.brevo.com → SMTP & API → API Keys
+        sync: false
+      - key: EMAIL_FROM            # a sender verified in Brevo (e.g. your Gmail)
+        sync: false
+      # SMTP fallback (NOT usable on Render — blocked):
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT
@@ -67,8 +77,6 @@ services:
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASSWORD         # Gmail App Password
-        sync: false
-      - key: EMAIL_FROM
         sync: false
       # ── Auto-seed the DB connection on boot (survives free-tier wipes) ────────
       # When SEED_HOST + SEED_USERNAME + SEED_PASSWORD are set, the app recreates
