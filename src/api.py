@@ -31,6 +31,7 @@ from src.core.profiles import (
     ProfileCreate,
     ProfilePublic,
     ProfileStore,
+    seed_profile_from_env,
 )
 from src.core.reports import (
     JsonFileReportStore,
@@ -188,6 +189,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 # Pluggable storage backends. Swap for Sqlite*Store later without touching the
 # routes below.
 _store: ProfileStore = JsonFileProfileStore()
+# Stateless/ephemeral deploys (e.g. Render's free tier, whose disk is wiped on
+# every restart) restore their DB connection from SEED_* env vars on boot, so it
+# survives sleeps and redeploys without a paid disk. No-op when unset; idempotent
+# when a disk does persist. See docs/DEPLOY-render.md.
+seed_profile_from_env(_store)
 _report_store: ReportStore = JsonFileReportStore()
 _schema_store: SchemaStore = JsonFileSchemaStore()
 

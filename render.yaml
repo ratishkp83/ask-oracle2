@@ -70,3 +70,28 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      # ── Auto-seed the DB connection on boot (survives free-tier wipes) ────────
+      # When SEED_HOST + SEED_USERNAME + SEED_PASSWORD are set, the app recreates
+      # the connection profile from env on every start — so a free-instance sleep
+      # or redeploy (ephemeral disk) no longer drops your connection, with no paid
+      # disk. The password stays in env (never the repo) and is encrypted at rest
+      # exactly like a UI-added profile. Idempotent: a no-op if the profile already
+      # exists. Pre-filled below for Supabase; set the three secrets in the dashboard.
+      - key: SEED_PROFILE_NAME
+        value: Supabase
+      - key: SEED_ENGINE
+        value: postgres
+      - key: SEED_PORT
+        value: "5432"            # Supabase Session pooler
+      - key: SEED_DATABASE
+        value: postgres
+      - key: SEED_SSLMODE
+        value: require
+      - key: SEED_SCHEMA
+        value: public
+      - key: SEED_HOST           # Session pooler host, e.g. aws-1-<region>.pooler.supabase.com
+        sync: false
+      - key: SEED_USERNAME       # e.g. postgres.<project-ref>
+        sync: false
+      - key: SEED_PASSWORD       # your Supabase DB password
+        sync: false

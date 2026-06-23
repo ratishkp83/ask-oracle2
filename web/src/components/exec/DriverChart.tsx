@@ -51,6 +51,7 @@ export function DriverChart({ spec, onBarClick }: { spec: ChartSpec; onBarClick?
                 type="category"
                 dataKey="label"
                 width={118}
+                interval={0}
                 tick={{ fontSize: 12, fill: INK }}
                 axisLine={false}
                 tickLine={false}
