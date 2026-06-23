@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field, model_validator
 from src.core.crypto import decrypt_secret, encrypt_secret
 from src.core.errors import log_error, new_error_id
 from src.core.fileio import atomic_write_json
+from src.core.logging_config import get_logger
 from src.storage import DEFAULT_STORAGE_DIR
 
 Environment = Literal["DEV", "TEST", "PROD"]
@@ -247,6 +248,63 @@ class JsonFileProfileStore(ProfileStore):
                 username=stored.username,
                 password=decrypt_secret(stored.password_encrypted),
             )
+
+
+def seed_profile_from_env(store: ProfileStore) -> Optional[ProfilePublic]:
+    """Idempotently (re)create a connection profile from ``SEED_*`` env vars.
+
+    Lets a stateless deploy whose disk is wiped on every restart (e.g. Render's
+    free tier) restore its database connection automatically on boot, instead of
+    an operator re-adding it by hand each time. The password lives only in the
+    platform's environment (never the repo) and is encrypted at rest by the
+    store exactly like a UI-created profile — invariant 4 holds.
+
+    No-op unless ``SEED_HOST`` + ``SEED_USERNAME`` + ``SEED_PASSWORD`` are all
+    set. If a profile named ``SEED_PROFILE_NAME`` already exists (e.g. on a
+    persistent disk) it is left untouched, so this is safe to call on every
+    boot. Never raises: a bad seed config logs a warning and the app starts
+    normally.
+    """
+    host = os.getenv("SEED_HOST")
+    username = os.getenv("SEED_USERNAME")
+    password = os.getenv("SEED_PASSWORD")
+    if not (host and username and password):
+        return None
+
+    log = get_logger("profiles")
+    name = os.getenv("SEED_PROFILE_NAME", "Seeded connection")
+    engine = os.getenv("SEED_ENGINE", "postgres").strip().lower()
+    if engine not in ("oracle", "postgres"):
+        engine = "postgres"
+    is_pg = engine == "postgres"
+    try:
+        if any(p.name == name for p in store.list()):
+            log.info("Seed profile already present; leaving it untouched",
+                     extra={"extra_fields": {"name": name}})
+            return None
+        data = ProfileCreate(
+            name=name,
+            engine=engine,  # type: ignore[arg-type]  # validated by the model
+            host=host,
+            port=int(os.getenv("SEED_PORT", "5432" if is_pg else "1521")),
+            database=os.getenv("SEED_DATABASE"),
+            sslmode=os.getenv("SEED_SSLMODE", "require") if is_pg else os.getenv("SEED_SSLMODE"),
+            current_schema=os.getenv("SEED_SCHEMA", "public") if is_pg else os.getenv("SEED_SCHEMA"),
+            service_name=os.getenv("SEED_SERVICE_NAME"),
+            sid=os.getenv("SEED_SID"),
+            username=username,
+            password=password,
+            environment=os.getenv("SEED_ENVIRONMENT", "DEV"),  # type: ignore[arg-type]
+        )
+        created = store.create(data)
+        log.info("Seeded a connection profile from env",
+                 extra={"extra_fields": {"name": name, "engine": engine, "host": host}})
+        return created
+    except Exception as exc:  # never block startup on a bad seed config
+        # Log the exception TYPE only — never str(exc), which could echo the password.
+        log.warning("Could not seed a connection profile from env",
+                    extra={"extra_fields": {"error_type": type(exc).__name__, "name": name}})
+        return None
 
 
 class InMemoryProfileStore(ProfileStore):

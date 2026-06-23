@@ -39,6 +39,27 @@ Blueprint: [`render.yaml`](../render.yaml).
    :5432, user `postgres`, or the **session pooler** `aws-0-<region>.pooler.
    supabase.com:5432`, user `postgres.<ref>` if your network is IPv4-only).
 
+## Keep the connection across restarts on the free tier (env-seed)
+The free plan has **no persistent disk**, so a saved connection is lost whenever the
+instance **sleeps (~15m idle) or redeploys**. Instead of re-adding it by hand each
+time, set the `SEED_*` env vars and the app **recreates the connection on every boot**:
+
+| Var | Value (Supabase) |
+|---|---|
+| `SEED_HOST` | Session pooler host, e.g. `aws-1-<region>.pooler.supabase.com` |
+| `SEED_USERNAME` | `postgres.<project-ref>` |
+| `SEED_PASSWORD` | your Supabase DB password |
+| `SEED_DATABASE` | `postgres` · `SEED_PORT` `5432` · `SEED_SSLMODE` `require` · `SEED_SCHEMA` `public` · `SEED_ENGINE` `postgres` · `SEED_PROFILE_NAME` `Supabase` |
+
+The non-secret defaults are pre-declared in `render.yaml`; set the three secrets
+(`SEED_HOST`/`SEED_USERNAME`/`SEED_PASSWORD`) in the dashboard. The password lives
+only in the platform's env (never the repo) and is encrypted at rest exactly like a
+UI-added profile (invariant 4). Seeding is **idempotent** — a no-op when a profile of
+that name already exists, so it's safe on a paid disk too. After seeding, you still
+**"Read from database"** once to register the schema (the schema store is also
+ephemeral on free; the connection is what env-seed restores). Leave the `SEED_*` vars
+unset to disable.
+
 ## Security (important for a public URL)
 The app has no login yet (RISK-07). Options:
 - **Personal/demo:** leave `APP_API_KEY` unset and keep the URL private. Anyone with
